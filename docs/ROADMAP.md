@@ -119,7 +119,7 @@ Workspace
 
 - [x] **M0-01** New repo `sabai-rs/sabai`, fresh workspace (no code from oxalin)
 - [x] **M0-02** Split into `crates/sabai-*` with `[workspace.dependencies]`
-- [ ] **M0-03** `sabai` facade crate with features: `orm`, `auth`, `queue`, `full`
+- [x] **M0-03** `sabai` facade crate with features: `orm`, `auth`, `queue`, `full`
 - [ ] **M0-04** `.cargo/config.toml`: fast linker (mold/lld), `debug = "line-tables-only"`, `build-override opt-level = 3`
 - [ ] **M0-05** CI: `cargo build --timings` and `cargo llvm-lines` on PRs, fail when over the compile budgets below
 

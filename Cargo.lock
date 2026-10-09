@@ -5,6 +5,12 @@ version = 4
 [[package]]
 name = "sabai"
 version = "0.0.0"
+dependencies = [
+ "sabai-auth",
+ "sabai-http",
+ "sabai-orm",
+ "sabai-queue",
+]
 
 [[package]]
 name = "sabai-auth"
