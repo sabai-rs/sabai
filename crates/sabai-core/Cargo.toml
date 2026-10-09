@@ -8,7 +8,9 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+bytes.workspace = true
 http.workspace = true
+http-body.workspace = true
 
 [lints]
 workspace = true
