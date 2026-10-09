@@ -6,6 +6,24 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+autotests = false
+
+[features]
+default = []
+orm = ["dep:sabai-orm"]
+auth = ["orm", "dep:sabai-auth"]
+queue = ["dep:sabai-queue"]
+full = ["orm", "auth", "queue"]
+
+[dependencies]
+sabai-http.workspace = true
+sabai-orm = { workspace = true, optional = true }
+sabai-auth = { workspace = true, optional = true }
+sabai-queue = { workspace = true, optional = true }
+
+[[test]]
+name = "it"
+path = "../../tests/it/main.rs"
 
 [lints]
 workspace = true

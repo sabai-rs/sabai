@@ -12,6 +12,10 @@ repository = "https://github.com/sabai-rs/sabai"
 [workspace.dependencies]
 sabai-core = { path = "crates/sabai-core", version = "0.0.0" }
 sabai-macros = { path = "crates/sabai-macros", version = "0.0.0" }
+sabai-http = { path = "crates/sabai-http", version = "0.0.0" }
+sabai-orm = { path = "crates/sabai-orm", version = "0.0.0" }
+sabai-auth = { path = "crates/sabai-auth", version = "0.0.0" }
+sabai-queue = { path = "crates/sabai-queue", version = "0.0.0" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
