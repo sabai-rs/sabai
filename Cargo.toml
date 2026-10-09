@@ -30,6 +30,3 @@ unwrap_used = "warn"
 
 [profile.dev]
 debug = "line-tables-only"
-
-[profile.dev.build-override]
-opt-level = 3
