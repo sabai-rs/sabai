@@ -64,13 +64,21 @@ impl<T: IntoResponse, E: IntoResponse> IntoResponse for Result<T, E> {
 }
 
 fn plain_text(body: Body) -> Response {
+    with_content_type(body, "text/plain; charset=utf-8")
+}
+
+pub(crate) fn json(body: String) -> Response {
+    with_content_type(Body::from(body), "application/json")
+}
+
+fn with_content_type(body: Body, content_type: &'static str) -> Response {
     let mut response = Response::new(body);
-    let text = HeaderValue::from_static("text/plain; charset=utf-8");
-    response.headers_mut().insert(CONTENT_TYPE, text);
+    let value = HeaderValue::from_static(content_type);
+    response.headers_mut().insert(CONTENT_TYPE, value);
     response
 }
 
-fn with_status(mut response: Response, status: StatusCode) -> Response {
+pub(crate) fn with_status(mut response: Response, status: StatusCode) -> Response {
     *response.status_mut() = status;
     response
 }
