@@ -7,9 +7,53 @@ name = "sabai"
 version = "0.0.0"
 
 [[package]]
+name = "sabai-auth"
+version = "0.0.0"
+
+[[package]]
+name = "sabai-cache"
+version = "0.0.0"
+
+[[package]]
+name = "sabai-cli"
+version = "0.0.0"
+
+[[package]]
 name = "sabai-core"
 version = "0.0.0"
 
 [[package]]
+name = "sabai-http"
+version = "0.0.0"
+
+[[package]]
 name = "sabai-macros"
+version = "0.0.0"
+
+[[package]]
+name = "sabai-mail"
+version = "0.0.0"
+
+[[package]]
+name = "sabai-notify"
+version = "0.0.0"
+
+[[package]]
+name = "sabai-orm"
+version = "0.0.0"
+
+[[package]]
+name = "sabai-queue"
+version = "0.0.0"
+
+[[package]]
+name = "sabai-storage"
+version = "0.0.0"
+
+[[package]]
+name = "sabai-storage-s3"
+version = "0.0.0"
+
+[[package]]
+name = "sabai-testing"
 version = "0.0.0"
