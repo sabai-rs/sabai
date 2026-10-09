@@ -1,0 +1,8 @@
+# No linker override: macOS's ld-prime (Xcode 15+) and Linux's default rust-lld
+# (Rust 1.90+, x86_64) are already fast. Forcing mold would make every
+# contributor install it. To try mold on Linux, set it in ~/.cargo/config.toml.
+
+[alias]
+lint = "clippy --workspace --all-targets --all-features -- -D warnings"
+t = "nextest run --workspace --all-features"
+timings = "build --workspace --timings"
