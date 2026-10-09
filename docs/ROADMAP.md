@@ -122,6 +122,8 @@ Workspace
 - [x] **M0-03** `sabai` facade crate with features: `orm`, `auth`, `queue`, `full`
 - [x] **M0-04** `.cargo/config.toml`: fast linker (mold/lld), `debug = "line-tables-only"`, `build-override opt-level = 3`
 - [ ] **M0-05** CI: `cargo build --timings` and `cargo llvm-lines` on PRs, fail when over the compile budgets below
+  - [x] **M0-05a** CI reports: fmt, clippy, tests (default and all features), MSRV check, `--timings` artifact, `llvm-lines` summary
+  - [ ] **M0-05b** Fail CI when over the compile budgets (needs the walking-skeleton app to measure)
 
 Core (sabai-core)
 
