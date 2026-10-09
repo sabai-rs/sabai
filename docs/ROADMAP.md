@@ -127,7 +127,7 @@ Workspace
 
 Core (sabai-core)
 
-- [ ] **M0-06** `Error` type with HTTP status mapping
+- [x] **M0-06** `Error` type with HTTP status mapping
 - [ ] **M0-07** `Request`, `Response`, `Body`, `IntoResponse`
 - [ ] **M0-08** Config: layered `.env` + `config/*.toml`, typed access `config::<AppConfig>()`
 - [ ] **M0-09** Logging via `tracing`, request-id span per request
