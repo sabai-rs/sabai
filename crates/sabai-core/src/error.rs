@@ -4,6 +4,9 @@ use std::fmt;
 
 use http::StatusCode;
 
+use crate::response::{json, with_status};
+use crate::{IntoResponse, Response};
+
 type BoxedSource = Box<dyn StdError + Send + Sync + 'static>;
 
 /// The error every Sabai handler, extractor and service returns; it knows its HTTP status.
@@ -95,6 +98,13 @@ impl fmt::Display for Error {
     }
 }
 
+impl IntoResponse for Error {
+    fn into_response(self) -> Response {
+        let body = serde_json::json!({ "message": self.message }).to_string();
+        with_status(json(body), self.status)
+    }
+}
+
 // `Error` deliberately does not implement `std::error::Error`: that impl would
 // overlap with this blanket `From` (coherence), and the blanket `From` is what
 // lets `?` turn any error into a 500, like an uncaught exception in Laravel.
@@ -139,6 +149,36 @@ mod tests {
         assert_eq!(
             error.to_string(),
             "Server Error: invalid digit found in string"
+        );
+    }
+
+    #[test]
+    fn responds_with_its_status_and_a_json_message() {
+        let response = Error::not_found().into_response();
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        assert_eq!(response.headers()["content-type"], "application/json");
+        assert_eq!(response.body().as_bytes(), br#"{"message":"Not Found"}"#);
+    }
+
+    #[test]
+    fn the_response_never_shows_the_internal_cause() {
+        let error = Error::from("abc".parse::<i32>().unwrap_err());
+
+        let response = error.into_response();
+
+        assert_eq!(response.body().as_bytes(), br#"{"message":"Server Error"}"#);
+    }
+
+    #[test]
+    fn messages_are_escaped_as_json() {
+        let error = Error::new(StatusCode::CONFLICT, r#"Title "Hello" is taken"#);
+
+        let response = error.into_response();
+
+        assert_eq!(
+            response.body().as_bytes(),
+            br#"{"message":"Title \"Hello\" is taken"}"#
         );
     }
 }
