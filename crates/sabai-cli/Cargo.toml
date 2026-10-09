@@ -1,0 +1,15 @@
+[package]
+name = "sabai-cli"
+description = "The sabai command: new apps, generators, migrations and workers"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "sabai"
+path = "src/main.rs"
+
+[lints]
+workspace = true
