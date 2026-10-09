@@ -128,7 +128,7 @@ Workspace
 Core (sabai-core)
 
 - [x] **M0-06** `Error` type with HTTP status mapping
-- [ ] **M0-07** `Request`, `Response`, `Body`, `IntoResponse`
+- [x] **M0-07** `Request`, `Response`, `Body`, `IntoResponse`
 - [ ] **M0-08** Config: layered `.env` + `config/*.toml`, typed access `config::<AppConfig>()`
 - [ ] **M0-09** Logging via `tracing`, request-id span per request
 - [ ] **M0-10** App state / service container: type-map of `Arc<dyn Any + Send + Sync>`
@@ -205,7 +205,7 @@ Request & response
 - [ ] **M1-46** Status helpers: `created()` with `Location`, `no_content()`, `accepted()`
 - [ ] **M1-47** Redirects: `back()`, `to_route("posts.show", params)`, `.with("status", "Saved")`
 - [ ] **M1-48** Streaming responses, Server-Sent Events, `file()` inline with range requests
-- [ ] **M1-49** Central exception handler: every error becomes one response shape (`{message, errors}`), debug page in dev only, no internals in production
+- [ ] **M1-49** Central exception handler: every error becomes one response shape (`{message, errors}`) by default, replaceable by the app via a registered error renderer (`Arc<dyn ErrorRenderer>`), debug page in dev only, no internals in production
 
 Validation
 

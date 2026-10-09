@@ -62,6 +62,7 @@ dependencies = [
 name = "sabai"
 version = "0.0.0"
 dependencies = [
+ "http",
  "sabai-auth",
  "sabai-core",
  "sabai-http",

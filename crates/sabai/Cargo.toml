@@ -22,6 +22,9 @@ sabai-orm = { workspace = true, optional = true }
 sabai-auth = { workspace = true, optional = true }
 sabai-queue = { workspace = true, optional = true }
 
+[dev-dependencies]
+http.workspace = true
+
 [[test]]
 name = "it"
 path = "../../tests/it/main.rs"
