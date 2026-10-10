@@ -6,6 +6,7 @@ mod handler;
 mod param;
 mod route_urls;
 mod router;
+pub mod rules;
 mod server;
 mod service;
 
@@ -14,5 +15,6 @@ pub use form_request::FormRequest;
 pub use handler::{FromRequest, Handler};
 pub use param::Param;
 pub use router::{Route, RouteGroup, Router, Routes};
+pub use rules::Rules;
 pub use server::serve;
 pub use service::Service;
