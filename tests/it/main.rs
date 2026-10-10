@@ -4,6 +4,7 @@
 // which `allow-unwrap-in-tests` in clippy.toml does not cover.
 #![allow(clippy::unwrap_used)]
 
+mod app;
 mod config;
 mod container;
 mod error;
