@@ -3,6 +3,7 @@ use std::error::Error as StdError;
 use std::fmt;
 
 use http::StatusCode;
+use serde::ser::{Serialize, SerializeMap, Serializer};
 
 use crate::response::{json, with_status};
 use crate::{IntoResponse, Response};
@@ -15,7 +16,12 @@ pub struct Error {
     message: Cow<'static, str>,
     source: Option<BoxedSource>,
     context: Vec<Cow<'static, str>>,
+    errors: FieldErrors,
 }
+
+/// Messages per field, in the order they were added, like Laravel's error bag.
+#[derive(Debug, Default)]
+struct FieldErrors(Vec<(String, Vec<String>)>);
 
 /// `Result` with [`Error`] as the default error type.
 pub type Result<T, E = Error> = std::result::Result<T, E>;
@@ -47,6 +53,21 @@ impl Error {
         Self::from_status(StatusCode::FORBIDDEN)
     }
 
+    /// `422` with messages per field, like Laravel's `ValidationException::withMessages([...])`:
+    /// `Error::with_messages(&[("email", "These credentials do not match our records.")])`.
+    /// A field may appear more than once to give it several messages.
+    pub fn with_messages(messages: &[(&str, &str)]) -> Self {
+        let mut errors = FieldErrors::default();
+        for (field, message) in messages {
+            errors.push(field, message);
+        }
+        let message = errors.summary();
+        Self {
+            errors,
+            ..Self::from_parts(StatusCode::UNPROCESSABLE_ENTITY, message.into(), None)
+        }
+    }
+
     /// `500 Server Error` wrapping the underlying cause, which is logged but never shown to the client.
     pub fn internal(source: impl StdError + Send + Sync + 'static) -> Self {
         Self::internal_boxed(Box::new(source))
@@ -70,6 +91,7 @@ impl Error {
             message,
             source,
             context: Vec::new(),
+            errors: FieldErrors::default(),
         }
     }
 
@@ -91,6 +113,11 @@ impl Error {
     /// The client-facing message.
     pub fn message(&self) -> &str {
         &self.message
+    }
+
+    /// The messages per field of a validation error, in order; empty for other errors.
+    pub fn errors(&self) -> &[(String, Vec<String>)] {
+        &self.errors.0
     }
 
     /// The underlying cause, if any.
@@ -123,14 +150,63 @@ impl fmt::Debug for Error {
             .field("message", &self.message)
             .field("source", &self.source)
             .field("context", &self.context)
+            .field("errors", &self.errors)
             .finish()
     }
 }
 
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
-        let body = serde_json::json!({ "message": self.message }).to_string();
+        let body =
+            serde_json::to_string(&self).unwrap_or_else(|_| r#"{"message":"Server Error"}"#.into());
         with_status(json(body), self.status)
+    }
+}
+
+impl FieldErrors {
+    fn push(&mut self, field: &str, message: &str) {
+        match self.0.iter_mut().find(|(name, _)| name == field) {
+            Some((_, messages)) => messages.push(message.to_owned()),
+            None => self.0.push((field.to_owned(), vec![message.to_owned()])),
+        }
+    }
+
+    // Laravel's top-level message: "The title field is required. (and 2 more errors)".
+    fn summary(&self) -> String {
+        let mut messages = self.0.iter().flat_map(|(_, messages)| messages);
+        let Some(first) = messages.next() else {
+            return "The given data was invalid.".to_owned();
+        };
+        match messages.count() {
+            0 => first.clone(),
+            1 => format!("{first} (and 1 more error)"),
+            more => format!("{first} (and {more} more errors)"),
+        }
+    }
+}
+
+// The client's view: `message`, plus `errors` for validation. By hand, because a
+// `serde_json::Map` would sort the fields, and Laravel keeps them in the rules' order.
+impl Serialize for Error {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut body = serializer.serialize_map(None)?;
+        body.serialize_entry("message", &self.message)?;
+        if !self.errors.0.is_empty() {
+            body.serialize_entry("errors", &FieldsInOrder(&self.errors.0))?;
+        }
+        body.end()
+    }
+}
+
+struct FieldsInOrder<'a>(&'a [(String, Vec<String>)]);
+
+impl Serialize for FieldsInOrder<'_> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut map = serializer.serialize_map(Some(self.0.len()))?;
+        for (field, messages) in self.0 {
+            map.serialize_entry(field, messages)?;
+        }
+        map.end()
     }
 }
 
@@ -175,6 +251,31 @@ mod tests {
         assert_eq!(error.message(), "Server Error");
         assert!(error.source().is_some());
         assert_eq!(error.to_string(), "invalid digit found in string");
+    }
+
+    #[test]
+    fn with_messages_is_a_422_with_errors_per_field_in_order() {
+        let error = Error::with_messages(&[
+            ("title", "The title field is required."),
+            ("body", "The body field must be a string."),
+            ("title", "The title field must be a string."),
+        ]);
+
+        let response = error.into_response();
+
+        assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
+        assert_eq!(
+            response.body().as_bytes(),
+            br#"{"message":"The title field is required. (and 2 more errors)","errors":{"title":["The title field is required.","The title field must be a string."],"body":["The body field must be a string."]}}"#
+        );
+    }
+
+    #[test]
+    fn one_message_is_also_the_summary() {
+        let error = Error::with_messages(&[("credential", "These credentials do not match.")]);
+
+        assert_eq!(error.message(), "These credentials do not match.");
+        assert_eq!(error.errors()[0].0, "credential");
     }
 
     #[test]

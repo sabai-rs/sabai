@@ -233,7 +233,10 @@ Validation
 - [ ] **M1-26** `#[derive(Validate)]` emitting rule metadata only
 - [ ] **M1-27** Rules: `required`, `email`, `min`, `max`, `in`, `confirmed`, `unique` (after M2)
 - [ ] **M1-28** `FormRequest` validation returns `422` with field errors, like Laravel; a wrong type (`title` not a string, `draft=yes` for a `bool`) also lands under its field instead of one serde sentence. Revisit M1-19e here: one lenient deserializer over `Value` that reads form strings into `bool` and numbers like Laravel's `boolean` and `integer` rules, which also cut ~30% of LLVM lines
-- [ ] **M1-50** Fixed error shape: `{"message": ..., "errors": {"email": ["..."]}}`
+  - [x] **M1-28a** `Error::with_messages(&[("email", "...")])`: a `422` with `{"message": "... (and 1 more error)", "errors": {"email": ["..."]}}`, fields in the order given, like Laravel's `ValidationException::withMessages`
+  - [ ] **M1-28b** `fn rules() -> Rules` with typed rules: `Rules::new().field("title", [required(), string(), max(255)])`; `required`, `sometimes`, `string`, `max` with Laravel's English messages
+  - [ ] **M1-28c** `FormRequest` checks `rules()` on the raw input before building the struct, so a missing or wrong-typed field is a field error, not a serde sentence; used by the blog's `StorePostRequest`
+- [ ] **M1-50** Fixed error shape: `{"message": ..., "errors": {"email": ["..."]}}`; apps can swap the renderer for their own shape, such as `{"errors": [{"ref": "email", "type": "validation", "desc": [...]}]}`
 - [ ] **M1-51** Nested and array fields: `items.*.qty`
 - [ ] **M1-52** Conditional rules: `nullable`, `sometimes`, `required_if`, `required_with`, `bail`
 - [ ] **M1-53** More rules: `regex`, `url`, `uuid`, `date`, `before`/`after`, `numeric`, `integer`, `between`, `same`, `exists`, `enum`
