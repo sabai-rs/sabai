@@ -432,7 +432,7 @@ Storage (sabai-storage)
 
 Cache (sabai-cache)
 
-- [ ] **M7-10** `get`, `put`, `remember`, `forget`, TTL, tags (Redis)
+- [ ] **M7-10** App-facing `Cache` with Laravel's names (`get`, `put`, `forever`, `has`, `missing`, `pull`, `add`, `increment`, `remember`, `remember_forever`, `flush`), TTL, tags (Redis); built on the `CacheStore` contract from M0-13, so drivers only implement its atomic primitives
 - [ ] **M7-11** Drivers: memory, Redis, database
 - [ ] **M7-12** Atomic locks, used by the scheduler and unique jobs
 - [ ] **M7-13** Rate limiter on top of cache (login throttle, API limits)

@@ -21,6 +21,7 @@ bytes = "1"
 dotenvy = "0.15"
 http = "1"
 http-body = "1"
+pollster = "0.4"
 serde = "1"
 serde_json = "1"
 toml = { version = "0.9", default-features = false, features = ["std", "parse", "serde"] }

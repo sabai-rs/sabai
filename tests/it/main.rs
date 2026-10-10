@@ -7,6 +7,7 @@
 mod app;
 mod config;
 mod container;
+mod contracts;
 mod error;
 mod events;
 mod facade;
