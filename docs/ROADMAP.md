@@ -205,7 +205,7 @@ Request & response
 - [x] **M1-19c** `Service<T>` handler argument (method injection: `clock: Service<dyn Clock>`) and `request.app()`, like Laravel's `app()`
 - [ ] **M1-19** `Param<(A, B)>` for routes with several parameters
 - [x] **M1-19d** `Request` is one `Arc`, so taking `request: Request` as a handler argument costs a counter increment instead of copying every header (222ns to 21ns with 8 headers), in any argument position; `with_route_params` and `with_app` change it in place with `Arc::make_mut` before any clone exists
-- [ ] **M1-19e** `FormRequest` through one deserializer: turn the query, form or JSON input into a `serde_json::Value`, then `T::deserialize(value)`, so each request struct compiles one deserialize path instead of serde_json's and serde_urlencoded's; keep it only if `cargo llvm-lines` shows the drop and the runtime cost is small
+- [x] **M1-19e** Measured, not kept: JSON through a non-generic `serde_json::Value` cut the blog from 12,924 to 10,198 LLVM lines (~330 per extra request struct) but did not change rebuild time, doubled JSON parse time (317ns to 627ns) and let duplicate keys through; every input through `Value` cut 30% but broke typed form fields (`draft=true` into `bool`). Revisit with M1-28
 - [ ] **M1-19f** Hot-path trims, each kept only if a benchmark shows it: route parameter names as `Arc<str>` shared from the endpoint (one allocation per parameter instead of two), a cheap hasher for the `TypeId` maps in `Container` and `singleton`, and `Error` as a `Box` around its fields so every `Result` is one pointer wide
 - [ ] **M1-20** `#[derive(FromRequest)]` for grouping handler arguments
 - [ ] **M1-21** Responses: `json()`, `redirect()`, `view()` hook, `download()`
@@ -229,7 +229,7 @@ Validation
 
 - [ ] **M1-26** `#[derive(Validate)]` emitting rule metadata only
 - [ ] **M1-27** Rules: `required`, `email`, `min`, `max`, `in`, `confirmed`, `unique` (after M2)
-- [ ] **M1-28** Form-request style: `Valid<Json<T>>` returns `422` with field errors
+- [ ] **M1-28** `FormRequest` validation returns `422` with field errors, like Laravel; a wrong type (`title` not a string, `draft=yes` for a `bool`) also lands under its field instead of one serde sentence. Revisit M1-19e here: one lenient deserializer over `Value` that reads form strings into `bool` and numbers like Laravel's `boolean` and `integer` rules, which also cut ~30% of LLVM lines
 - [ ] **M1-50** Fixed error shape: `{"message": ..., "errors": {"email": ["..."]}}`
 - [ ] **M1-51** Nested and array fields: `items.*.qty`
 - [ ] **M1-52** Conditional rules: `nullable`, `sometimes`, `required_if`, `required_with`, `bail`
