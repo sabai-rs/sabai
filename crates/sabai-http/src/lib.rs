@@ -12,6 +12,6 @@ pub use controller::Controller;
 pub use form_request::FormRequest;
 pub use handler::{FromRequest, Handler};
 pub use param::Param;
-pub use router::{Router, Routes};
+pub use router::{RouteGroup, Router, Routes};
 pub use server::serve;
 pub use service::Service;

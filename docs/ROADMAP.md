@@ -155,6 +155,9 @@ Router
 - [ ] **M1-01** `get/post/put/patch/delete`, path params, `{*rest}` wildcard
   - [ ] **M1-01d** Graceful shutdown on Ctrl-C / SIGTERM: stop accepting, let in-flight requests finish (measure tokio `macros` / `signal` cost first)
 - [ ] **M1-02** Groups with prefix, group middleware, `merge`
+  - [x] **M1-02a** Prefix groups like Laravel's `Route::prefix('api')->group(...)`: `route.prefix("/api").group(|route| ...)` or `.group(api::routes)`, nestable; the closure runs on a fresh `Router` and a non-generic `mount_group` adds the prefix
+  - [ ] **M1-02b** Group middleware, `route.prefix("/admin").middleware(auth).group(...)` (after M1-29)
+  - [ ] **M1-02c** `route.merge(router)` for routes a package builds on its own
 - [ ] **M1-03** Named routes and `url_for` with percent-encoding
 - [ ] **M1-04** Per-route and per-group body limits
 - [ ] **M1-05** Auto `HEAD`, `405` with `Allow` header, panic catching

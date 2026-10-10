@@ -261,3 +261,42 @@ fn a_controller_that_cannot_be_made_stops_startup_and_names_it() {
         "{error}"
     );
 }
+
+#[test]
+fn a_prefix_group_puts_its_routes_under_the_prefix_and_can_nest() {
+    let mut router = Router::new();
+    router.prefix("/api").group(|route| {
+        route.get("/", index);
+        route.get("/health", health);
+        route.prefix("v1/").group(|route| {
+            route.get("/posts/{id}", show);
+        });
+    });
+    let routes = router.compile().unwrap();
+
+    let body = |path| send(&routes, Method::GET, path).body().as_bytes().to_vec();
+
+    assert_eq!(body("/api"), b"All posts");
+    assert_eq!(body("/api/health"), b"ok");
+    assert_eq!(body("/api/v1/posts/7"), b"post 7");
+    assert_eq!(
+        send(&routes, Method::GET, "/health").status(),
+        StatusCode::NOT_FOUND
+    );
+}
+
+#[test]
+fn a_group_route_that_repeats_another_is_reported_with_its_full_path() {
+    let mut router = Router::new();
+    router.get("/api/health", health);
+    router.prefix("api").group(|route| {
+        route.get("/health", health);
+    });
+
+    let error = router.compile().err().unwrap().to_string();
+
+    assert_eq!(
+        error,
+        "route `GET /api/health` is invalid: it is defined twice; remove one of them"
+    );
+}
