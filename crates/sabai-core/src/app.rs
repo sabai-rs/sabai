@@ -15,6 +15,21 @@ pub trait Provider: Send + Sync {
     }
 }
 
+/// A type the app builds from its services, like a class Laravel resolves by autowiring:
+/// controllers, services and repositories take what they need in `new`.
+///
+/// ```ignore
+/// impl FromApp for PostService {
+///     fn new(app: &App) -> Result<Self> {
+///         Ok(Self { posts: app.get()?, clock: app.get()? })
+///     }
+/// }
+/// ```
+pub trait FromApp: Sized {
+    /// Builds `Self`, like a Laravel constructor whose arguments come from the container.
+    fn new(app: &App) -> Result<Self>;
+}
+
 /// The application: config, the service container and event listeners, filled by providers at boot.
 #[derive(Debug)]
 pub struct App {
@@ -70,6 +85,12 @@ impl App {
     /// Resolves a service; see [`Container::get`].
     pub fn get<T: ?Sized + Send + Sync + 'static>(&self) -> Result<Arc<T>> {
         self.container.get()
+    }
+
+    /// Builds a new `T` from the app's services, like Laravel's `app()->make(PostService::class)`.
+    pub fn make<T: FromApp>(&self) -> Result<T> {
+        T::new(self)
+            .map_err(|error| error.context(format!("could not make `{}`", type_name::<T>())))
     }
 }
 

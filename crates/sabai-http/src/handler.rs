@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use std::sync::Arc;
 
 use sabai_core::contracts::BoxFuture;
-use sabai_core::{IntoResponse, Request, Response};
+use sabai_core::{App, IntoResponse, Request, Response, Result};
 
 use crate::FromRequest;
 
@@ -12,6 +12,11 @@ use crate::FromRequest;
 pub trait Handler<Args>: Clone + Send + Sync + 'static {
     /// Runs the handler for one request.
     fn call(&self, request: Request) -> BoxFuture<'static, Response>;
+
+    /// Prepares every argument once at startup; see [`FromRequest::prepare`].
+    fn prepare(_app: &App) -> Result<()> {
+        Ok(())
+    }
 }
 
 impl<F, Fut, R> Handler<()> for F
@@ -34,6 +39,11 @@ macro_rules! impl_handler {
             R: IntoResponse + 'static,
             $($arg: FromRequest),+
         {
+            fn prepare(app: &App) -> Result<()> {
+                $($arg::prepare(app)?;)+
+                Ok(())
+            }
+
             #[allow(non_snake_case)]
             fn call(&self, request: Request) -> BoxFuture<'static, Response> {
                 let handler = self.clone();
@@ -70,6 +80,7 @@ fn respond_with<R: IntoResponse + 'static>(
 /// A handler with its argument types erased, so routes with different handlers fit in one list.
 pub(crate) trait ErasedHandler: Send + Sync {
     fn call_erased(&self, request: Request) -> BoxFuture<'static, Response>;
+    fn prepare(&self, app: &App) -> Result<()>;
 }
 
 pub(crate) type BoxedHandler = Arc<dyn ErasedHandler>;
@@ -83,6 +94,10 @@ struct Erased<H, Args> {
 impl<H: Handler<Args>, Args: 'static> ErasedHandler for Erased<H, Args> {
     fn call_erased(&self, request: Request) -> BoxFuture<'static, Response> {
         self.handler.call(request)
+    }
+
+    fn prepare(&self, app: &App) -> Result<()> {
+        H::prepare(app)
     }
 }
 

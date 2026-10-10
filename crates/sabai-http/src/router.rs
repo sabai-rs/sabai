@@ -4,7 +4,7 @@ use std::fmt;
 use std::future::ready;
 
 use sabai_core::contracts::BoxFuture;
-use sabai_core::{Error, IntoResponse, Method, Request, Response, Result, StatusCode};
+use sabai_core::{App, Error, IntoResponse, Method, Request, Response, Result, StatusCode};
 
 use crate::handler::{BoxedHandler, Handler, boxed};
 
@@ -29,6 +29,7 @@ pub struct Routes {
 }
 
 struct Endpoint {
+    path: String,
     methods: Vec<(Method, BoxedHandler)>,
 }
 
@@ -100,6 +101,20 @@ impl Router {
 }
 
 impl Routes {
+    /// Checks every route's arguments against `app` once, before serving: a service that is
+    /// not bound fails here with the route's name instead of on a request. `serve` calls this.
+    pub fn prepare(&self, app: &App) -> Result<()> {
+        for endpoint in &self.endpoints {
+            for (method, handler) in &endpoint.methods {
+                let path = &endpoint.path;
+                handler.prepare(app).map_err(|error| {
+                    error.context(format!("route `{method} {path}` cannot start"))
+                })?;
+            }
+        }
+        Ok(())
+    }
+
     /// Runs the handler for `request`, or responds `404` or `405`.
     pub fn dispatch(&self, request: Request) -> BoxFuture<'static, Response> {
         let Ok(matched) = self.matcher.at(request.path()) else {
@@ -128,6 +143,7 @@ impl Routes {
             .insert(route.path.as_str(), index)
             .map_err(|source| invalid(route, source.to_string()))?;
         self.endpoints.push(Endpoint {
+            path: route.path.clone(),
             methods: Vec::new(),
         });
         Ok(index)

@@ -177,6 +177,7 @@ Controllers
 - [ ] **M1-16** `Router::resource("posts", PostController)` maps the 7 REST actions
 - [ ] **M1-17** `api_resource` (no `create`/`edit`)
 - [ ] **M1-18** Controllers like Laravel's constructor injection: `FromApp` (`fn new(app) -> Result<Self>`) for controllers, services and repositories, `app.make::<T>()` for concrete types, actions as `async fn store(self: Arc<Self>, ...)`, every controller built once when `serve` starts so a missing binding stops startup
+  - [x] **M1-18a** `FromApp` and `app.make::<T>()`; `serve` prepares every route's arguments before listening, so a `Service<T>` that is not bound stops startup and names the route
 
 Middleware
 

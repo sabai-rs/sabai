@@ -60,8 +60,8 @@ impl fmt::Display for NotBound {
         let name = self.name;
         write!(
             f,
-            "no service is bound to `{name}`; bind it in a provider: \
-             `container.bind::<{name}>(Arc::new(...))`"
+            "no service is bound to `{name}`; bind it in a provider's `register`: \
+             `app.bind::<{name}>(Arc::new(...))`"
         )
     }
 }
@@ -125,7 +125,7 @@ mod tests {
                 .starts_with("no service is bound to `dyn "),
             "{error}"
         );
-        assert!(error.to_string().contains("container.bind::<dyn "));
+        assert!(error.to_string().contains("`app.bind::<dyn "));
     }
 
     #[test]
