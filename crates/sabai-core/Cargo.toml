@@ -9,6 +9,7 @@ repository.workspace = true
 
 [dependencies]
 bytes.workspace = true
+dotenvy.workspace = true
 http.workspace = true
 http-body.workspace = true
 serde.workspace = true

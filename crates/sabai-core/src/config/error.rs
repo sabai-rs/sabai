@@ -32,6 +32,10 @@ pub(crate) enum ConfigError {
     UnclosedPlaceholder {
         key: String,
     },
+    EnvFile {
+        path: PathBuf,
+        source: dotenvy::Error,
+    },
 }
 
 impl fmt::Display for ConfigError {
@@ -68,6 +72,9 @@ impl fmt::Display for ConfigError {
                 "config key `{key}` needs env var `{name}`, which is not set; \
                  add `{name}=...` to `.env` or give a default: `${{{name}:-value}}`"
             ),
+            Self::EnvFile { path, source } => {
+                write!(f, "could not read `{}`: {source}", path.display())
+            }
             Self::UnclosedPlaceholder { key } => {
                 write!(f, "config key `{key}` has a `${{` without a closing `}}`")
             }
@@ -81,6 +88,7 @@ impl StdError for ConfigError {
             Self::ReadDir { source, .. } | Self::ReadFile { source, .. } => Some(source),
             Self::Parse { source, .. } => Some(source),
             Self::Invalid { source, .. } => Some(source),
+            Self::EnvFile { source, .. } => Some(source),
             Self::Missing { .. } | Self::MissingEnv { .. } | Self::UnclosedPlaceholder { .. } => {
                 None
             }

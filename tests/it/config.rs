@@ -8,9 +8,9 @@ struct AppConfig {
 }
 
 fn fixture() -> Config {
-    Config::from_dir(concat!(
+    Config::load(concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/../../tests/it/fixtures/config"
+        "/../../tests/it/fixtures"
     ))
     .unwrap()
 }
@@ -19,7 +19,7 @@ fn fixture() -> Config {
 fn each_toml_file_becomes_a_typed_section() {
     let app: AppConfig = fixture().get("app").unwrap();
 
-    assert_eq!(app.name, "Todo");
+    assert_eq!(app.name, "Todo from .env");
     assert!(app.debug);
 }
 
@@ -41,11 +41,11 @@ fn dotted_keys_read_across_files() {
 
 #[test]
 fn a_missing_directory_says_which_one() {
-    let error = Config::from_dir("does/not/exist").unwrap_err();
+    let error = Config::load("does/not/exist").unwrap_err();
 
     assert!(
         error
             .to_string()
-            .contains("could not read the config directory `does/not/exist`")
+            .contains("could not read the config directory `does/not/exist/config`")
     );
 }
