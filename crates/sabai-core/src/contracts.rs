@@ -3,12 +3,14 @@
 
 mod cache;
 mod clock;
+mod storage;
 
 use std::future::Future;
 use std::pin::Pin;
 
 pub use cache::CacheStore;
 pub use clock::{Clock, SystemClock};
+pub use storage::{FileMetadata, StorageDriver};
 
 // Native `async fn` in traits cannot be used as `dyn Trait` yet, and drivers are picked
 // from config at runtime, so async methods return this instead. It is what `async-trait`

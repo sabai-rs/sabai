@@ -136,7 +136,7 @@ Core (sabai-core)
 - [x] **M0-11** Service providers: `trait Provider { fn register(&self, app: &mut App) -> Result<()>; fn boot(&self, app: &App) -> Result<()>; }`; `App::builder(config).provider(..).boot()` returns a read-only `Arc<App>`
 - [x] **M0-12** Events: `app.dispatch(&event)` with sync listeners (closures or `Listener<E>` structs), registered with `app.listen(..)` in providers; queued listeners come in M4-15
 
-* [ ] **M0-13** Contracts from day one: `Clock`, `Cache`, `Filesystem`, `Mailer` traits, so fakes, the scheduler and packages plug in
+* [ ] **M0-13** Contracts from day one in `sabai::contracts`: `Clock`, `CacheStore`, `StorageDriver`, `MailTransport` (the driver layer, like Laravel's `Store`, Flysystem adapters and Symfony transports), so fakes, the scheduler and packages plug in. The app-facing `Cache`, `Filesystem` and `Mailer` with Laravel's method names are built on them in M7
 
 Macros (sabai-macros)
 
