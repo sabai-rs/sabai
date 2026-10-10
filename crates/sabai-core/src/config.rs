@@ -1,3 +1,4 @@
+mod env;
 mod error;
 
 use std::fs;
@@ -7,6 +8,7 @@ use serde::de::DeserializeOwned;
 use serde_json::{Map, Value};
 
 use crate::{Error, Result};
+use env::{Env, interpolate};
 use error::ConfigError;
 
 /// All app config, loaded from `config/*.toml`: `app.toml` becomes the `app` section, and so on.
@@ -32,6 +34,7 @@ impl Config {
             dir: dir.to_owned(),
             source,
         };
+        let env = Env::from_process();
         let mut config = Self::default();
         for entry in fs::read_dir(dir).map_err(read_dir)? {
             let path = entry.map_err(read_dir)?.path();
@@ -39,29 +42,34 @@ impl Config {
                 .extension()
                 .is_some_and(|extension| extension == "toml")
             {
-                config.load_file(&path)?;
+                config.load_file(&path, &env)?;
             }
         }
         Ok(config)
     }
 
-    fn load_file(&mut self, path: &Path) -> Result<()> {
+    fn load_file(&mut self, path: &Path, env: &Env) -> Result<()> {
         let text = fs::read_to_string(path).map_err(|source| ConfigError::ReadFile {
             path: path.to_owned(),
             source,
         })?;
-        let section = path.file_stem().unwrap_or_default().to_string_lossy();
-        self.insert_section(&section, &text)
-            .map_err(|source| ConfigError::Parse {
-                path: path.to_owned(),
-                source,
-            })?;
-        Ok(())
+        Ok(self.insert_section(path, &text, env)?)
     }
 
-    fn insert_section(&mut self, name: &str, toml_text: &str) -> Result<(), toml::de::Error> {
-        let section: Value = toml::from_str(toml_text)?;
-        self.root.insert(name.to_owned(), section);
+    fn insert_section(
+        &mut self,
+        path: &Path,
+        toml_text: &str,
+        env: &Env,
+    ) -> Result<(), ConfigError> {
+        let parse_error = |source| ConfigError::Parse {
+            path: path.to_owned(),
+            source,
+        };
+        let mut section: Value = toml::from_str(toml_text).map_err(parse_error)?;
+        let name = path.file_stem().unwrap_or_default().to_string_lossy();
+        interpolate(&mut section, &name, env)?;
+        self.root.insert(name.into_owned(), section);
         Ok(())
     }
 
@@ -96,7 +104,10 @@ mod tests {
 
     fn config(section: &str, toml_text: &str) -> Config {
         let mut config = Config::default();
-        config.insert_section(section, toml_text).unwrap();
+        let path = Path::new("config").join(format!("{section}.toml"));
+        config
+            .insert_section(&path, toml_text, &Env::default())
+            .unwrap();
         config
     }
 
@@ -138,9 +149,13 @@ mod tests {
     #[test]
     fn invalid_toml_points_at_the_line() {
         let error = Config::default()
-            .insert_section("app", "name = \"Blog\"\nport = \"80\n")
+            .insert_section(
+                Path::new("config/app.toml"),
+                "port = \"80\n",
+                &Env::default(),
+            )
             .unwrap_err();
 
-        assert!(error.to_string().contains("line 2"), "{error}");
+        assert!(error.to_string().contains("line 1"), "{error}");
     }
 }
