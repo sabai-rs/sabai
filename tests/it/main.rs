@@ -5,6 +5,7 @@
 #![allow(clippy::unwrap_used)]
 
 mod config;
+mod container;
 mod error;
 mod facade;
 mod log;
