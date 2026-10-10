@@ -6,13 +6,19 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use sabai_core::contracts::BoxFuture;
-use sabai_core::{Error, Request, Result, StatusCode, log};
+use sabai_core::{App, Error, Request, Result, StatusCode, log};
 
 /// A type a handler can take as an argument, built from the request before the handler runs,
 /// like a type-hinted argument in a Laravel controller. Failing rejects the request with that error.
 pub trait FromRequest: Sized + Send + 'static {
     /// Builds the argument from `request`.
     fn from_request(request: &Request) -> BoxFuture<'_, Result<Self>>;
+
+    /// Checks once, before the server accepts requests, that the argument can be built,
+    /// so a missing service stops startup instead of failing requests.
+    fn prepare(_app: &App) -> Result<()> {
+        Ok(())
+    }
 }
 
 impl FromRequest for Request {
@@ -28,6 +34,10 @@ pub struct Service<T: ?Sized>(pub Arc<T>);
 impl<T: ?Sized + Send + Sync + 'static> FromRequest for Service<T> {
     fn from_request(request: &Request) -> BoxFuture<'_, Result<Self>> {
         Box::pin(ready(request.app().and_then(|app| app.get()).map(Service)))
+    }
+
+    fn prepare(app: &App) -> Result<()> {
+        app.get::<T>().map(drop)
     }
 }
 

@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
 
-use sabai::{App, Config, Error, Provider, Result, StatusCode};
+use sabai::{App, Config, Error, FromApp, Provider, Result, StatusCode};
 
 type Journal = Arc<Mutex<Vec<String>>>;
 
@@ -94,4 +94,40 @@ fn a_failing_provider_stops_boot_with_its_error() {
         "provider `it::app::BrokenProvider` failed to register: mail.host is not set"
     );
     assert!(journal.lock().unwrap().is_empty());
+}
+
+/// Built by `app.make()`, like a Laravel class resolved by autowiring.
+struct WelcomeService {
+    mailer: Arc<dyn Mailer>,
+}
+
+impl FromApp for WelcomeService {
+    fn new(app: &App) -> Result<Self> {
+        Ok(Self { mailer: app.get()? })
+    }
+}
+
+#[test]
+fn make_builds_a_type_from_the_apps_services() {
+    let app = App::builder(Config::default())
+        .provider(MailProvider(Journal::default()))
+        .boot()
+        .unwrap();
+
+    let welcome = app.make::<WelcomeService>().unwrap();
+
+    assert_eq!(welcome.mailer.transport(), "log");
+}
+
+#[test]
+fn make_names_the_type_it_could_not_build() {
+    let app = App::builder(Config::default()).boot().unwrap();
+
+    let error = app.make::<WelcomeService>().err().unwrap().to_string();
+
+    assert!(error.starts_with("could not make `"), "{error}");
+    assert!(
+        error.contains("WelcomeService`: no service is bound to `dyn"),
+        "{error}"
+    );
 }

@@ -1,6 +1,7 @@
 use pollster::block_on;
-use sabai::http::{Param, Router, Routes};
-use sabai::{Body, Error, Method, Request, Response, Result, StatusCode};
+use sabai::contracts::Clock;
+use sabai::http::{Param, Router, Routes, Service};
+use sabai::{App, Body, Config, Error, Method, Request, Response, Result, StatusCode};
 
 async fn index() -> &'static str {
     "All posts"
@@ -24,6 +25,10 @@ async fn file(request: Request) -> String {
 
 async fn show_typed(Param(id): Param<u64>, request: Request) -> String {
     format!("post {id} via {}", request.method())
+}
+
+async fn uptime(clock: Service<dyn Clock>) -> String {
+    format!("{:?}", clock.now())
 }
 
 async fn method_name(request: Request) -> String {
@@ -158,4 +163,19 @@ fn handlers_take_typed_params_alongside_the_request() {
 
     assert_eq!(found.body().as_bytes(), b"post 7 via GET");
     assert_eq!(not_a_number.status(), StatusCode::NOT_FOUND);
+}
+
+#[test]
+fn a_route_whose_service_is_not_bound_stops_startup_and_names_the_route() {
+    let mut router = Router::new();
+    router.get("/uptime", uptime);
+    let routes = router.compile().unwrap();
+    let app = App::builder(Config::default()).boot().unwrap();
+
+    let error = routes.prepare(&app).err().unwrap().to_string();
+
+    assert!(
+        error.starts_with("route `GET /uptime` cannot start: no service is bound to `dyn"),
+        "{error}"
+    );
 }

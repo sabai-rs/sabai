@@ -21,6 +21,7 @@ const BODY_LIMIT: usize = 2 * 1024 * 1024;
 /// (default `127.0.0.1:8000`), like `php artisan serve`.
 pub fn serve(app: Arc<App>, router: Router) -> Result<()> {
     let routes = router.compile()?;
+    routes.prepare(&app)?;
     let host: String = app.config().get_or("app.host", "127.0.0.1".to_owned())?;
     let port: u16 = app.config().get_or("app.port", 8000)?;
     let listener = StdTcpListener::bind((host.as_str(), port))

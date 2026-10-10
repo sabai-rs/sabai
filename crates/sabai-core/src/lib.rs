@@ -11,7 +11,7 @@ pub mod log;
 mod request;
 mod response;
 
-pub use app::{App, AppBuilder, Provider};
+pub use app::{App, AppBuilder, FromApp, Provider};
 pub use body::Body;
 pub use bytes::Bytes;
 pub use config::{Config, ConfigSection};
