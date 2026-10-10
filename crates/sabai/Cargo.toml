@@ -17,6 +17,7 @@ full = ["orm", "auth", "queue"]
 
 [dependencies]
 sabai-core.workspace = true
+sabai-macros.workspace = true
 sabai-http.workspace = true
 sabai-orm = { workspace = true, optional = true }
 sabai-auth = { workspace = true, optional = true }
