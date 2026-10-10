@@ -1,7 +1,12 @@
+use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
+
 use pollster::block_on;
-use sabai::contracts::Clock;
-use sabai::http::{Param, Router, Routes, Service};
-use sabai::{App, Body, Config, Error, Method, Request, Response, Result, StatusCode};
+use sabai::contracts::{Clock, SystemClock};
+use sabai::http::{Controller, Param, Router, Routes, Service};
+use sabai::{
+    App, Body, Config, Error, FromApp, Method, Provider, Request, Response, Result, StatusCode,
+};
 
 async fn index() -> &'static str {
     "All posts"
@@ -33,6 +38,38 @@ async fn uptime(clock: Service<dyn Clock>) -> String {
 
 async fn method_name(request: Request) -> String {
     request.method().to_string()
+}
+
+static POST_CONTROLLERS_MADE: AtomicUsize = AtomicUsize::new(0);
+
+struct PostController {
+    clock: Arc<dyn Clock>,
+}
+
+impl FromApp for PostController {
+    fn new(app: &App) -> Result<Self> {
+        let clock = app.get()?;
+        POST_CONTROLLERS_MADE.fetch_add(1, Ordering::SeqCst);
+        Ok(Self { clock })
+    }
+}
+
+impl Controller for PostController {}
+
+impl PostController {
+    async fn show(self: Arc<Self>, Param(id): Param<u64>) -> String {
+        let _ = self.clock.now();
+        format!("post {id}")
+    }
+}
+
+struct ClockProvider;
+
+impl Provider for ClockProvider {
+    fn register(&self, app: &mut App) -> Result<()> {
+        app.bind::<dyn Clock>(Arc::new(SystemClock));
+        Ok(())
+    }
 }
 
 fn routes() -> Routes {
@@ -176,6 +213,51 @@ fn a_route_whose_service_is_not_bound_stops_startup_and_names_the_route() {
 
     assert!(
         error.starts_with("route `GET /uptime` cannot start: no service is bound to `dyn"),
+        "{error}"
+    );
+}
+
+#[test]
+fn a_controller_is_made_once_at_startup_and_shared_by_every_request() {
+    let mut router = Router::new();
+    router.get("/posts/{id}", PostController::show);
+    let routes = router.compile().unwrap();
+    let app = App::builder(Config::default())
+        .provider(ClockProvider)
+        .boot()
+        .unwrap();
+
+    routes.prepare(&app).unwrap();
+    let send_with_app = |path| {
+        let request = http::Request::builder()
+            .uri(path)
+            .body(Body::empty())
+            .unwrap();
+        block_on(routes.dispatch(Request::from(request).with_app(app.clone())))
+    };
+    let first = send_with_app("/posts/1");
+    let second = send_with_app("/posts/2");
+
+    assert_eq!(first.body().as_bytes(), b"post 1");
+    assert_eq!(second.body().as_bytes(), b"post 2");
+    assert_eq!(POST_CONTROLLERS_MADE.load(Ordering::SeqCst), 1);
+}
+
+#[test]
+fn a_controller_that_cannot_be_made_stops_startup_and_names_it() {
+    let mut router = Router::new();
+    router.get("/posts/{id}", PostController::show);
+    let routes = router.compile().unwrap();
+    let app = App::builder(Config::default()).boot().unwrap();
+
+    let error = routes.prepare(&app).err().unwrap().to_string();
+
+    assert!(
+        error.starts_with("route `GET /posts/{id}` cannot start: could not make `"),
+        "{error}"
+    );
+    assert!(
+        error.contains("PostController`: no service is bound to `dyn"),
         "{error}"
     );
 }
