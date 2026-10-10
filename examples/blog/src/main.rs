@@ -10,5 +10,5 @@ fn main() -> Result<()> {
     let config = Config::load(env!("CARGO_MANIFEST_DIR"))?;
     Logging::new(&config.get_or("logging.level", String::from("info"))?)?.init()?;
     let app = App::builder(config).boot()?;
-    sabai::http::serve(app, routes::web())
+    sabai::http::serve(app, routes::all())
 }

@@ -23,6 +23,17 @@ where
     }
 }
 
+impl<F, Fut, R> Handler<(Request,)> for F
+where
+    F: Fn(Request) -> Fut + Clone + Send + Sync + 'static,
+    Fut: Future<Output = R> + Send + 'static,
+    R: IntoResponse + 'static,
+{
+    fn call(&self, request: Request) -> BoxFuture<'static, Response> {
+        respond_with(Box::pin(self(request)))
+    }
+}
+
 // Generic over the return type only, so every handler returning the same type shares one
 // copy of this state machine instead of each route compiling its own (LLVM lines per route).
 fn respond_with<R: IntoResponse + 'static>(
