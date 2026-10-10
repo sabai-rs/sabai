@@ -106,7 +106,6 @@ impl Routes {
             return respond(Error::not_found());
         };
         let endpoint = &self.endpoints[*matched.value];
-        // Collected before `request` moves: the params borrow the path inside it.
         let params: Vec<_> = matched
             .params
             .iter()

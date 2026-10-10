@@ -34,8 +34,7 @@ where
     }
 }
 
-// Generic over the return type only, so every handler returning the same type shares one
-// copy of this state machine instead of each route compiling its own (LLVM lines per route).
+// Generic over `R` only, so handlers with the same return type share this code.
 fn respond_with<R: IntoResponse + 'static>(
     future: BoxFuture<'static, R>,
 ) -> BoxFuture<'static, Response> {
@@ -49,8 +48,7 @@ pub(crate) trait ErasedHandler: Send + Sync {
 
 pub(crate) type BoxedHandler = Arc<dyn ErasedHandler>;
 
-// A struct rather than a closure: the vtable then points straight at `call_erased`,
-// without the closure, `FnOnce` and vtable shims a boxed closure adds to every route.
+// A struct, not a boxed closure, which would add three shims to every route.
 struct Erased<H, Args> {
     handler: H,
     _args: PhantomData<fn() -> Args>,

@@ -125,8 +125,7 @@ fn lookup<'a>(placeholder: &'a str, key: &str, env: &'a Env) -> Result<&'a str, 
         })
 }
 
-// Like Laravel's env(): "true", "false" and "null" get their types. Numbers follow JSON
-// rules, so a value with a leading zero such as a zip code "01234" stays a string.
+// Like Laravel's env(). JSON number rules keep a zip code such as "01234" a string.
 fn typed(text: &str) -> Value {
     match text {
         "true" => Value::Bool(true),

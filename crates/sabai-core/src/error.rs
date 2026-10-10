@@ -100,8 +100,7 @@ impl Error {
     }
 }
 
-// Display is for developers (logs, boot failures), so it shows the cause when there is one.
-// Clients only ever see `message`, through `IntoResponse`.
+// Display is for logs, so it shows the cause; clients only see `message`.
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for context in self.context.iter().rev() {
@@ -121,9 +120,7 @@ impl IntoResponse for Error {
     }
 }
 
-// `Error` deliberately does not implement `std::error::Error`: that impl would
-// overlap with this blanket `From` (coherence), and the blanket `From` is what
-// lets `?` turn any error into a 500, like an uncaught exception in Laravel.
+// No `impl std::error::Error`: it would overlap this blanket `From`, which lets `?` turn any error into a 500.
 impl<E: StdError + Send + Sync + 'static> From<E> for Error {
     fn from(source: E) -> Self {
         Self::internal(source)

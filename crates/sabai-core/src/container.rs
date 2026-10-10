@@ -6,8 +6,7 @@ use std::sync::Arc;
 
 use crate::{Error, Result};
 
-// Holds an `Arc<T>`. Storing the `Arc` itself, not `T`, is what lets `T` be a trait
-// object such as `dyn Mailer`: `Arc<dyn Mailer>` has a known size, `dyn Mailer` does not.
+// Holds an `Arc<T>`, not a `T`, so `T` can be a trait object such as `dyn Mailer`.
 type BoxedService = Box<dyn Any + Send + Sync>;
 
 struct Binding {

@@ -23,8 +23,6 @@ where
     }
 }
 
-// Queued listeners (M4-15) will be a second kind of erased listener stored here, so
-// `listen` and `dispatch` keep the same signatures when queues arrive.
 type ErasedListener = Box<dyn Fn(&dyn Any, &App) -> Result<()> + Send + Sync>;
 
 struct RegisteredListener {
@@ -42,7 +40,7 @@ impl Events {
     pub(crate) fn listen<E: Event, L: Listener<E>>(&mut self, listener: L) {
         let run: ErasedListener = Box::new(move |event, app| match event.downcast_ref::<E>() {
             Some(event) => listener.handle(event, app),
-            // Unreachable: listeners are stored under `TypeId::of::<E>()`, so only `E` reaches them.
+            // Unreachable: listeners are stored under `TypeId::of::<E>()`.
             None => Ok(()),
         });
         let registered = RegisteredListener {
