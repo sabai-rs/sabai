@@ -1,6 +1,6 @@
 [package]
 name = "sabai-http"
-description = "Router, handlers, extractors, middleware, validation and sessions for the Sabai web framework"
+description = "Router, handlers and their arguments, middleware, validation and sessions for the Sabai web framework"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -15,6 +15,9 @@ hyper-util.workspace = true
 matchit.workspace = true
 sabai-core.workspace = true
 tokio.workspace = true
+
+[dev-dependencies]
+pollster.workspace = true
 
 [lints]
 workspace = true

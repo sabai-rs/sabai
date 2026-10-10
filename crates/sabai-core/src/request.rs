@@ -3,7 +3,7 @@ use http::{HeaderMap, Method, Uri};
 use crate::Body;
 
 /// An incoming HTTP request, with Laravel-style helpers on top of [`http::Request`].
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Request {
     inner: http::Request<Body>,
     route_params: Vec<(String, String)>,
@@ -47,6 +47,11 @@ impl Request {
             .iter()
             .find(|(param, _)| param == name)
             .map(|(_, value)| value.as_str())
+    }
+
+    /// Every parameter of the matched route, in path order, as `(name, value)` pairs.
+    pub fn params(&self) -> &[(String, String)] {
+        &self.route_params
     }
 
     /// Attaches the matched route's parameters; the router calls this before the handler runs.

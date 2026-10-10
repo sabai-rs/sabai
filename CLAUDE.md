@@ -21,7 +21,7 @@ Full roadmap and to-do list: `docs/ROADMAP.md`.
   ```
 - Closures passed to builders (`group`, `transaction`) are called first, then work goes to a non-generic fn.
 - Pluggable parts (middleware, guards, queue/cache/storage/mail drivers) are `Arc<dyn Trait>`, never nested generic layers.
-- `impl Handler` for at most 8 extractor args.
+- `impl Handler` for at most 8 arguments (`FromRequest` types).
 - `sabai-macros` never depends on runtime crates; it emits `::sabai::...` paths.
 - Heavy optional deps (AWS SDK, mail, views) live in their own crate or behind a feature.
 - Integration tests live in one binary: `tests/it/main.rs` with `mod` per area.
@@ -33,7 +33,7 @@ crates/
   sabai/           facade: re-exports + features
   sabai-core/      Error, Request/Response, config, container, contracts (Clock, Cache, Filesystem, Mailer)
   sabai-macros/    proc-macros (syn with minimal features)
-  sabai-http/      router, handlers, extractors, middleware, validation, sessions
+  sabai-http/      router, handlers and their arguments, middleware, validation, sessions
   sabai-orm/       query builder, models, relations, schema builder, migrator
   sabai-auth/      guards, hashing, gates, policies
   sabai-queue/     jobs, drivers, worker

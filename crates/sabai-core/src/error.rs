@@ -9,7 +9,7 @@ use crate::{IntoResponse, Response};
 
 type BoxedSource = Box<dyn StdError + Send + Sync + 'static>;
 
-/// The error every Sabai handler, extractor and service returns; it knows its HTTP status.
+/// The error every Sabai handler, handler argument and service returns; it knows its HTTP status.
 pub struct Error {
     status: StatusCode,
     message: Cow<'static, str>,

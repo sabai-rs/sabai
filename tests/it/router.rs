@@ -1,5 +1,5 @@
 use pollster::block_on;
-use sabai::http::{Router, Routes};
+use sabai::http::{Param, Router, Routes};
 use sabai::{Body, Error, Method, Request, Response, Result, StatusCode};
 
 async fn index() -> &'static str {
@@ -20,6 +20,10 @@ async fn show(request: Request) -> String {
 
 async fn file(request: Request) -> String {
     format!("file {}", request.param("path").unwrap_or("?"))
+}
+
+async fn show_typed(Param(id): Param<u64>, request: Request) -> String {
+    format!("post {id} via {}", request.method())
 }
 
 async fn method_name(request: Request) -> String {
@@ -141,4 +145,17 @@ fn every_method_routes_to_its_own_handler() {
         let response = send(&routes, method.clone(), "/posts/1");
         assert_eq!(response.body().as_bytes(), method.as_str().as_bytes());
     }
+}
+
+#[test]
+fn handlers_take_typed_params_alongside_the_request() {
+    let mut router = Router::new();
+    router.get("/posts/{id}", show_typed);
+    let routes = router.compile().unwrap();
+
+    let found = send(&routes, Method::GET, "/posts/7");
+    let not_a_number = send(&routes, Method::GET, "/posts/abc");
+
+    assert_eq!(found.body().as_bytes(), b"post 7 via GET");
+    assert_eq!(not_a_number.status(), StatusCode::NOT_FOUND);
 }

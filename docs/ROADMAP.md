@@ -42,7 +42,7 @@ sabai/
 │   ├── sabai-core/            # Error, Request/Response, config, container,
 │   │                          # contracts: Clock, Cache, Filesystem, Mailer
 │   ├── sabai-macros/          # derives emit metadata only; no runtime deps
-│   ├── sabai-http/            # router, handlers, extractors, middleware, validation, sessions
+│   ├── sabai-http/            # router, handlers and their arguments, middleware, validation, sessions
 │   ├── sabai-orm/             # query builder, models, relations, schema builder, migrator
 │   ├── sabai-auth/            # guards, hashing, gates, policies
 │   ├── sabai-queue/           # jobs, drivers, worker
@@ -131,7 +131,7 @@ Core (sabai-core)
   - [x] **M0-06b** `Error::context("...")` adds what was being done to an error (`provider app::MailProvider failed to register: mail.host is not set`); `AppBuilder::boot` uses it to name the failing provider
   - [x] **M0-06c** Readable errors from `main`: `Debug` prints like `Display` (`{:#?}` keeps the fields); a port already in use says how to fix it
 - [x] **M0-07** `Request`, `Response`, `Body`, `IntoResponse`
-- [x] **M0-08** Config: layered `.env` + `config/*.toml`, typed access `config.section::<AppConfig>()` via `ConfigSection` (app-wide access through the container in M0-10 and a `Config<T>` extractor in M1-19, not a global)
+- [x] **M0-08** Config: layered `.env` + `config/*.toml`, typed access `config.section::<AppConfig>()` via `ConfigSection` (app-wide access through the container in M0-10 and a `Config<T>` handler argument in M1-19, not a global)
 - [x] **M0-09** Logging via `tracing`; the subscriber accepts extra layers registered by providers (e.g. Sentry). The request-id span moved to M1-33, where the server exists to use it
 - [x] **M0-10** App state / service container: type-map of `Arc<dyn Any + Send + Sync>`
 - [x] **M0-11** Service providers: `trait Provider { fn register(&self, app: &mut App) -> Result<()>; fn boot(&self, app: &App) -> Result<()>; }`; `App::builder(config).provider(..).boot()` returns a read-only `Arc<App>`
@@ -167,15 +167,15 @@ Router: compile-time rules
 - [ ] **M1-11** `route` boxes the handler, then calls a non-generic `push_route()`
   - [ ] **M1-11b** Bring LLVM lines per route down from 204 (M1-01a) toward the budget: function pointers instead of `Arc` for zero-sized handlers, a smaller `get` and `Handler::call`; then set the per-route budget from what is reachable (boxing each handler's future alone costs ~40)
 - [ ] **M1-12** Middleware stored as `Arc<dyn Middleware>`, never nested generic layers
-- [ ] **M1-13** `impl Handler` macro capped at 8 extractor args
-- [ ] **M1-14** Extractor rejections turned into a `Response` by one non-generic helper
+- [x] **M1-13** `impl Handler` macro capped at 8 arguments
+- [x] **M1-14** Rejected handler arguments are a `sabai::Error`, rendered by its one non-generic `into_response`
 
 Controllers
 
 - [ ] **M1-15** Handlers as methods: `.get("/posts", PostController::index)`
 - [ ] **M1-16** `Router::resource("posts", PostController)` maps the 7 REST actions
 - [ ] **M1-17** `api_resource` (no `create`/`edit`)
-- [ ] **M1-18** Controller state via `State<T>` extractor
+- [ ] **M1-18** Controller state via a `State<T>` handler argument
 
 Middleware
 
@@ -192,8 +192,9 @@ Middleware
 
 Request & response
 
-- [ ] **M1-19** Extractors: `Json<T>`, `Form<T>`, `Query<T>`, `Path<T>`, `Header`, `State<T>`
-- [ ] **M1-20** `#[derive(FromRequest)]` for grouping extractors
+- [x] **M1-19a** Handler arguments (Laravel's method injection): async `FromRequest` over `&Request`, `Param<T>` (a value that does not parse is a 404, like `whereNumber`), `Request` itself, up to 8 per handler
+- [ ] **M1-19** More handler arguments: `Json<T>`, `Form<T>`, `Query<T>`, `Header`, `State<T>`, `Param<(A, B)>` for routes with several parameters
+- [ ] **M1-20** `#[derive(FromRequest)]` for grouping handler arguments
 - [ ] **M1-21** Responses: `json()`, `redirect()`, `view()` hook, `download()`
 - [ ] **M1-22** Cookies (signed + encrypted)
 - [ ] **M1-23** Sessions: driver trait, cookie and Redis drivers
@@ -285,7 +286,7 @@ Migrations, schema & data
 
 ## M3: Auth
 
-Goal: session login for web routes and token auth for API routes, both behind one `Auth` extractor.
+Goal: session login for web routes and token auth for API routes, both behind one `Auth` handler argument.
 
 Core
 
@@ -293,7 +294,7 @@ Core
 - [ ] **M3-02** `trait UserProvider` with an ORM-backed default
 - [ ] **M3-03** Password hashing with Argon2id, `Hash::make` / `Hash::check`, rehash on login
 - [ ] **M3-04** Guards as `Arc<dyn Guard>`: `session` and `token`, picked per route group
-- [ ] **M3-05** Extractors: `Auth<User>` (required, else 401/redirect) and `OptionalAuth<User>`
+- [ ] **M3-05** Handler arguments: `Auth<User>` (required, else 401/redirect) and `OptionalAuth<User>`
 - [ ] **M3-06** Middleware: `auth`, `auth("api")`, `guest`
 
 Web (session) flow
@@ -391,7 +392,7 @@ Package API
 
 - [ ] **M6-01** `ServiceProvider` (`register` / `boot`) is the single entry point for every package
 - [ ] **M6-02** One-line install: `App::new().provider(SanctumProvider)`; optional auto-register behind a feature, since it costs compile time
-- [ ] **M6-03** Providers can add routes, middleware, config defaults, migrations, commands, listeners, jobs, guards and extractors
+- [ ] **M6-03** Providers can add routes, middleware, config defaults, migrations, commands, listeners, jobs, guards and handler arguments
 - [ ] **M6-04** `vendor:publish --provider=<name> --tag=config|migrations|views` copies package files into the app
 - [ ] **M6-05** Config merge: package defaults, overridden by the app's `config/<package>.toml`
 
@@ -405,7 +406,7 @@ Model extension (what a MediaLibrary needs)
 Auth extension (what a Sanctum needs)
 
 - [ ] **M6-10** Custom guards registered by name: `auth.extend("sanctum", ...)`
-- [ ] **M6-11** `FromRequest` public and stable, so packages ship their own extractors
+- [ ] **M6-11** `FromRequest` public and stable, so packages ship their own handler arguments
 - [ ] **M6-12** Package commands show up in `sabai list`
 
 Stability & tooling
@@ -426,7 +427,7 @@ Storage (sabai-storage)
 - [ ] **M7-01** `Storage::disk("local" | "public" | "s3")` configured in `config/storage.toml`
 - [ ] **M7-02** `put`, `get`, `exists`, `delete`, `copy`, `move`, `size`, `last_modified`, list files and directories
 - [ ] **M7-03** Streaming reads and writes for large files, never loaded fully into memory
-- [ ] **M7-04** `UploadedFile` extractor (multipart) with `store("avatars")` and size / MIME validation
+- [ ] **M7-04** `UploadedFile` handler argument (multipart) with `store("avatars")` and size / MIME validation
 - [ ] **M7-05** Public URLs and expiring signed URLs (S3 presigned, local via signed route)
 - [ ] **M7-06** Per-file visibility: public or private
 - [ ] **M7-07** `storage:link` command: public disk to `public/storage`
