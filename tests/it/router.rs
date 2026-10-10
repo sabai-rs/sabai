@@ -14,13 +14,24 @@ async fn broken() -> Result<&'static str> {
     Err(Error::forbidden())
 }
 
+async fn show(request: Request) -> String {
+    format!("post {}", request.param("id").unwrap_or("?"))
+}
+
+async fn file(request: Request) -> String {
+    format!("file {}", request.param("path").unwrap_or("?"))
+}
+
+async fn method_name(request: Request) -> String {
+    request.method().to_string()
+}
+
 fn routes() -> Routes {
-    Router::new()
-        .get("/posts", index)
-        .get("/health", health)
-        .get("/admin", broken)
-        .compile()
-        .unwrap()
+    let mut router = Router::new();
+    router.get("/posts", index);
+    router.get("/health", health);
+    router.get("/admin", broken);
+    router.compile().unwrap()
 }
 
 fn send(routes: &Routes, method: Method, path: &str) -> Response {
@@ -72,14 +83,15 @@ fn a_known_path_with_the_wrong_method_is_a_405() {
 
 #[test]
 fn route_mistakes_are_reported_at_boot() {
-    let duplicate = Router::new()
-        .get("/posts", index)
-        .get("/posts", index)
-        .compile();
-    let malformed = Router::new().get("/posts/{id", index).compile();
+    let mut duplicate = Router::new();
+    duplicate.get("/posts", index);
+    duplicate.get("/posts", index);
+    let mut malformed = Router::new();
+    malformed.get("/posts/{id", index);
 
-    let duplicate = duplicate.err().unwrap().to_string();
-    let malformed = malformed.err().unwrap().to_string();
+    let duplicate = duplicate.compile().err().unwrap().to_string();
+    let malformed = malformed.compile().err().unwrap().to_string();
+
     assert_eq!(
         duplicate,
         "route `GET /posts` is invalid: it is defined twice; remove one of them"
@@ -88,4 +100,45 @@ fn route_mistakes_are_reported_at_boot() {
         malformed.starts_with("route `GET /posts/{id` is invalid: "),
         "{malformed}"
     );
+}
+
+#[test]
+fn route_params_reach_the_handler() {
+    let mut router = Router::new();
+    router.get("/posts/{id}", show);
+    router.get("/files/{*path}", file);
+    let routes = router.compile().unwrap();
+
+    assert_eq!(
+        send(&routes, Method::GET, "/posts/7").body().as_bytes(),
+        b"post 7"
+    );
+    assert_eq!(
+        send(&routes, Method::GET, "/files/docs/terms.pdf")
+            .body()
+            .as_bytes(),
+        b"file docs/terms.pdf"
+    );
+}
+
+#[test]
+fn every_method_routes_to_its_own_handler() {
+    let mut router = Router::new();
+    router.get("/posts/{id}", method_name);
+    router.post("/posts/{id}", method_name);
+    router.put("/posts/{id}", method_name);
+    router.patch("/posts/{id}", method_name);
+    router.delete("/posts/{id}", method_name);
+    let routes = router.compile().unwrap();
+
+    for method in [
+        Method::GET,
+        Method::POST,
+        Method::PUT,
+        Method::PATCH,
+        Method::DELETE,
+    ] {
+        let response = send(&routes, method.clone(), "/posts/1");
+        assert_eq!(response.body().as_bytes(), method.as_str().as_bytes());
+    }
 }

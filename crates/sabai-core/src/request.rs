@@ -6,6 +6,7 @@ use crate::Body;
 #[derive(Debug)]
 pub struct Request {
     inner: http::Request<Body>,
+    route_params: Vec<(String, String)>,
 }
 
 impl Request {
@@ -39,6 +40,21 @@ impl Request {
         self.inner.headers().get(name)?.to_str().ok()
     }
 
+    /// A parameter from the matched route, like Laravel's `$request->route('id')`:
+    /// `{id}` in `/posts/{id}` gives `param("id") == Some("7")` for `/posts/7`.
+    pub fn param(&self, name: &str) -> Option<&str> {
+        self.route_params
+            .iter()
+            .find(|(param, _)| param == name)
+            .map(|(_, value)| value.as_str())
+    }
+
+    /// Attaches the matched route's parameters; the router calls this before the handler runs.
+    pub fn with_route_params(mut self, params: Vec<(String, String)>) -> Self {
+        self.route_params = params;
+        self
+    }
+
     /// The request body.
     pub fn body(&self) -> &Body {
         self.inner.body()
@@ -52,7 +68,10 @@ impl Request {
 
 impl From<http::Request<Body>> for Request {
     fn from(inner: http::Request<Body>) -> Self {
-        Self { inner }
+        Self {
+            inner,
+            route_params: Vec::new(),
+        }
     }
 }
 

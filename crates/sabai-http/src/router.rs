@@ -8,8 +8,9 @@ use sabai_core::{Error, IntoResponse, Method, Request, Response, Result, StatusC
 
 use crate::handler::{BoxedHandler, Handler, boxed};
 
-/// Collects routes: `Router::new().get("/posts", index)`. Mistakes such as a duplicate
-/// route are reported by [`Router::compile`] at boot, so building stays a plain chain.
+/// Collects routes, one statement each like Laravel's `routes/web.php`:
+/// `route.get("/posts", index);`. Mistakes such as a duplicate route are reported by
+/// [`Router::compile`] at boot, so declaring routes needs no `?` on every line.
 #[derive(Default)]
 pub struct Router {
     routes: Vec<Route>,
@@ -37,13 +38,37 @@ impl Router {
         Self::default()
     }
 
-    /// Routes `GET path` to `handler`. Paths use `{id}` for parameters.
-    pub fn get<H: Handler<Args>, Args: 'static>(self, path: &str, handler: H) -> Self {
+    /// Routes `GET path` to `handler`. Paths use `{id}` for parameters, read with `request.param("id")`.
+    pub fn get<H: Handler<Args>, Args: 'static>(&mut self, path: &str, handler: H) -> &mut Self {
         let handler = boxed(handler);
         self.push_route(Method::GET, path, handler)
     }
 
-    fn push_route(mut self, method: Method, path: &str, handler: BoxedHandler) -> Self {
+    /// Routes `POST path` to `handler`.
+    pub fn post<H: Handler<Args>, Args: 'static>(&mut self, path: &str, handler: H) -> &mut Self {
+        let handler = boxed(handler);
+        self.push_route(Method::POST, path, handler)
+    }
+
+    /// Routes `PUT path` to `handler`.
+    pub fn put<H: Handler<Args>, Args: 'static>(&mut self, path: &str, handler: H) -> &mut Self {
+        let handler = boxed(handler);
+        self.push_route(Method::PUT, path, handler)
+    }
+
+    /// Routes `PATCH path` to `handler`.
+    pub fn patch<H: Handler<Args>, Args: 'static>(&mut self, path: &str, handler: H) -> &mut Self {
+        let handler = boxed(handler);
+        self.push_route(Method::PATCH, path, handler)
+    }
+
+    /// Routes `DELETE path` to `handler`.
+    pub fn delete<H: Handler<Args>, Args: 'static>(&mut self, path: &str, handler: H) -> &mut Self {
+        let handler = boxed(handler);
+        self.push_route(Method::DELETE, path, handler)
+    }
+
+    fn push_route(&mut self, method: Method, path: &str, handler: BoxedHandler) -> &mut Self {
         self.routes.push(Route {
             method,
             path: path.to_owned(),
@@ -81,6 +106,13 @@ impl Routes {
             return respond(Error::not_found());
         };
         let endpoint = &self.endpoints[*matched.value];
+        // Collected before `request` moves: the params borrow the path inside it.
+        let params: Vec<_> = matched
+            .params
+            .iter()
+            .map(|(name, value)| (name.to_owned(), value.to_owned()))
+            .collect();
+        let request = request.with_route_params(params);
         match endpoint
             .methods
             .iter()

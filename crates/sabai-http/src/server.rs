@@ -90,6 +90,7 @@ fn body_error(error: Box<dyn StdError + Send + Sync>) -> Error {
 mod tests {
     use std::io::{Read, Write};
     use std::net::TcpStream;
+    use std::time::Duration;
 
     use super::*;
 
@@ -100,13 +101,20 @@ mod tests {
     fn running_server() -> std::net::SocketAddr {
         let listener = StdTcpListener::bind("127.0.0.1:0").unwrap();
         let address = listener.local_addr().unwrap();
-        let routes = Arc::new(Router::new().get("/", hello).compile().unwrap());
+        let mut router = Router::new();
+        router.get("/", hello);
+        let routes = Arc::new(router.compile().unwrap());
         std::thread::spawn(move || serve_on(listener, routes));
         address
     }
 
     fn send(address: std::net::SocketAddr, head: &str, body: &[u8]) -> String {
         let mut stream = TcpStream::connect(address).unwrap();
+        // A server that failed to start still accepts the connection (the port is already
+        // bound), so without a timeout the test would wait forever instead of failing.
+        stream
+            .set_read_timeout(Some(Duration::from_secs(5)))
+            .unwrap();
         stream.write_all(head.as_bytes()).unwrap();
         stream.write_all(body).unwrap();
         let mut response = String::new();
