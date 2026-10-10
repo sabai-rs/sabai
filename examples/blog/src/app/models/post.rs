@@ -1,7 +1,7 @@
 use serde::Serialize;
 
 /// A blog post.
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct Post {
     pub id: u64,
     pub title: String,

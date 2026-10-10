@@ -1,14 +1,12 @@
 //! The Sabai blog: the example app that uses every framework feature as it lands.
 
-mod models;
-mod providers;
-mod requests;
+mod app;
 mod routes;
 
 use sabai::log::Logging;
 use sabai::{App, Config, Result};
 
-use crate::providers::AppServiceProvider;
+use crate::app::providers::AppServiceProvider;
 
 fn main() -> Result<()> {
     // The manifest directory, not ".", so `cargo run -p blog` works from the workspace root.
