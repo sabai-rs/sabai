@@ -129,7 +129,7 @@ Core (sabai-core)
 
 - [x] **M0-06** `Error` type with HTTP status mapping
 - [x] **M0-07** `Request`, `Response`, `Body`, `IntoResponse`
-- [ ] **M0-08** Config: layered `.env` + `config/*.toml`, typed access `config::<AppConfig>()`
+- [x] **M0-08** Config: layered `.env` + `config/*.toml`, typed access `config.section::<AppConfig>()` via `ConfigSection` (app-wide access through the container in M0-10 and a `Config<T>` extractor in M1-19, not a global)
 - [ ] **M0-09** Logging via `tracing`, request-id span per request
 - [ ] **M0-10** App state / service container: type-map of `Arc<dyn Any + Send + Sync>`
 - [ ] **M0-11** Service providers: `trait Provider { fn register(&self, app: &mut App); fn boot(&self, app: &App); }`

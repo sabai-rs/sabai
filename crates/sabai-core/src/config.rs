@@ -11,6 +11,12 @@ use crate::{Error, Result};
 use env::{Env, interpolate};
 use error::ConfigError;
 
+/// A typed config section, tied to its file: `KEY = "app"` reads `config/app.toml`.
+pub trait ConfigSection: DeserializeOwned {
+    /// The section name, which is also the file name without `.toml`.
+    const KEY: &'static str;
+}
+
 /// All app config, loaded from `config/*.toml`: `app.toml` becomes the `app` section, and so on.
 #[derive(Debug, Default)]
 pub struct Config {
@@ -21,6 +27,11 @@ impl Config {
     /// Loads `base/config/*.toml`, one section per file, filling `${NAME}` from the env and `base/.env`.
     pub fn load(base: impl AsRef<Path>) -> Result<Self> {
         Self::load_base(base.as_ref())
+    }
+
+    /// Reads the section a [`ConfigSection`] type names, so the key is written once, next to the type.
+    pub fn section<T: ConfigSection>(&self) -> Result<T> {
+        self.get(T::KEY)
     }
 
     fn load_base(base: &Path) -> Result<Self> {

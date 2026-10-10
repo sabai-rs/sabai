@@ -7,7 +7,7 @@ mod request;
 mod response;
 
 pub use body::Body;
-pub use config::Config;
+pub use config::{Config, ConfigSection};
 pub use error::{Error, Result};
 pub use http::{Method, StatusCode};
 pub use request::Request;
