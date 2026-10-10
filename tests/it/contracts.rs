@@ -1,6 +1,7 @@
 //! Contracts implemented the way a driver author would, to prove they are implementable.
 
 mod cache;
+mod mail;
 mod storage;
 
 use std::sync::Mutex;
