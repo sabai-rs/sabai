@@ -1,5 +1,6 @@
 use std::convert::Infallible;
 use std::error::Error as StdError;
+use std::io;
 use std::net::TcpListener as StdTcpListener;
 use std::sync::Arc;
 
@@ -22,11 +23,20 @@ pub fn serve(app: Arc<App>, router: Router) -> Result<()> {
     let routes = Arc::new(router.compile()?);
     let host: String = app.config().get_or("app.host", "127.0.0.1".to_owned())?;
     let port: u16 = app.config().get_or("app.port", 8000)?;
-    let listener = StdTcpListener::bind((host.as_str(), port)).map_err(|error| {
-        Error::from(error).context(format!("could not listen on {host}:{port}"))
-    })?;
+    let listener = StdTcpListener::bind((host.as_str(), port))
+        .map_err(|error| listen_failed(error, &host, port))?;
     log::info!("Sabai is serving on http://{}", listener.local_addr()?);
     serve_on(listener, routes)
+}
+
+fn listen_failed(error: io::Error, host: &str, port: u16) -> Error {
+    let hint = match error.kind() {
+        io::ErrorKind::AddrInUse => {
+            " because another program is using that port; stop it or change `app.port` in config/app.toml"
+        }
+        _ => "",
+    };
+    Error::from(error).context(format!("could not listen on {host}:{port}{hint}"))
 }
 
 pub(crate) fn serve_on(listener: StdTcpListener, routes: Arc<Routes>) -> Result<()> {
@@ -130,6 +140,19 @@ mod tests {
 
         assert!(response.starts_with("HTTP/1.1 200 OK"), "{response}");
         assert!(response.ends_with("Hello, Sabai"));
+    }
+
+    #[test]
+    fn a_port_in_use_explains_how_to_fix_it() {
+        let taken = StdTcpListener::bind("127.0.0.1:0").unwrap();
+        let port = taken.local_addr().unwrap().port();
+        let error = StdTcpListener::bind(("127.0.0.1", port)).unwrap_err();
+
+        let message = listen_failed(error, "127.0.0.1", port).to_string();
+
+        let expected = format!("could not listen on 127.0.0.1:{port} because another program");
+        assert!(message.starts_with(&expected), "{message}");
+        assert!(message.contains("change `app.port` in config/app.toml"));
     }
 
     #[test]
