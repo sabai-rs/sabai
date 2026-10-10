@@ -131,7 +131,7 @@ Core (sabai-core)
   - [x] **M0-06b** `Error::context("...")` adds what was being done to an error (`provider app::MailProvider failed to register: mail.host is not set`); `AppBuilder::boot` uses it to name the failing provider
   - [x] **M0-06c** Readable errors from `main`: `Debug` prints like `Display` (`{:#?}` keeps the fields); a port already in use says how to fix it
 - [x] **M0-07** `Request`, `Response`, `Body`, `IntoResponse`
-- [x] **M0-08** Config: layered `.env` + `config/*.toml`, typed access `config.section::<AppConfig>()` via `ConfigSection` (app-wide access through the container in M0-10 and a `Config<T>` handler argument in M1-19, not a global)
+- [x] **M0-08** Config: layered `.env` + `config/*.toml`, typed access `config.section::<AppConfig>()` via `ConfigSection` (app-wide access through the container in M0-10 and `request.app()?.config()` in handlers since M1-19c, not a global)
 - [x] **M0-09** Logging via `tracing`; the subscriber accepts extra layers registered by providers (e.g. Sentry). The request-id span moved to M1-33, where the server exists to use it
 - [x] **M0-10** App state / service container: type-map of `Arc<dyn Any + Send + Sync>`
 - [x] **M0-11** Service providers: `trait Provider { fn register(&self, app: &mut App) -> Result<()>; fn boot(&self, app: &App) -> Result<()>; }`; `App::builder(config).provider(..).boot()` returns a read-only `Arc<App>`
@@ -176,7 +176,7 @@ Controllers
 - [ ] **M1-15** Handlers as methods: `.get("/posts", PostController::index)`
 - [ ] **M1-16** `Router::resource("posts", PostController)` maps the 7 REST actions
 - [ ] **M1-17** `api_resource` (no `create`/`edit`)
-- [ ] **M1-18** Controller state via a `State<T>` handler argument
+- [ ] **M1-18** Controllers like Laravel's constructor injection: `FromApp` (`fn new(app) -> Result<Self>`) for controllers, services and repositories, `app.make::<T>()` for concrete types, actions as `async fn store(self: Arc<Self>, ...)`, every controller built once when `serve` starts so a missing binding stops startup
 
 Middleware
 
@@ -195,7 +195,8 @@ Request & response
 
 - [x] **M1-19a** Handler arguments (Laravel's method injection): async `FromRequest` over `&Request`, `Param<T>` (a value that does not parse is a 404, like `whereNumber`), `Request` itself, up to 8 per handler
 - [x] **M1-19b** `FormRequest`: a request struct is a handler argument, filled from the query string (`GET`) or a JSON or form body picked by Content-Type (malformed JSON 400, invalid input 422); `Json<T>` responses
-- [ ] **M1-19** More handler arguments: `Header`, `State<T>`, `Param<(A, B)>` for routes with several parameters
+- [x] **M1-19c** `Service<T>` handler argument (method injection: `clock: Service<dyn Clock>`) and `request.app()`, like Laravel's `app()`
+- [ ] **M1-19** `Param<(A, B)>` for routes with several parameters
 - [ ] **M1-20** `#[derive(FromRequest)]` for grouping handler arguments
 - [ ] **M1-21** Responses: `json()`, `redirect()`, `view()` hook, `download()`
 - [ ] **M1-22** Cookies (signed + encrypted)
