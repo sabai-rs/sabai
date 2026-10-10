@@ -128,11 +128,12 @@ Workspace
 Core (sabai-core)
 
 - [x] **M0-06** `Error` type with HTTP status mapping
+  - [ ] **M0-06b** `Error::context("...")` adds what was being done to an error (`provider app::MailProvider failed to register: mail.host is not set`); `AppBuilder::boot` uses it to name the failing provider
 - [x] **M0-07** `Request`, `Response`, `Body`, `IntoResponse`
 - [x] **M0-08** Config: layered `.env` + `config/*.toml`, typed access `config.section::<AppConfig>()` via `ConfigSection` (app-wide access through the container in M0-10 and a `Config<T>` extractor in M1-19, not a global)
 - [x] **M0-09** Logging via `tracing`; the subscriber accepts extra layers registered by providers (e.g. Sentry). The request-id span moved to M1-33, where the server exists to use it
 - [x] **M0-10** App state / service container: type-map of `Arc<dyn Any + Send + Sync>`
-- [ ] **M0-11** Service providers: `trait Provider { fn register(&self, app: &mut App); fn boot(&self, app: &App); }`
+- [x] **M0-11** Service providers: `trait Provider { fn register(&self, app: &mut App) -> Result<()>; fn boot(&self, app: &App) -> Result<()>; }`; `App::builder(config).provider(..).boot()` returns a read-only `Arc<App>`
 - [ ] **M0-12** Events: `dispatch(Event)` with sync listeners (queued listeners come in M4)
 
 * [ ] **M0-13** Contracts from day one: `Clock`, `Cache`, `Filesystem`, `Mailer` traits, so fakes, the scheduler and packages plug in
