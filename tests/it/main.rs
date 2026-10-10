@@ -8,6 +8,7 @@ mod app;
 mod config;
 mod container;
 mod error;
+mod events;
 mod facade;
 mod log;
 mod request;
