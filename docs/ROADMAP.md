@@ -165,7 +165,7 @@ Router: compile-time rules
 
 - [ ] **M1-10** `group`/`merge` run the closure, then call a non-generic `mount()`
 - [ ] **M1-11** `route` boxes the handler, then calls a non-generic `push_route()`
-  - [ ] **M1-11b** Bring LLVM lines per route down from 204 (M1-01a) toward the budget: function pointers instead of `Arc` for zero-sized handlers, a smaller `get` and `Handler::call`; then set the per-route budget from what is reachable (boxing each handler's future alone costs ~40)
+  - [x] **M1-11b** Measured LLVM lines per route and kept the per-handler design: about 180 for a plain route and 450 with arguments. Sharing code per `(Args, R)` shape halves routes that share a shape but doubles routes that each return their own type, which is how Sabai apps are written (`Json<Post>`, `Json<Vec<Tag>>`). Boxing, `Arc::new` and `Router::get` alone cost about 100 per route, so the budget is 200 plain and 500 with arguments
 - [ ] **M1-12** Middleware stored as `Arc<dyn Middleware>`, never nested generic layers
 - [x] **M1-13** `impl Handler` macro capped at 8 arguments
 - [x] **M1-14** Rejected handler arguments are a `sabai::Error`, rendered by its one non-generic `into_response`
