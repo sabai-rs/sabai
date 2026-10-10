@@ -1,5 +1,7 @@
 //! The Sabai blog: the example app that uses every framework feature as it lands.
 
+mod models;
+mod requests;
 mod routes;
 
 use sabai::log::Logging;

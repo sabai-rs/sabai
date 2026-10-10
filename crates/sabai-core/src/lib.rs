@@ -20,4 +20,4 @@ pub use error::{Error, Result};
 pub use events::{Event, Listener};
 pub use http::{Method, StatusCode};
 pub use request::Request;
-pub use response::{IntoResponse, Response};
+pub use response::{IntoResponse, Json, Response};

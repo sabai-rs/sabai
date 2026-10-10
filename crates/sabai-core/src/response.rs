@@ -1,7 +1,8 @@
 use http::StatusCode;
 use http::header::{CONTENT_TYPE, HeaderValue};
+use serde::Serialize;
 
-use crate::Body;
+use crate::{Body, Error};
 
 /// An HTTP response with a Sabai [`Body`].
 pub type Response = http::Response<Body>;
@@ -63,6 +64,24 @@ impl<T: IntoResponse, E: IntoResponse> IntoResponse for Result<T, E> {
     }
 }
 
+/// A JSON response, like Laravel's `response()->json($post)`: `Json(post)`.
+pub struct Json<T>(pub T);
+
+impl<T: Serialize> IntoResponse for Json<T> {
+    fn into_response(self) -> Response {
+        json_or_error(serde_json::to_string(&self.0))
+    }
+}
+
+fn json_or_error(body: serde_json::Result<String>) -> Response {
+    match body {
+        Ok(body) => json(body),
+        Err(error) => Error::from(error)
+            .context("could not serialize the response as JSON")
+            .into_response(),
+    }
+}
+
 fn plain_text(body: Body) -> Response {
     with_content_type(body, "text/plain; charset=utf-8")
 }
@@ -97,6 +116,14 @@ mod tests {
             "text/plain; charset=utf-8"
         );
         assert_eq!(response.body().as_bytes(), b"Hello, Sabai");
+    }
+
+    #[test]
+    fn json_responds_with_the_serialized_value() {
+        let response = Json(vec!["sabai", "rust"]).into_response();
+
+        assert_eq!(response.headers()[CONTENT_TYPE], "application/json");
+        assert_eq!(response.body().as_bytes(), br#"["sabai","rust"]"#);
     }
 
     #[test]

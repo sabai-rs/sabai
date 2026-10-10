@@ -9,6 +9,7 @@ publish = false
 
 [dependencies]
 sabai.workspace = true
+serde = { workspace = true, features = ["derive"] }
 
 [lints]
 workspace = true

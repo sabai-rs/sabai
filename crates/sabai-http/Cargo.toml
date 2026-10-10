@@ -14,10 +14,14 @@ hyper.workspace = true
 hyper-util.workspace = true
 matchit.workspace = true
 sabai-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_urlencoded.workspace = true
 tokio.workspace = true
 
 [dev-dependencies]
 pollster.workspace = true
+serde = { workspace = true, features = ["derive"] }
 
 [lints]
 workspace = true
