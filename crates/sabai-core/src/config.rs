@@ -41,8 +41,17 @@ impl Config {
 
     /// Reads a section or a dotted key, like Laravel's `config('app.name')`, into any deserializable type.
     pub fn get<T: DeserializeOwned>(&self, key: &str) -> Result<T> {
-        let value = self.value(key)?;
+        let value = self.lookup(key).ok_or_else(|| missing(key))?;
         T::deserialize(value).map_err(|source| invalid(key, source))
+    }
+
+    /// Like [`Config::get`], but `default` when the key is not set. A key that is set with
+    /// the wrong type is still an error, so a typo in a config file never goes unnoticed.
+    pub fn get_or<T: DeserializeOwned>(&self, key: &str, default: T) -> Result<T> {
+        match self.lookup(key) {
+            Some(value) => T::deserialize(value).map_err(|source| invalid(key, source)),
+            None => Ok(default),
+        }
     }
 
     fn load_dir(dir: &Path, env: &Env) -> Result<Self> {
@@ -88,13 +97,12 @@ impl Config {
         Ok(())
     }
 
-    fn value(&self, key: &str) -> Result<&Value> {
+    fn lookup(&self, key: &str) -> Option<&Value> {
         let mut segments = key.split('.');
         segments
             .next()
             .and_then(|section| self.root.get(section))
             .and_then(|section| segments.try_fold(section, |value, segment| value.get(segment)))
-            .ok_or_else(|| missing(key))
     }
 }
 
@@ -162,6 +170,19 @@ mod tests {
             error.to_string(),
             "config key `mail.host` is not set; add it to `config/mail.toml`"
         );
+    }
+
+    #[test]
+    fn get_or_falls_back_only_when_the_key_is_missing() {
+        let config = config("app", "port = \"eighty\"\n");
+
+        assert_eq!(
+            config
+                .get_or("app.host", String::from("127.0.0.1"))
+                .unwrap(),
+            "127.0.0.1"
+        );
+        assert!(config.get_or("app.port", 3000_u16).is_err());
     }
 
     #[test]

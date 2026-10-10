@@ -8,8 +8,13 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+http.workspace = true
+http-body-util.workspace = true
+hyper.workspace = true
+hyper-util.workspace = true
 matchit.workspace = true
 sabai-core.workspace = true
+tokio.workspace = true
 
 [lints]
 workspace = true

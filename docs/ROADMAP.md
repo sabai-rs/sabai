@@ -150,6 +150,7 @@ Goal: Laravel-style routes, controllers and validation built fresh on hyper + ma
 Router
 
 - [ ] **M1-01** `get/post/put/patch/delete`, path params, `{*rest}` wildcard
+  - [ ] **M1-01d** Graceful shutdown on Ctrl-C / SIGTERM: stop accepting, let in-flight requests finish (measure tokio `macros` / `signal` cost first)
 - [ ] **M1-02** Groups with prefix, group middleware, `merge`
 - [ ] **M1-03** Named routes and `url_for` with percent-encoding
 - [ ] **M1-04** Per-route and per-group body limits
@@ -163,6 +164,7 @@ Router: compile-time rules
 
 - [ ] **M1-10** `group`/`merge` run the closure, then call a non-generic `mount()`
 - [ ] **M1-11** `route` boxes the handler, then calls a non-generic `push_route()`
+  - [ ] **M1-11b** Bring LLVM lines per route down from 204 (M1-01a) toward the budget: function pointers instead of `Arc` for zero-sized handlers, a smaller `get` and `Handler::call`; then set the per-route budget from what is reachable (boxing each handler's future alone costs ~40)
 - [ ] **M1-12** Middleware stored as `Arc<dyn Middleware>`, never nested generic layers
 - [ ] **M1-13** `impl Handler` macro capped at 8 extractor args
 - [ ] **M1-14** Extractor rejections turned into a `Response` by one non-generic helper
