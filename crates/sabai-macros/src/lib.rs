@@ -1,6 +1,8 @@
-//! Derive macros for Sabai. They emit metadata only and refer to runtime items through `::sabai::...` paths.
+//! Derive macros for Sabai. They emit metadata only and refer to runtime items through `::sabai::...`,
+//! or whatever name the calling crate gives `sabai` or `sabai-core` in its Cargo.toml.
 
 mod config_section;
+mod paths;
 
 use proc_macro::TokenStream;
 use syn::{DeriveInput, parse_macro_input};

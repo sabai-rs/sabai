@@ -126,6 +126,22 @@ mod tests {
         config
     }
 
+    #[derive(serde::Deserialize, sabai_macros::ConfigSection)]
+    struct MailConfig {
+        host: String,
+    }
+
+    #[test]
+    fn the_derive_works_inside_sabai_core_itself() {
+        let config = config("mail", "host = \"smtp.example.com\"\n");
+
+        assert_eq!(MailConfig::KEY, "mail");
+        assert_eq!(
+            config.section::<MailConfig>().unwrap().host,
+            "smtp.example.com"
+        );
+    }
+
     #[test]
     fn dotted_keys_reach_nested_values() {
         let config = config("database", "[connections.pg]\nport = 5432\n");

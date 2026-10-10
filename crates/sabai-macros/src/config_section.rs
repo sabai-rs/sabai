@@ -2,12 +2,15 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{DeriveInput, Error, LitStr, Result};
 
+use crate::paths;
+
 pub(crate) fn expand(input: &DeriveInput) -> Result<TokenStream> {
     let key = section_key(input)?;
+    let core = paths::core()?;
     let name = &input.ident;
     let (impl_generics, type_generics, where_clause) = input.generics.split_for_impl();
     Ok(quote! {
-        impl #impl_generics ::sabai::ConfigSection for #name #type_generics #where_clause {
+        impl #impl_generics #core::ConfigSection for #name #type_generics #where_clause {
             const KEY: &'static str = #key;
         }
     })

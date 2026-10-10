@@ -141,7 +141,7 @@ Core (sabai-core)
 Macros (sabai-macros)
 
 - [x] **M0-14** Crate skeleton with minimal `syn` features (`derive`, `parsing`, `printing`, `proc-macro`); first derive: `ConfigSection` (`MailConfig` reads `config/mail.toml`, or `#[config("mail")]`)
-- [ ] **M0-15** `proc-macro-crate` lookup so macros work via facade or sub-crates
+- [x] **M0-15** `proc-macro-crate` lookup so macros work via facade or sub-crates: `::sabai`, a renamed `sabai`, `::sabai_core`, or `crate` inside `sabai-core`
 
 ## M1: HTTP layer & controllers
 
