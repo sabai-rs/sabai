@@ -57,7 +57,7 @@ sabai/
 │   ├── sabai-sanctum/
 │   └── sabai-media/
 ├── templates/                 # `sabai new` skeletons: api, web, minimal
-├── examples/todo-app/
+├── examples/blog/
 ├── docs/                      # getsabai.dev source
 └── tests/it/main.rs           # one integration-test binary
 ```
@@ -510,7 +510,7 @@ Testing (sabai-testing)
 
 Docs & example
 
-- [ ] **DOC-01** `examples/todo-app` exercising every milestone
+- [ ] **DOC-01** `examples/blog` exercising every milestone, with the same nouns as the docs (posts, comments, users)
 - [ ] **DOC-02** getsabai.dev docs site: install, routing, controllers, ORM, auth, queue, CLI
 - [ ] **DOC-03** "Coming from Laravel" page mapping each Laravel concept to Sabai
 
