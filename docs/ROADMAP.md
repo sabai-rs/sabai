@@ -131,7 +131,7 @@ Core (sabai-core)
 - [x] **M0-07** `Request`, `Response`, `Body`, `IntoResponse`
 - [x] **M0-08** Config: layered `.env` + `config/*.toml`, typed access `config.section::<AppConfig>()` via `ConfigSection` (app-wide access through the container in M0-10 and a `Config<T>` extractor in M1-19, not a global)
 - [x] **M0-09** Logging via `tracing`; the subscriber accepts extra layers registered by providers (e.g. Sentry). The request-id span moved to M1-33, where the server exists to use it
-- [ ] **M0-10** App state / service container: type-map of `Arc<dyn Any + Send + Sync>`
+- [x] **M0-10** App state / service container: type-map of `Arc<dyn Any + Send + Sync>`
 - [ ] **M0-11** Service providers: `trait Provider { fn register(&self, app: &mut App); fn boot(&self, app: &App); }`
 - [ ] **M0-12** Events: `dispatch(Event)` with sync listeners (queued listeners come in M4)
 
