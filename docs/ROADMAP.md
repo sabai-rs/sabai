@@ -160,7 +160,7 @@ Router
   - [ ] **M1-02c** `route.merge(router)` for routes a package builds on its own
 - [ ] **M1-03** Named routes and `route("posts.show", ...)` URLs with percent-encoding, like Laravel's `route()` helper
   - [x] **M1-03a** `route.get(...).name("posts.show")` and `routes.route("posts.show", &[("id", 7)])`: values percent-encoded, unused params become the query string, a duplicate name stops boot
-  - [ ] **M1-03b** A `Url` handler argument, `url.route("posts.show", &[("id", 7)])`, used by the blog for the `Location` of a new post
+  - [ ] **M1-03b** A `Url` handler argument, `url.route(...)`, with redirects (`redirect()->route()`, M1-21), where web pages need it; feature tests use `route(...)` through the test client (QA-01)
   - [ ] **M1-03c** Group name prefixes, `prefix("/admin").name("admin.")`, and absolute URLs from `app.url`
 - [ ] **M1-04** Per-route and per-group body limits
 - [ ] **M1-05** Auto `HEAD`, `405` with `Allow` header, panic catching
@@ -516,7 +516,9 @@ Developer experience
 
 Testing (sabai-testing)
 
-- [ ] **QA-01** In-process test client: `app.get("/posts").await.assert_ok().assert_json(...)`
+- [ ] **QA-01** In-process test client, like Laravel's feature tests: `app().get_json(route(ROUTE)).assert_status(200).assert_json_fragment(...)`
+  - [x] **QA-01a** `TestApp` (prepares routes like `serve`, runs handlers on tokio, plain `#[test]`), `get_json(route(ROUTE).with("id", 1))`/`post_json(route(ROUTE), json!(...))` with `route()` as a free function like Laravel's helper, `assert_status`/`assert_ok`/`assert_created`/`assert_not_found`/`assert_json_fragment`; the blog has `src/lib.rs` and `tests/feature/<area>/<controller>/<action>.rs` in one test binary
+  - [ ] **QA-01b** `assert_json_count(n, "data")`, `assert_json_structure(...)`, `assert_json_path`, `put_json`/`patch_json`/`delete_json`
 - [ ] **QA-02** `acting_as(&user)` for authenticated tests
 - [ ] **QA-03** `RefreshDatabase`: migrate once per run, one rolled-back transaction per test
 - [ ] **QA-04** DB assertions: `assert_database_has`, `assert_database_missing`, `assert_soft_deleted`, `assert_model_exists`

@@ -13,6 +13,7 @@ name = "blog"
 version = "0.0.0"
 dependencies = [
  "sabai",
+ "sabai-testing",
  "serde",
 ]
 
@@ -354,6 +355,14 @@ version = "0.0.0"
 [[package]]
 name = "sabai-testing"
 version = "0.0.0"
+dependencies = [
+ "http",
+ "sabai-core",
+ "sabai-http",
+ "serde",
+ "serde_json",
+ "tokio",
+]
 
 [[package]]
 name = "serde"

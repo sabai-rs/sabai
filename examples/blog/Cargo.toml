@@ -11,5 +11,8 @@ publish = false
 sabai.workspace = true
 serde = { workspace = true, features = ["derive"] }
 
+[dev-dependencies]
+sabai-testing.workspace = true
+
 [lints]
 workspace = true
