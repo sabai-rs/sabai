@@ -27,6 +27,20 @@ Compile-time rules that apply to every item below:
 - `sabai-macros` never depends on runtime crates; it emits `::sabai::...` paths.
 - Integration tests live in one binary: `tests/it/main.rs`.
 
+## Now: walking skeleton
+
+`CLAUDE.md` asks for an end-to-end slice before deepening any milestone: `sabai new blog` -> `sabai migrate` -> `sabai serve` -> `GET /posts` returns JSON from the database. M1 went deep first; these come next, in this order, and anything else waits unless it blocks one of them.
+
+1. **M1-16 / M1-17** `api_resource("posts", PostController)`: closes M1's "done when"
+2. **M2-01** A Postgres pool from config
+3. **M2-19 / M2-21 / M2-24** (smallest part) Raw `.sql` migrations, the `migrations` table, `migrate`
+4. **M2-09 / M2-10** (smallest part) `#[derive(Model)]` metadata and `all`, `find_or_fail`, `create`
+5. The blog's `PostRepository` on the database instead of in memory, with feature tests on a test database (QA-03, smallest part)
+6. **M5-01 / M5-02 / M5-08 / M5-10** (smallest part) `sabai new`, `sabai serve`, `sabai migrate`
+7. **M0-05b** Compile budgets in CI, measured on the skeleton
+
+After the skeleton: middleware (M1-29 to M1-33, which auth needs), then `authorize()` (M1-57), array rules (M1-51), and the rest of each milestone in order.
+
 ## Folder structure
 
 Two trees: the framework repo, split into crates by external dependency so apps only compile what they use, and the app that `sabai new` generates, laid out like Laravel.
@@ -153,6 +167,7 @@ Goal: Laravel-style routes, controllers and validation built fresh on hyper + ma
 Router
 
 - [ ] **M1-01** `get/post/put/patch/delete`, path params, `{*rest}` wildcard
+  - [x] **M1-01a** `get`/`post`/`put`/`patch`/`delete`, `{id}` params and the `{*rest}` wildcard, matched by `matchit`
   - [ ] **M1-01d** Graceful shutdown on Ctrl-C / SIGTERM: stop accepting, let in-flight requests finish (measure tokio `macros` / `signal` cost first)
 - [ ] **M1-02** Groups with prefix, group middleware, `merge`
   - [x] **M1-02a** Prefix groups like Laravel's `Route::prefix('api')->group(...)`: `route.prefix("/api").group(|route| ...)` or `.group(api::routes)`, nestable; the closure runs on a fresh `Router` and a non-generic `mount_group` adds the prefix
@@ -171,8 +186,8 @@ Router
 
 Router: compile-time rules
 
-- [ ] **M1-10** `group`/`merge` run the closure, then call a non-generic `mount()`
-- [ ] **M1-11** `route` boxes the handler, then calls a non-generic `push_route()`
+- [x] **M1-10** `group` runs the closure on a fresh `Router`, then calls the non-generic `mount_group()` (M1-02a); `merge` (M1-02c) must do the same
+- [x] **M1-11** `route.get(...)` boxes the handler, then calls the non-generic `push_route()`
   - [x] **M1-11b** Measured LLVM lines per route and kept the per-handler design: about 180 for a plain route and 450 with arguments. Sharing code per `(Args, R)` shape halves routes that share a shape but doubles routes that each return their own type, which is how Sabai apps are written (`Json<Post>`, `Json<Vec<Tag>>`). Boxing, `Arc::new` and `Router::get` alone cost about 100 per route, so the budget is 200 plain and 500 with arguments
 - [ ] **M1-12** Middleware stored as `Arc<dyn Middleware>`, never nested generic layers
 - [x] **M1-13** `impl Handler` macro capped at 8 arguments
@@ -180,7 +195,7 @@ Router: compile-time rules
 
 Controllers
 
-- [ ] **M1-15** Handlers as methods: `.get("/posts", PostController::index)`
+- [x] **M1-15** Handlers as methods: `.get("/posts/{id}", PostController::show)`, with `self: Arc<Self>` (M1-18)
 - [ ] **M1-16** `Router::resource("posts", PostController)` maps the 7 REST actions
 - [ ] **M1-17** `api_resource` (no `create`/`edit`)
 - [x] **M1-18** Controllers like Laravel's constructor injection: `FromApp` (`fn new(app) -> Result<Self>`) for controllers, services and repositories, `app.make::<T>()` for concrete types, actions as `async fn store(self: Arc<Self>, ...)`, every controller built once when `serve` starts so a missing binding stops startup
@@ -209,7 +224,7 @@ Request & response
 - [ ] **M1-19** `Param<(A, B)>` for routes with several parameters
 - [x] **M1-19d** `Request` is one `Arc`, so taking `request: Request` as a handler argument costs a counter increment instead of copying every header (222ns to 21ns with 8 headers), in any argument position; `with_route_params` and `with_app` change it in place with `Arc::make_mut` before any clone exists
 - [x] **M1-19e** Measured, not kept: JSON through a non-generic `serde_json::Value` cut the blog from 12,924 to 10,198 LLVM lines (~330 per extra request struct) but did not change rebuild time, doubled JSON parse time (317ns to 627ns) and let duplicate keys through; every input through `Value` cut 30% but broke typed form fields (`draft=true` into `bool`). Revisit with M1-28
-- [ ] **M1-19f** Hot-path trims, each kept only if a benchmark shows it: route parameter names as `Arc<str>` shared from the endpoint (one allocation per parameter instead of two), a cheap hasher for the `TypeId` maps in `Container` and `singleton`, and `Error` as a `Box` around its fields so every `Result` is one pointer wide
+- [ ] **M1-19f** Hot-path trims, each kept only if a benchmark shows it: route parameter names as `Arc<str>` shared from the endpoint (one allocation per parameter instead of two), a cheap hasher for the `TypeId` maps in `Container` and `singleton`, and `Error` as a `Box` around its fields so every `Result` is one pointer wide, and `FormRequest::rules()` built once in `prepare` instead of on every request
 - [ ] **M1-20** `#[derive(FromRequest)]` for grouping handler arguments
 - [ ] **M1-21** Responses: `json()`, `redirect()`, `view()` hook, `download()`
 - [ ] **M1-22** Cookies (signed + encrypted)
@@ -222,7 +237,7 @@ Request & response
 - [ ] **M1-42** Method spoofing (`_method=PUT`) for HTML forms
 - [ ] **M1-43** Flash data and old input for redirect-back flows
 - [ ] **M1-44** Locale from `Accept-Language`
-- [ ] **M1-45** `IntoResponse` for `(StatusCode, headers, body)` tuples and `Result<T, E>`
+- [ ] **M1-45** `IntoResponse` for `(StatusCode, headers, body)` tuples; `(StatusCode, T)` and `Result<T, E>` are done
 - [ ] **M1-46** Status helpers: `created()` with `Location`, `no_content()`, `accepted()`
 - [ ] **M1-47** Redirects: `back()`, `to_route("posts.show", params)`, `.with("status", "Saved")`
 - [ ] **M1-48** Streaming responses, Server-Sent Events, `file()` inline with range requests
@@ -230,13 +245,13 @@ Request & response
 
 Validation
 
-- [ ] **M1-26** `#[derive(Validate)]` emitting rule metadata only
-- [ ] **M1-27** Rules: `required`, `email`, `min`, `max`, `in`, `confirmed`, `unique` (after M2)
+- [x] **M1-26** Dropped: rules are typed functions returned by `fn rules()` (M1-28b), so no derive is needed
+- [ ] **M1-27** More rules: `email`, `min`, `in`, `array`, `confirmed`, `unique` (after M2); `required`, `sometimes`, `string` and `max` are done (M1-28b)
 - [x] **M1-28** `FormRequest` validation returns `422` with field errors, like Laravel; a wrong type (`title` not a string, `draft=yes` for a `bool`) also lands under its field instead of one serde sentence. Revisit M1-19e here: one lenient deserializer over `Value` that reads form strings into `bool` and numbers like Laravel's `boolean` and `integer` rules, which also cut ~30% of LLVM lines
   - [x] **M1-28a** `Error::with_messages(&[("email", "...")])`: a `422` with `{"message": "... (and 1 more error)", "errors": {"email": ["..."]}}`, fields in the order given, like Laravel's `ValidationException::withMessages`
   - [x] **M1-28b** Typed rules in `sabai::http::rules`: `Rules::new().field("title", [required(), string(), max(255)])` and `rules.validate(&input)`; `required` (stops the field, like Laravel), `sometimes`, `string`, `max` (characters, number or items), Laravel's English messages with `device_uuid` read as "device uuid"
   - [x] **M1-28c** `FormRequest::rules()` runs on the raw input (JSON as sent, form fields as strings) before the struct is built, so a missing or wrong-typed field is a field error, not a serde sentence; parsing and validating are not generic, only the final deserialize is; the blog's `StorePostRequest` has rules and feature tests
-- [ ] **M1-50** Fixed error shape: `{"message": ..., "errors": {"email": ["..."]}}`; apps can swap the renderer for their own shape, such as `{"errors": [{"ref": "email", "type": "validation", "desc": [...]}]}`
+- [ ] **M1-50** Apps swap the error renderer for their own shape, such as `{"errors": [{"ref": "email", "type": "validation", "desc": [...]}]}`; Laravel's default `{"message", "errors": {"email": [...]}}` is done (M1-28a)
 - [ ] **M1-51** Nested and array fields: `items.*.qty`
 - [ ] **M1-52** Conditional rules: `nullable`, `sometimes`, `required_if`, `required_with`, `bail`
 - [ ] **M1-53** More rules: `regex`, `url`, `uuid`, `date`, `before`/`after`, `numeric`, `integer`, `between`, `same`, `exists`, `enum`
