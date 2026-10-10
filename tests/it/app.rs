@@ -89,6 +89,9 @@ fn a_failing_provider_stops_boot_with_its_error() {
         .boot()
         .unwrap_err();
 
-    assert_eq!(error.to_string(), "mail.host is not set");
+    assert_eq!(
+        error.to_string(),
+        "provider `it::app::BrokenProvider` failed to register: mail.host is not set"
+    );
     assert!(journal.lock().unwrap().is_empty());
 }

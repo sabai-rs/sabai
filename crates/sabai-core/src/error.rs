@@ -15,6 +15,7 @@ pub struct Error {
     status: StatusCode,
     message: Cow<'static, str>,
     source: Option<BoxedSource>,
+    context: Vec<Cow<'static, str>>,
 }
 
 /// `Result` with [`Error`] as the default error type.
@@ -69,7 +70,18 @@ impl Error {
             status,
             message,
             source,
+            context: Vec::new(),
         }
+    }
+
+    /// Adds what was being done when this error happened; shown in logs, never to the client.
+    pub fn context(self, context: impl Into<Cow<'static, str>>) -> Self {
+        self.push_context(context.into())
+    }
+
+    fn push_context(mut self, context: Cow<'static, str>) -> Self {
+        self.context.push(context);
+        self
     }
 
     /// The HTTP status this error responds with.
@@ -92,6 +104,9 @@ impl Error {
 // Clients only ever see `message`, through `IntoResponse`.
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for context in self.context.iter().rev() {
+            write!(f, "{context}: ")?;
+        }
         match &self.source {
             Some(source) => write!(f, "{source}"),
             None => f.write_str(&self.message),
@@ -179,5 +194,26 @@ mod tests {
             response.body().as_bytes(),
             br#"{"message":"Title \"Hello\" is taken"}"#
         );
+    }
+
+    #[test]
+    fn context_reads_outermost_first_in_logs() {
+        let error = Error::from("abc".parse::<i32>().unwrap_err())
+            .context("reading the port")
+            .context("booting the app");
+
+        assert_eq!(
+            error.to_string(),
+            "booting the app: reading the port: invalid digit found in string"
+        );
+    }
+
+    #[test]
+    fn context_never_reaches_the_client() {
+        let response = Error::not_found()
+            .context("looking up post 7")
+            .into_response();
+
+        assert_eq!(response.body().as_bytes(), br#"{"message":"Not Found"}"#);
     }
 }
