@@ -130,7 +130,7 @@ Core (sabai-core)
 - [x] **M0-06** `Error` type with HTTP status mapping
 - [x] **M0-07** `Request`, `Response`, `Body`, `IntoResponse`
 - [x] **M0-08** Config: layered `.env` + `config/*.toml`, typed access `config.section::<AppConfig>()` via `ConfigSection` (app-wide access through the container in M0-10 and a `Config<T>` extractor in M1-19, not a global)
-- [ ] **M0-09** Logging via `tracing`, request-id span per request
+- [ ] **M0-09** Logging via `tracing`, request-id span per request; the subscriber accepts extra layers registered by providers (e.g. Sentry)
 - [ ] **M0-10** App state / service container: type-map of `Arc<dyn Any + Send + Sync>`
 - [ ] **M0-11** Service providers: `trait Provider { fn register(&self, app: &mut App); fn boot(&self, app: &App); }`
 - [ ] **M0-12** Events: `dispatch(Event)` with sync listeners (queued listeners come in M4)
@@ -205,7 +205,7 @@ Request & response
 - [ ] **M1-46** Status helpers: `created()` with `Location`, `no_content()`, `accepted()`
 - [ ] **M1-47** Redirects: `back()`, `to_route("posts.show", params)`, `.with("status", "Saved")`
 - [ ] **M1-48** Streaming responses, Server-Sent Events, `file()` inline with range requests
-- [ ] **M1-49** Central exception handler: every error becomes one response shape (`{message, errors}`) by default, replaceable by the app via a registered error renderer (`Arc<dyn ErrorRenderer>`), debug page in dev only, no internals in production
+- [ ] **M1-49** Central exception handler: every error becomes one response shape (`{message, errors}`) by default, replaceable by the app via a registered error renderer (`Arc<dyn ErrorRenderer>`); before rendering, errors (5xx by default) go to every registered `Arc<dyn ErrorReporter>`, like Laravel's report/render split; debug page in dev only, no internals in production
 
 Validation
 
@@ -337,7 +337,7 @@ Drivers (`Arc<dyn QueueDriver>`)
 Worker
 
 - [ ] **M4-09** `queue:work` with concurrency, queue priority list, graceful shutdown on SIGTERM
-- [ ] **M4-10** Retries with exponential backoff, then `failed_jobs` table
+- [ ] **M4-10** Retries with exponential backoff, then `failed_jobs` table; final failures go to the same error reporters as HTTP errors
 - [ ] **M4-11** `queue:failed`, `queue:retry {id}`, `queue:flush`
 - [ ] **M4-12** Job middleware: rate limit, without-overlapping
 
@@ -410,6 +410,7 @@ Stability & tooling
 - [ ] **M6-15** `sabai-testing` boots a test app with just one provider, for package tests
 - [ ] **M6-16** Dogfood: ship `sabai-sanctum` and `sabai-media` as separate crates, public APIs only
 - [ ] **M6-17** Package directory page on getsabai.dev
+- [ ] **M6-18** `sabai-sentry` package: an `ErrorReporter` plus a `tracing` layer, DSN, release and environment from `config/sentry.toml` (`${SENTRY_DSN}`), request context (route, user id, request id); public API only, so the `sentry` SDK stays out of apps that skip it
 
 ## M7: Storage, cache, mail & app services
 

@@ -88,12 +88,13 @@ impl Error {
     }
 }
 
+// Display is for developers (logs, boot failures), so it shows the cause when there is one.
+// Clients only ever see `message`, through `IntoResponse`.
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.message)?;
         match &self.source {
-            Some(source) => write!(f, ": {source}"),
-            None => Ok(()),
+            Some(source) => write!(f, "{source}"),
+            None => f.write_str(&self.message),
         }
     }
 }
@@ -132,6 +133,7 @@ mod tests {
 
         assert_eq!(error.status(), StatusCode::CONFLICT);
         assert_eq!(error.message(), "Email already taken");
+        assert_eq!(error.to_string(), "Email already taken");
         assert!(error.source().is_none());
     }
 
@@ -146,10 +148,7 @@ mod tests {
         assert_eq!(error.status(), StatusCode::INTERNAL_SERVER_ERROR);
         assert_eq!(error.message(), "Server Error");
         assert!(error.source().is_some());
-        assert_eq!(
-            error.to_string(),
-            "Server Error: invalid digit found in string"
-        );
+        assert_eq!(error.to_string(), "invalid digit found in string");
     }
 
     #[test]
