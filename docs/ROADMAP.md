@@ -120,7 +120,7 @@ Workspace
 - [x] **M0-01** New repo `sabai-rs/sabai`, fresh workspace (no code from oxalin)
 - [x] **M0-02** Split into `crates/sabai-*` with `[workspace.dependencies]`
 - [x] **M0-03** `sabai` facade crate with features: `orm`, `auth`, `queue`, `full`
-- [x] **M0-04** Dev profile in `Cargo.toml`: `debug = "line-tables-only"`; no forced linker (ld-prime / rust-lld are already fast). `build-override opt-level = 3` was measured and dropped: +3 s clean build, no gain on rebuilds even with 200 serde derives (re-measure at M0-14)
+- [x] **M0-04** Dev profile in `Cargo.toml`: `debug = "line-tables-only"`; no forced linker (ld-prime / rust-lld are already fast). `build-override opt-level = 3` was measured and dropped: +3 s clean build, no gain on rebuilds even with 200 serde derives; re-measured at M0-14 with minimal `syn`: still +1.8 s
 - [ ] **M0-05** CI: `cargo build --timings` and `cargo llvm-lines` on PRs, fail when over the compile budgets below
   - [x] **M0-05a** CI reports: fmt, clippy, tests (default and all features), MSRV check, `--timings` artifact, `llvm-lines` summary
   - [ ] **M0-05b** Fail CI when over the compile budgets (needs the walking-skeleton app to measure)
@@ -140,7 +140,7 @@ Core (sabai-core)
 
 Macros (sabai-macros)
 
-- [ ] **M0-14** Crate skeleton with minimal `syn` features
+- [x] **M0-14** Crate skeleton with minimal `syn` features (`derive`, `parsing`, `printing`, `proc-macro`); first derive: `ConfigSection` (`MailConfig` reads `config/mail.toml`, or `#[config("mail")]`)
 - [ ] **M0-15** `proc-macro-crate` lookup so macros work via facade or sub-crates
 
 ## M1: HTTP layer & controllers

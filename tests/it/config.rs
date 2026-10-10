@@ -1,14 +1,21 @@
 use sabai::{Config, ConfigSection};
 use serde::Deserialize;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ConfigSection)]
 struct AppConfig {
     name: String,
     debug: bool,
 }
 
-impl ConfigSection for AppConfig {
-    const KEY: &'static str = "app";
+#[derive(Debug, Deserialize, ConfigSection)]
+#[config("database")]
+struct Connections {
+    connections: std::collections::HashMap<String, Connection>,
+}
+
+#[derive(Debug, Deserialize)]
+struct Connection {
+    path: String,
 }
 
 fn fixture() -> Config {
@@ -33,6 +40,17 @@ fn a_config_section_type_knows_its_own_key() {
 
     assert_eq!(app.name, "Todo from .env");
     assert!(app.debug);
+}
+
+#[test]
+fn the_derive_reads_the_file_named_after_the_struct_or_the_attribute() {
+    let config = fixture();
+
+    let connections = config.section::<Connections>().unwrap();
+
+    assert_eq!(<AppConfig as ConfigSection>::KEY, "app");
+    assert_eq!(<Connections as ConfigSection>::KEY, "database");
+    assert_eq!(connections.connections["sqlite"].path, "database.sqlite");
 }
 
 #[test]
