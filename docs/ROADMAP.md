@@ -130,7 +130,7 @@ Core (sabai-core)
 - [x] **M0-06** `Error` type with HTTP status mapping
 - [x] **M0-07** `Request`, `Response`, `Body`, `IntoResponse`
 - [x] **M0-08** Config: layered `.env` + `config/*.toml`, typed access `config.section::<AppConfig>()` via `ConfigSection` (app-wide access through the container in M0-10 and a `Config<T>` extractor in M1-19, not a global)
-- [ ] **M0-09** Logging via `tracing`, request-id span per request; the subscriber accepts extra layers registered by providers (e.g. Sentry)
+- [x] **M0-09** Logging via `tracing`; the subscriber accepts extra layers registered by providers (e.g. Sentry). The request-id span moved to M1-33, where the server exists to use it
 - [ ] **M0-10** App state / service container: type-map of `Arc<dyn Any + Send + Sync>`
 - [ ] **M0-11** Service providers: `trait Provider { fn register(&self, app: &mut App); fn boot(&self, app: &App); }`
 - [ ] **M0-12** Events: `dispatch(Event)` with sync listeners (queued listeners come in M4)
@@ -179,7 +179,7 @@ Middleware
 - [ ] **M1-30** `from_fn(fn)` for writing middleware as a plain async function
 - [ ] **M1-31** Middleware aliases and groups (`web`, `api`) with a priority order, like Laravel's HTTP kernel
 - [ ] **M1-32** Parameterised middleware: `throttle(60).per_minute()`, `auth("api")`, `can("update", "post")`
-- [ ] **M1-33** Request ID and access log (tracing span per request)
+- [ ] **M1-33** Request ID and access log: a tracing span per request with `X-Request-Id` (reuse the incoming value only if it is short and `[A-Za-z0-9._-]`, to block log injection; otherwise generate one), echoed in the response
 - [ ] **M1-34** Timeout and compression (gzip, br)
 - [ ] **M1-35** Security headers: HSTS, CSP, X-Frame-Options, Referrer-Policy
 - [ ] **M1-36** Static files from `public/` with cache headers
@@ -348,6 +348,7 @@ Beyond basics
 - [ ] **M4-15** Queued event listeners (from M0 events)
 - [ ] **M4-16** Unique jobs (lock by key)
 - [ ] **M4-17** Metrics: jobs processed, failed, wait time (tracing / Prometheus)
+- [ ] **M4-18** Jobs carry the request id of the request that dispatched them, so worker logs link back to it (like Laravel's `Context`)
 
 ## M5: Console kernel & commands (Artisan-style)
 
