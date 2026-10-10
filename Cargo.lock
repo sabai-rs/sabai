@@ -308,6 +308,7 @@ dependencies = [
  "hyper",
  "hyper-util",
  "matchit",
+ "percent-encoding",
  "pollster",
  "sabai-core",
  "serde",

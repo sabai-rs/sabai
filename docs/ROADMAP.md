@@ -158,7 +158,10 @@ Router
   - [x] **M1-02a** Prefix groups like Laravel's `Route::prefix('api')->group(...)`: `route.prefix("/api").group(|route| ...)` or `.group(api::routes)`, nestable; the closure runs on a fresh `Router` and a non-generic `mount_group` adds the prefix
   - [ ] **M1-02b** Group middleware, `route.prefix("/admin").middleware(auth).group(...)` (after M1-29)
   - [ ] **M1-02c** `route.merge(router)` for routes a package builds on its own
-- [ ] **M1-03** Named routes and `url_for` with percent-encoding
+- [ ] **M1-03** Named routes and `route("posts.show", ...)` URLs with percent-encoding, like Laravel's `route()` helper
+  - [x] **M1-03a** `route.get(...).name("posts.show")` and `routes.route("posts.show", &[("id", 7)])`: values percent-encoded, unused params become the query string, a duplicate name stops boot
+  - [ ] **M1-03b** A `Url` handler argument, `url.route("posts.show", &[("id", 7)])`, used by the blog for the `Location` of a new post
+  - [ ] **M1-03c** Group name prefixes, `prefix("/admin").name("admin.")`, and absolute URLs from `app.url`
 - [ ] **M1-04** Per-route and per-group body limits
 - [ ] **M1-05** Auto `HEAD`, `405` with `Allow` header, panic catching
 - [ ] **M1-06** Route table for `route:list`
