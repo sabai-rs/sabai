@@ -8,7 +8,7 @@ use http_body::{Frame, SizeHint};
 type BoxError = Box<dyn StdError + Send + Sync + 'static>;
 
 /// The body of every request and response: one concrete type, so handlers never become generic over it.
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct Body {
     bytes: Option<Bytes>,
 }

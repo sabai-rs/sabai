@@ -1,7 +1,6 @@
 //! Pages for people, like Laravel's `routes/web.php`.
 
-use sabai::Request;
-use sabai::http::Router;
+use sabai::http::{Param, Router};
 
 pub fn routes(route: &mut Router) {
     route.get("/", home);
@@ -12,6 +11,6 @@ async fn home() -> &'static str {
     "Hello, Sabai"
 }
 
-async fn show_post(request: Request) -> String {
-    format!("Post {}", request.param("id").unwrap_or_default())
+async fn show_post(Param(id): Param<u64>) -> String {
+    format!("Post {id}")
 }

@@ -286,6 +286,7 @@ dependencies = [
  "hyper",
  "hyper-util",
  "matchit",
+ "pollster",
  "sabai-core",
  "tokio",
 ]
