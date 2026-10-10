@@ -143,6 +143,7 @@ Macros (sabai-macros)
 
 - [x] **M0-14** Crate skeleton with minimal `syn` features (`derive`, `parsing`, `printing`, `proc-macro`); first derive: `ConfigSection` (`MailConfig` reads `config/mail.toml`, or `#[config("mail")]`)
 - [x] **M0-15** `proc-macro-crate` lookup so macros work via facade or sub-crates: `::sabai`, a renamed `sabai`, `::sabai_core`, or `crate` inside `sabai-core`
+- [ ] **M0-16** `sabai-macros` on syn 3, the version `serde_derive` uses, so apps compile syn once instead of twice (~1s of a clean build)
 
 ## M1: HTTP layer & controllers
 
@@ -193,7 +194,8 @@ Middleware
 Request & response
 
 - [x] **M1-19a** Handler arguments (Laravel's method injection): async `FromRequest` over `&Request`, `Param<T>` (a value that does not parse is a 404, like `whereNumber`), `Request` itself, up to 8 per handler
-- [ ] **M1-19** More handler arguments: `Json<T>`, `Form<T>`, `Query<T>`, `Header`, `State<T>`, `Param<(A, B)>` for routes with several parameters
+- [x] **M1-19b** `FormRequest`: a request struct is a handler argument, filled from the query string (`GET`) or a JSON or form body picked by Content-Type (malformed JSON 400, invalid input 422); `Json<T>` responses
+- [ ] **M1-19** More handler arguments: `Header`, `State<T>`, `Param<(A, B)>` for routes with several parameters
 - [ ] **M1-20** `#[derive(FromRequest)]` for grouping handler arguments
 - [ ] **M1-21** Responses: `json()`, `redirect()`, `view()` hook, `download()`
 - [ ] **M1-22** Cookies (signed + encrypted)
