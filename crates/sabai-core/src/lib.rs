@@ -4,6 +4,7 @@ mod app;
 mod body;
 mod config;
 mod container;
+pub mod contracts;
 mod error;
 mod events;
 pub mod log;
@@ -12,6 +13,7 @@ mod response;
 
 pub use app::{App, AppBuilder, Provider};
 pub use body::Body;
+pub use bytes::Bytes;
 pub use config::{Config, ConfigSection};
 pub use container::Container;
 pub use error::{Error, Result};
