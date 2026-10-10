@@ -10,7 +10,6 @@ use crate::{IntoResponse, Response};
 type BoxedSource = Box<dyn StdError + Send + Sync + 'static>;
 
 /// The error every Sabai handler, extractor and service returns; it knows its HTTP status.
-#[derive(Debug)]
 pub struct Error {
     status: StatusCode,
     message: Cow<'static, str>,
@@ -113,6 +112,21 @@ impl fmt::Display for Error {
     }
 }
 
+// `main` returning `Err` prints `Debug`, so it reads like `Display`; `{:#?}` still shows the fields.
+impl fmt::Debug for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if !f.alternate() {
+            return fmt::Display::fmt(self, f);
+        }
+        f.debug_struct("Error")
+            .field("status", &self.status)
+            .field("message", &self.message)
+            .field("source", &self.source)
+            .field("context", &self.context)
+            .finish()
+    }
+}
+
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
         let body = serde_json::json!({ "message": self.message }).to_string();
@@ -203,6 +217,17 @@ mod tests {
             error.to_string(),
             "booting the app: reading the port: invalid digit found in string"
         );
+    }
+
+    #[test]
+    fn debug_reads_like_display_so_main_prints_a_sentence() {
+        let error = Error::from("abc".parse::<i32>().unwrap_err()).context("reading the port");
+
+        assert_eq!(
+            format!("{error:?}"),
+            "reading the port: invalid digit found in string"
+        );
+        assert!(format!("{error:#?}").starts_with("Error {"));
     }
 
     #[test]
