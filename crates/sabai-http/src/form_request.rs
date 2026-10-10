@@ -5,11 +5,13 @@ use sabai_core::contracts::BoxFuture;
 use sabai_core::{Error, Method, Request, Result, StatusCode};
 use serde::de::DeserializeOwned;
 use serde_json::error::Category;
+use serde_json::{Map, Value};
 
-use crate::FromRequest;
+use crate::{FromRequest, Rules};
 
 /// The input of one action as a struct, like Laravel's `StorePostRequest`: a handler that takes
-/// `request: StorePostRequest` receives it filled from the query string (`GET`) or the JSON or form body.
+/// `request: StorePostRequest` receives it filled from the query string (`GET`) or the JSON or
+/// form body, after its [`rules`](FormRequest::rules) pass.
 ///
 /// ```ignore
 /// #[derive(Deserialize)]
@@ -17,21 +19,61 @@ use crate::FromRequest;
 ///     pub title: String,
 /// }
 ///
-/// impl FormRequest for StorePostRequest {}
+/// impl FormRequest for StorePostRequest {
+///     fn rules() -> Rules {
+///         Rules::new().field("title", [required(), string(), max(255)])
+///     }
+/// }
 /// ```
-pub trait FormRequest: DeserializeOwned + Send + 'static {}
-
-impl<T: FormRequest> FromRequest for T {
-    fn from_request(request: &Request) -> BoxFuture<'_, Result<Self>> {
-        Box::pin(ready(parse_input(request)))
+pub trait FormRequest: DeserializeOwned + Send + 'static {
+    /// The rules the raw input must pass before it becomes `Self`; a failure is a `422` per field.
+    fn rules() -> Rules {
+        Rules::new()
     }
 }
 
-fn parse_input<T: DeserializeOwned>(request: &Request) -> Result<T> {
-    match input_of(request)? {
-        Input::Json(bytes) => serde_json::from_slice(bytes).map_err(json_error),
-        Input::Form(bytes) => serde_urlencoded::from_bytes(bytes).map_err(invalid_input),
+impl<T: FormRequest> FromRequest for T {
+    fn from_request(request: &Request) -> BoxFuture<'_, Result<Self>> {
+        Box::pin(ready(parse_input(request, &T::rules())))
     }
+}
+
+fn parse_input<T: DeserializeOwned>(request: &Request, rules: &Rules) -> Result<T> {
+    match validated_input(request, rules)? {
+        Validated::Json(value) => T::deserialize(value).map_err(invalid_input),
+        // serde_urlencoded reads `draft=true` into a `bool`; a `Value` of strings would not.
+        Validated::Form(bytes) => serde_urlencoded::from_bytes(bytes).map_err(invalid_input),
+    }
+}
+
+enum Validated<'a> {
+    Json(Value),
+    Form(&'a [u8]),
+}
+
+// Not generic: parsing and validating compile once, however many request structs an app has.
+fn validated_input<'a>(request: &'a Request, rules: &Rules) -> Result<Validated<'a>> {
+    match input_of(request)? {
+        Input::Json(bytes) => {
+            let value = serde_json::from_slice(bytes).map_err(json_error)?;
+            rules.validate(&value)?;
+            Ok(Validated::Json(value))
+        }
+        Input::Form(bytes) => {
+            rules.validate(&form_value(bytes)?)?;
+            Ok(Validated::Form(bytes))
+        }
+    }
+}
+
+fn form_value(bytes: &[u8]) -> Result<Value> {
+    let pairs: Vec<(String, String)> =
+        serde_urlencoded::from_bytes(bytes).map_err(invalid_input)?;
+    let fields: Map<String, Value> = pairs
+        .into_iter()
+        .map(|(name, value)| (name, Value::String(value)))
+        .collect();
+    Ok(Value::Object(fields))
 }
 
 enum Input<'a> {
@@ -85,6 +127,7 @@ mod tests {
     use serde::Deserialize;
 
     use super::*;
+    use crate::rules::{max, required, string};
 
     #[derive(Debug, Deserialize, PartialEq)]
     struct StorePostRequest {
@@ -92,7 +135,11 @@ mod tests {
         draft: bool,
     }
 
-    impl FormRequest for StorePostRequest {}
+    impl FormRequest for StorePostRequest {
+        fn rules() -> Rules {
+            Rules::new().field("title", [required(), string(), max(10)])
+        }
+    }
 
     fn send(
         method: Method,
@@ -173,6 +220,32 @@ mod tests {
         assert!(
             error.to_string().contains("Content-Type: application/json"),
             "{error}"
+        );
+    }
+
+    #[test]
+    fn rules_run_on_json_and_form_input_before_the_struct_is_built() {
+        let form = "application/x-www-form-urlencoded";
+
+        let missing = send(
+            Method::POST,
+            "/posts",
+            "application/json",
+            r#"{"draft":true}"#,
+        );
+        let too_long = send(
+            Method::POST,
+            "/posts",
+            form,
+            "title=Sabai+framework&draft=true",
+        );
+
+        let missing = missing.err().unwrap();
+        assert_eq!(missing.status(), StatusCode::UNPROCESSABLE_ENTITY);
+        assert_eq!(missing.message(), "The title field is required.");
+        assert_eq!(
+            too_long.err().unwrap().message(),
+            "The title field must not be greater than 10 characters."
         );
     }
 }
