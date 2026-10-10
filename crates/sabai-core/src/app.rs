@@ -1,7 +1,8 @@
-use std::any::type_name;
+use std::any::{TypeId, type_name};
 use std::sync::Arc;
 
-use crate::{Config, Container, Error, Result};
+use crate::events::Events;
+use crate::{Config, Container, Error, Event, Listener, Result};
 
 /// A package's or an app's entry point, like a Laravel service provider.
 pub trait Provider: Send + Sync {
@@ -14,11 +15,12 @@ pub trait Provider: Send + Sync {
     }
 }
 
-/// The application: config plus the service container, filled by providers at boot.
+/// The application: config, the service container and event listeners, filled by providers at boot.
 #[derive(Debug)]
 pub struct App {
     config: Config,
     container: Container,
+    events: Events,
 }
 
 /// Collects providers before boot; [`AppBuilder::boot`] turns it into an [`App`].
@@ -39,6 +41,7 @@ impl App {
             app: App {
                 config,
                 container: Container::default(),
+                events: Events::default(),
             },
             providers: Vec::new(),
         }
@@ -52,6 +55,16 @@ impl App {
     /// Binds a service; see [`Container::bind`].
     pub fn bind<T: ?Sized + Send + Sync + 'static>(&mut self, service: Arc<T>) {
         self.container.bind(service);
+    }
+
+    /// Adds a listener for `E`, run in the order added: a closure `|event: &E, app: &App|` or a [`Listener`].
+    pub fn listen<E: Event, L: Listener<E>>(&mut self, listener: L) {
+        self.events.listen(listener);
+    }
+
+    /// Runs every listener for `event`, stopping at the first error; no listeners is fine.
+    pub fn dispatch<E: Event>(&self, event: &E) -> Result<()> {
+        self.events.dispatch(TypeId::of::<E>(), event, self)
     }
 
     /// Resolves a service; see [`Container::get`].

@@ -134,7 +134,7 @@ Core (sabai-core)
 - [x] **M0-09** Logging via `tracing`; the subscriber accepts extra layers registered by providers (e.g. Sentry). The request-id span moved to M1-33, where the server exists to use it
 - [x] **M0-10** App state / service container: type-map of `Arc<dyn Any + Send + Sync>`
 - [x] **M0-11** Service providers: `trait Provider { fn register(&self, app: &mut App) -> Result<()>; fn boot(&self, app: &App) -> Result<()>; }`; `App::builder(config).provider(..).boot()` returns a read-only `Arc<App>`
-- [ ] **M0-12** Events: `dispatch(Event)` with sync listeners (queued listeners come in M4)
+- [x] **M0-12** Events: `app.dispatch(&event)` with sync listeners (closures or `Listener<E>` structs), registered with `app.listen(..)` in providers; queued listeners come in M4-15
 
 * [ ] **M0-13** Contracts from day one: `Clock`, `Cache`, `Filesystem`, `Mailer` traits, so fakes, the scheduler and packages plug in
 
@@ -346,7 +346,7 @@ Beyond basics
 
 - [ ] **M4-13** Chains: run B after A succeeds
 - [ ] **M4-14** Batches with progress and `then`/`catch` callbacks
-- [ ] **M4-15** Queued event listeners (from M0 events)
+- [ ] **M4-15** Queued event listeners (from M0 events): a listener opts in like Laravel's `ShouldQueue`; the event is serialized and pushed to the configured queue connection (`sync` runs it inline, `database`, `redis`, ...). `listen` and `dispatch` keep their signatures
 - [ ] **M4-16** Unique jobs (lock by key)
 - [ ] **M4-17** Metrics: jobs processed, failed, wait time (tracing / Prometheus)
 - [ ] **M4-18** Jobs carry the request id of the request that dispatched them, so worker logs link back to it (like Laravel's `Context`)
