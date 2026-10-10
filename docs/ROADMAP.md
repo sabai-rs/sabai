@@ -232,10 +232,10 @@ Validation
 
 - [ ] **M1-26** `#[derive(Validate)]` emitting rule metadata only
 - [ ] **M1-27** Rules: `required`, `email`, `min`, `max`, `in`, `confirmed`, `unique` (after M2)
-- [ ] **M1-28** `FormRequest` validation returns `422` with field errors, like Laravel; a wrong type (`title` not a string, `draft=yes` for a `bool`) also lands under its field instead of one serde sentence. Revisit M1-19e here: one lenient deserializer over `Value` that reads form strings into `bool` and numbers like Laravel's `boolean` and `integer` rules, which also cut ~30% of LLVM lines
+- [x] **M1-28** `FormRequest` validation returns `422` with field errors, like Laravel; a wrong type (`title` not a string, `draft=yes` for a `bool`) also lands under its field instead of one serde sentence. Revisit M1-19e here: one lenient deserializer over `Value` that reads form strings into `bool` and numbers like Laravel's `boolean` and `integer` rules, which also cut ~30% of LLVM lines
   - [x] **M1-28a** `Error::with_messages(&[("email", "...")])`: a `422` with `{"message": "... (and 1 more error)", "errors": {"email": ["..."]}}`, fields in the order given, like Laravel's `ValidationException::withMessages`
   - [x] **M1-28b** Typed rules in `sabai::http::rules`: `Rules::new().field("title", [required(), string(), max(255)])` and `rules.validate(&input)`; `required` (stops the field, like Laravel), `sometimes`, `string`, `max` (characters, number or items), Laravel's English messages with `device_uuid` read as "device uuid"
-  - [ ] **M1-28c** `FormRequest` checks `rules()` on the raw input before building the struct, so a missing or wrong-typed field is a field error, not a serde sentence; used by the blog's `StorePostRequest`
+  - [x] **M1-28c** `FormRequest::rules()` runs on the raw input (JSON as sent, form fields as strings) before the struct is built, so a missing or wrong-typed field is a field error, not a serde sentence; parsing and validating are not generic, only the final deserialize is; the blog's `StorePostRequest` has rules and feature tests
 - [ ] **M1-50** Fixed error shape: `{"message": ..., "errors": {"email": ["..."]}}`; apps can swap the renderer for their own shape, such as `{"errors": [{"ref": "email", "type": "validation", "desc": [...]}]}`
 - [ ] **M1-51** Nested and array fields: `items.*.qty`
 - [ ] **M1-52** Conditional rules: `nullable`, `sometimes`, `required_if`, `required_with`, `bail`
