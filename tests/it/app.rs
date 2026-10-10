@@ -120,6 +120,19 @@ fn make_builds_a_type_from_the_apps_services() {
 }
 
 #[test]
+fn make_shared_builds_once_and_returns_the_same_instance() {
+    let app = App::builder(Config::default())
+        .provider(MailProvider(Journal::default()))
+        .boot()
+        .unwrap();
+
+    let first = app.make_shared::<WelcomeService>().unwrap();
+    let second = app.make_shared::<WelcomeService>().unwrap();
+
+    assert!(Arc::ptr_eq(&first, &second));
+}
+
+#[test]
 fn make_names_the_type_it_could_not_build() {
     let app = App::builder(Config::default()).boot().unwrap();
 

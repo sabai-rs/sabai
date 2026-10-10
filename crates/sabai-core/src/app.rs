@@ -1,5 +1,7 @@
-use std::any::{TypeId, type_name};
-use std::sync::Arc;
+use std::any::{Any, TypeId, type_name};
+use std::collections::HashMap;
+use std::fmt;
+use std::sync::{Arc, PoisonError, RwLock};
 
 use crate::events::Events;
 use crate::{Config, Container, Error, Event, Listener, Result};
@@ -36,7 +38,12 @@ pub struct App {
     config: Config,
     container: Container,
     events: Events,
+    shared: Shared,
 }
+
+/// Instances built by [`App::make_shared`], kept for the life of the app.
+#[derive(Default)]
+struct Shared(RwLock<HashMap<TypeId, Arc<dyn Any + Send + Sync>>>);
 
 /// Collects providers before boot; [`AppBuilder::boot`] turns it into an [`App`].
 pub struct AppBuilder {
@@ -57,6 +64,7 @@ impl App {
                 config,
                 container: Container::default(),
                 events: Events::default(),
+                shared: Shared::default(),
             },
             providers: Vec::new(),
         }
@@ -91,6 +99,41 @@ impl App {
     pub fn make<T: FromApp>(&self) -> Result<T> {
         T::new(self)
             .map_err(|error| error.context(format!("could not make `{}`", type_name::<T>())))
+    }
+
+    /// Makes `T` the first time and returns that same instance after, like a Laravel singleton.
+    pub fn make_shared<T: FromApp + Send + Sync + 'static>(&self) -> Result<Arc<T>> {
+        let id = TypeId::of::<T>();
+        if let Some(made) = self.shared.find(id).and_then(|made| made.downcast().ok()) {
+            return Ok(made);
+        }
+        // Made outside the lock, so `T::new` can itself call `make_shared` without a deadlock.
+        let made = Arc::new(self.make::<T>()?);
+        Ok(self
+            .shared
+            .keep(id, made.clone())
+            .downcast()
+            .unwrap_or(made))
+    }
+}
+
+impl Shared {
+    // The lock is only held for one map lookup or insert, so even a poisoned lock holds a whole map.
+    fn find(&self, id: TypeId) -> Option<Arc<dyn Any + Send + Sync>> {
+        let shared = self.0.read().unwrap_or_else(PoisonError::into_inner);
+        shared.get(&id).cloned()
+    }
+
+    // If two threads make `T` at once, both get the first one kept.
+    fn keep(&self, id: TypeId, made: Arc<dyn Any + Send + Sync>) -> Arc<dyn Any + Send + Sync> {
+        let mut shared = self.0.write().unwrap_or_else(PoisonError::into_inner);
+        shared.entry(id).or_insert(made).clone()
+    }
+}
+
+impl fmt::Debug for Shared {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Shared").finish_non_exhaustive()
     }
 }
 
