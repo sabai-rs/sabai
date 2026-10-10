@@ -1,0 +1,14 @@
+[package]
+name = "blog"
+description = "The Sabai example app: a blog that uses every feature as it lands"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+sabai.workspace = true
+
+[lints]
+workspace = true

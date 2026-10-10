@@ -42,7 +42,7 @@ crates/
   sabai-testing/   test client, fakes, DB assertions
 packages/          first-party packages using public API only (sabai-sanctum, sabai-media)
 templates/         `sabai new` skeletons
-examples/todo-app/ dogfood app: every feature must be used here
+examples/blog/     dogfood app: every feature must be used here
 ```
 
 Dependency direction only points down toward `sabai-core`. Crates at the bottom change least.
@@ -63,7 +63,7 @@ Dependency direction only points down toward `sabai-core`. Crates at the bottom 
   cargo llvm-lines -p <crate> | head -20
   ```
   Report build-time impact in the summary.
-- Use the feature in `examples/todo-app` before calling it done.
+- Use the feature in `examples/blog` before calling it done.
 - Work one ticket at a time by its ID from `docs/ROADMAP.md` (e.g. `M1-03`). If a ticket is too big for one small step, split it into `M1-03a`, `M1-03b` and say so.
 - Branch per ticket: `m1-03-named-routes`. Commit messages start with the ID: `M1-03: named routes and url_for`.
 - Tick the ticket in `docs/ROADMAP.md` in the same commit that finishes it.

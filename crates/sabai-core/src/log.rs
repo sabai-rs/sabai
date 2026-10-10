@@ -51,8 +51,11 @@ impl Logging {
 
     /// The subscriber without installing it, so tests can scope it with `tracing::subscriber::with_default`.
     pub fn into_subscriber(self) -> impl Subscriber + Send + Sync {
+        // An empty `Vec` of layers answers "not interested" for every callsite, which would
+        // silently turn all logging off, so the extra layers are only added when there are some.
+        let extra_layers = (!self.layers.is_empty()).then_some(self.layers);
         tracing_subscriber::registry()
-            .with(self.layers)
+            .with(extra_layers)
             .with(tracing_subscriber::fmt::layer())
             .with(self.filter)
     }
@@ -129,6 +132,17 @@ mod tests {
             *recorder.0.lock().unwrap(),
             ["DEBUG sabai_core", "WARN other"]
         );
+    }
+
+    #[test]
+    fn logging_without_extra_layers_still_logs() {
+        let subscriber = Logging::new("info").unwrap().into_subscriber();
+
+        let enabled = tracing::subscriber::with_default(subscriber, || {
+            tracing::enabled!(tracing::Level::INFO)
+        });
+
+        assert!(enabled);
     }
 
     #[test]
