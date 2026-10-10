@@ -128,7 +128,7 @@ Workspace
 Core (sabai-core)
 
 - [x] **M0-06** `Error` type with HTTP status mapping
-  - [ ] **M0-06b** `Error::context("...")` adds what was being done to an error (`provider app::MailProvider failed to register: mail.host is not set`); `AppBuilder::boot` uses it to name the failing provider
+  - [x] **M0-06b** `Error::context("...")` adds what was being done to an error (`provider app::MailProvider failed to register: mail.host is not set`); `AppBuilder::boot` uses it to name the failing provider
 - [x] **M0-07** `Request`, `Response`, `Body`, `IntoResponse`
 - [x] **M0-08** Config: layered `.env` + `config/*.toml`, typed access `config.section::<AppConfig>()` via `ConfigSection` (app-wide access through the container in M0-10 and a `Config<T>` extractor in M1-19, not a global)
 - [x] **M0-09** Logging via `tracing`; the subscriber accepts extra layers registered by providers (e.g. Sentry). The request-id span moved to M1-33, where the server exists to use it

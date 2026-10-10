@@ -1,6 +1,7 @@
+use std::any::type_name;
 use std::sync::Arc;
 
-use crate::{Config, Container, Result};
+use crate::{Config, Container, Error, Result};
 
 /// A package's or an app's entry point, like a Laravel service provider.
 pub trait Provider: Send + Sync {
@@ -23,7 +24,12 @@ pub struct App {
 /// Collects providers before boot; [`AppBuilder::boot`] turns it into an [`App`].
 pub struct AppBuilder {
     app: App,
-    providers: Vec<Box<dyn Provider>>,
+    providers: Vec<NamedProvider>,
+}
+
+struct NamedProvider {
+    name: &'static str,
+    provider: Box<dyn Provider>,
 }
 
 impl App {
@@ -56,12 +62,12 @@ impl App {
 
 impl AppBuilder {
     /// Adds a provider. Providers register and boot in the order they are added.
-    pub fn provider(self, provider: impl Provider + 'static) -> Self {
-        self.push_provider(Box::new(provider))
+    pub fn provider<P: Provider + 'static>(self, provider: P) -> Self {
+        self.push_provider(type_name::<P>(), Box::new(provider))
     }
 
-    fn push_provider(mut self, provider: Box<dyn Provider>) -> Self {
-        self.providers.push(provider);
+    fn push_provider(mut self, name: &'static str, provider: Box<dyn Provider>) -> Self {
+        self.providers.push(NamedProvider { name, provider });
         self
     }
 
@@ -69,11 +75,14 @@ impl AppBuilder {
     /// shared and read-only from here on.
     pub fn boot(self) -> Result<Arc<App>> {
         let Self { mut app, providers } = self;
-        for provider in &providers {
-            provider.register(&mut app)?;
+        for NamedProvider { name, provider } in &providers {
+            let failed =
+                |error: Error| error.context(format!("provider `{name}` failed to register"));
+            provider.register(&mut app).map_err(failed)?;
         }
-        for provider in &providers {
-            provider.boot(&app)?;
+        for NamedProvider { name, provider } in &providers {
+            let failed = |error: Error| error.context(format!("provider `{name}` failed to boot"));
+            provider.boot(&app).map_err(failed)?;
         }
         Ok(Arc::new(app))
     }
