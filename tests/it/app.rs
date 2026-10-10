@@ -120,14 +120,14 @@ fn make_builds_a_type_from_the_apps_services() {
 }
 
 #[test]
-fn make_shared_builds_once_and_returns_the_same_instance() {
+fn singleton_builds_once_and_returns_the_same_instance() {
     let app = App::builder(Config::default())
         .provider(MailProvider(Journal::default()))
         .boot()
         .unwrap();
 
-    let first = app.make_shared::<WelcomeService>().unwrap();
-    let second = app.make_shared::<WelcomeService>().unwrap();
+    let first = app.singleton::<WelcomeService>().unwrap();
+    let second = app.singleton::<WelcomeService>().unwrap();
 
     assert!(Arc::ptr_eq(&first, &second));
 }

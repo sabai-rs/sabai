@@ -20,10 +20,10 @@ pub trait Controller: FromApp + Send + Sync + 'static {}
 
 impl<C: Controller> FromRequest for Arc<C> {
     fn from_request(request: &Request) -> BoxFuture<'_, Result<Self>> {
-        Box::pin(ready(request.app().and_then(|app| app.make_shared())))
+        Box::pin(ready(request.app().and_then(|app| app.singleton())))
     }
 
     fn prepare(app: &App) -> Result<()> {
-        app.make_shared::<C>().map(drop)
+        app.singleton::<C>().map(drop)
     }
 }

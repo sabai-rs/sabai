@@ -38,12 +38,12 @@ pub struct App {
     config: Config,
     container: Container,
     events: Events,
-    shared: Shared,
+    singletons: Singletons,
 }
 
-/// Instances built by [`App::make_shared`], kept for the life of the app.
+/// Instances built by [`App::singleton`], kept for the life of the app.
 #[derive(Default)]
-struct Shared(RwLock<HashMap<TypeId, Arc<dyn Any + Send + Sync>>>);
+struct Singletons(RwLock<HashMap<TypeId, Arc<dyn Any + Send + Sync>>>);
 
 /// Collects providers before boot; [`AppBuilder::boot`] turns it into an [`App`].
 pub struct AppBuilder {
@@ -64,7 +64,7 @@ impl App {
                 config,
                 container: Container::default(),
                 events: Events::default(),
-                shared: Shared::default(),
+                singletons: Singletons::default(),
             },
             providers: Vec::new(),
         }
@@ -102,38 +102,42 @@ impl App {
     }
 
     /// Makes `T` the first time and returns that same instance after, like a Laravel singleton.
-    pub fn make_shared<T: FromApp + Send + Sync + 'static>(&self) -> Result<Arc<T>> {
+    pub fn singleton<T: FromApp + Send + Sync + 'static>(&self) -> Result<Arc<T>> {
         let id = TypeId::of::<T>();
-        if let Some(made) = self.shared.find(id).and_then(|made| made.downcast().ok()) {
+        if let Some(made) = self
+            .singletons
+            .find(id)
+            .and_then(|made| made.downcast().ok())
+        {
             return Ok(made);
         }
-        // Made outside the lock, so `T::new` can itself call `make_shared` without a deadlock.
+        // Made outside the lock, so `T::new` can itself call `singleton` without a deadlock.
         let made = Arc::new(self.make::<T>()?);
         Ok(self
-            .shared
+            .singletons
             .keep(id, made.clone())
             .downcast()
             .unwrap_or(made))
     }
 }
 
-impl Shared {
+impl Singletons {
     // The lock is only held for one map lookup or insert, so even a poisoned lock holds a whole map.
     fn find(&self, id: TypeId) -> Option<Arc<dyn Any + Send + Sync>> {
-        let shared = self.0.read().unwrap_or_else(PoisonError::into_inner);
-        shared.get(&id).cloned()
+        let singletons = self.0.read().unwrap_or_else(PoisonError::into_inner);
+        singletons.get(&id).cloned()
     }
 
     // If two threads make `T` at once, both get the first one kept.
     fn keep(&self, id: TypeId, made: Arc<dyn Any + Send + Sync>) -> Arc<dyn Any + Send + Sync> {
-        let mut shared = self.0.write().unwrap_or_else(PoisonError::into_inner);
-        shared.entry(id).or_insert(made).clone()
+        let mut singletons = self.0.write().unwrap_or_else(PoisonError::into_inner);
+        singletons.entry(id).or_insert(made).clone()
     }
 }
 
-impl fmt::Debug for Shared {
+impl fmt::Debug for Singletons {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Shared").finish_non_exhaustive()
+        f.debug_struct("Singletons").finish_non_exhaustive()
     }
 }
 

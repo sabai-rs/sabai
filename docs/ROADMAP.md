@@ -179,7 +179,7 @@ Controllers
 - [ ] **M1-17** `api_resource` (no `create`/`edit`)
 - [x] **M1-18** Controllers like Laravel's constructor injection: `FromApp` (`fn new(app) -> Result<Self>`) for controllers, services and repositories, `app.make::<T>()` for concrete types, actions as `async fn store(self: Arc<Self>, ...)`, every controller built once when `serve` starts so a missing binding stops startup
   - [x] **M1-18a** `FromApp` and `app.make::<T>()`; `serve` prepares every route's arguments before listening, so a `Service<T>` that is not bound stops startup and names the route
-  - [x] **M1-18b** `Controller` trait and `app.make_shared::<T>()`: a controller is made once when `serve` starts and shared by every request
+  - [x] **M1-18b** `Controller` trait and `app.singleton::<T>()`: a controller is made once when `serve` starts and shared by every request
   - [x] **M1-18c** The blog's `PostController` -> `PostService` -> `dyn PostRepository`, with an in-memory repository until the ORM (M2)
 
 Middleware
@@ -201,9 +201,9 @@ Request & response
 - [x] **M1-19b** `FormRequest`: a request struct is a handler argument, filled from the query string (`GET`) or a JSON or form body picked by Content-Type (malformed JSON 400, invalid input 422); `Json<T>` responses
 - [x] **M1-19c** `Service<T>` handler argument (method injection: `clock: Service<dyn Clock>`) and `request.app()`, like Laravel's `app()`
 - [ ] **M1-19** `Param<(A, B)>` for routes with several parameters
-- [ ] **M1-19d** `Request` as a handler argument without a clone: only the last argument may take the request by value (like axum's `FromRequestParts` / `FromRequest`), so a handler taking `request: Request` no longer copies the `HeaderMap`, `Uri` and params; do it before packages write their own arguments (M6-11)
+- [x] **M1-19d** `Request` is one `Arc`, so taking `request: Request` as a handler argument costs a counter increment instead of copying every header (222ns to 21ns with 8 headers), in any argument position; `with_route_params` and `with_app` change it in place with `Arc::make_mut` before any clone exists
 - [ ] **M1-19e** `FormRequest` through one deserializer: turn the query, form or JSON input into a `serde_json::Value`, then `T::deserialize(value)`, so each request struct compiles one deserialize path instead of serde_json's and serde_urlencoded's; keep it only if `cargo llvm-lines` shows the drop and the runtime cost is small
-- [ ] **M1-19f** Hot-path trims, each kept only if a benchmark shows it: route parameter names as `Arc<str>` shared from the endpoint (one allocation per parameter instead of two), a cheap hasher for the `TypeId` maps in `Container` and `make_shared`, and `Error` as a `Box` around its fields so every `Result` is one pointer wide
+- [ ] **M1-19f** Hot-path trims, each kept only if a benchmark shows it: route parameter names as `Arc<str>` shared from the endpoint (one allocation per parameter instead of two), a cheap hasher for the `TypeId` maps in `Container` and `singleton`, and `Error` as a `Box` around its fields so every `Result` is one pointer wide
 - [ ] **M1-20** `#[derive(FromRequest)]` for grouping handler arguments
 - [ ] **M1-21** Responses: `json()`, `redirect()`, `view()` hook, `download()`
 - [ ] **M1-22** Cookies (signed + encrypted)

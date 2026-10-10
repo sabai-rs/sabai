@@ -1,11 +1,28 @@
-use std::future::Future;
+use std::future::{Future, ready};
 use std::marker::PhantomData;
 use std::sync::Arc;
 
 use sabai_core::contracts::BoxFuture;
 use sabai_core::{App, IntoResponse, Request, Response, Result};
 
-use crate::FromRequest;
+/// A type a handler can take as an argument, built from the request before the handler runs,
+/// like a type-hinted argument in a Laravel controller. Failing rejects the request with that error.
+pub trait FromRequest: Sized + Send + 'static {
+    /// Builds the argument from `request`.
+    fn from_request(request: &Request) -> BoxFuture<'_, Result<Self>>;
+
+    /// Checks once, before the server accepts requests, that the argument can be built,
+    /// so a missing service stops startup instead of failing requests.
+    fn prepare(_app: &App) -> Result<()> {
+        Ok(())
+    }
+}
+
+impl FromRequest for Request {
+    fn from_request(request: &Request) -> BoxFuture<'_, Result<Self>> {
+        Box::pin(ready(Ok(request.clone())))
+    }
+}
 
 /// An async function the router can call, such as `async fn index() -> impl IntoResponse`.
 /// `Args` lists its argument types, so functions with different arguments are different handlers.
