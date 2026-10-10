@@ -22,6 +22,12 @@ struct Route {
     handler: BoxedHandler,
 }
 
+/// Routes that share a prefix, started by [`Router::prefix`] like Laravel's `Route::prefix('api')`.
+pub struct RouteGroup<'a> {
+    router: &'a mut Router,
+    prefix: String,
+}
+
 /// Compiled routes, ready to dispatch requests.
 pub struct Routes {
     matcher: matchit::Router<usize>,
@@ -69,6 +75,20 @@ impl Router {
         self.push_route(Method::DELETE, path, handler)
     }
 
+    /// Starts a group whose routes all begin with `prefix`:
+    /// `route.prefix("/api").group(|route| { route.get("/health", health); });`
+    pub fn prefix(&mut self, prefix: &str) -> RouteGroup<'_> {
+        RouteGroup {
+            router: self,
+            prefix: prefix.to_owned(),
+        }
+    }
+
+    fn mount_group(&mut self, prefix: &str, group: Router) {
+        let routes = group.routes.into_iter().map(|route| route.prefixed(prefix));
+        self.routes.extend(routes);
+    }
+
     fn push_route(&mut self, method: Method, path: &str, handler: BoxedHandler) -> &mut Self {
         self.routes.push(Route {
             method,
@@ -97,6 +117,29 @@ impl Router {
             routes.add_method(index, route)?;
         }
         Ok(routes)
+    }
+}
+
+impl RouteGroup<'_> {
+    /// Adds the routes declared in `routes`, a closure or a function such as `api::routes`.
+    pub fn group<F: FnOnce(&mut Router)>(self, routes: F) {
+        let mut group = Router::new();
+        routes(&mut group);
+        self.router.mount_group(&self.prefix, group);
+    }
+}
+
+impl Route {
+    // Like Laravel, `prefix("api")` and `prefix("/api/")` mean the same, and `/` inside the group is `/api`.
+    fn prefixed(self, prefix: &str) -> Self {
+        let prefix = prefix.trim_matches('/');
+        let path = self.path.trim_start_matches('/');
+        let path = match (prefix.is_empty(), path.is_empty()) {
+            (true, _) => format!("/{path}"),
+            (false, true) => format!("/{prefix}"),
+            (false, false) => format!("/{prefix}/{path}"),
+        };
+        Self { path, ..self }
     }
 }
 
