@@ -1,10 +1,14 @@
-use sabai::Config;
+use sabai::{Config, ConfigSection};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 struct AppConfig {
     name: String,
     debug: bool,
+}
+
+impl ConfigSection for AppConfig {
+    const KEY: &'static str = "app";
 }
 
 fn fixture() -> Config {
@@ -18,6 +22,14 @@ fn fixture() -> Config {
 #[test]
 fn each_toml_file_becomes_a_typed_section() {
     let app: AppConfig = fixture().get("app").unwrap();
+
+    assert_eq!(app.name, "Todo from .env");
+    assert!(app.debug);
+}
+
+#[test]
+fn a_config_section_type_knows_its_own_key() {
+    let app = fixture().section::<AppConfig>().unwrap();
 
     assert_eq!(app.name, "Todo from .env");
     assert!(app.debug);
