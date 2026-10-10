@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 
 use serde_json::{Number, Value};
 
@@ -11,6 +12,19 @@ pub(crate) struct Env {
 }
 
 impl Env {
+    /// The process environment, plus `base/.env` (or `base/.env.{APP_ENV}`) for names it does not set.
+    pub(crate) fn load(base: &Path) -> Result<Self, ConfigError> {
+        Self::from_process().with_file_from(base)
+    }
+
+    fn with_file_from(mut self, base: &Path) -> Result<Self, ConfigError> {
+        let path = env_file(base, self.get("APP_ENV"));
+        for (name, value) in read_env_file(&path)? {
+            self.vars.entry(name).or_insert(value);
+        }
+        Ok(self)
+    }
+
     /// A snapshot of the process environment; variables that are not valid UTF-8 are skipped.
     pub(crate) fn from_process() -> Self {
         let vars = std::env::vars_os()
@@ -21,6 +35,25 @@ impl Env {
 
     fn get(&self, name: &str) -> Option<&str> {
         self.vars.get(name).map(String::as_str)
+    }
+}
+
+fn env_file(base: &Path, app_env: Option<&str>) -> PathBuf {
+    app_env
+        .map(|app_env| base.join(format!(".env.{app_env}")))
+        .filter(|path| path.exists())
+        .unwrap_or_else(|| base.join(".env"))
+}
+
+fn read_env_file(path: &Path) -> Result<Vec<(String, String)>, ConfigError> {
+    let env_file_error = |source| ConfigError::EnvFile {
+        path: path.to_owned(),
+        source,
+    };
+    match dotenvy::from_path_iter(path) {
+        Ok(lines) => lines.collect::<Result<_, _>>().map_err(env_file_error),
+        Err(error) if error.not_found() => Ok(Vec::new()),
+        Err(error) => Err(env_file_error(error)),
     }
 }
 
@@ -118,6 +151,53 @@ mod tests {
         Env {
             vars: vars.collect(),
         }
+    }
+
+    fn fixtures(dir: &str) -> PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/it/fixtures")
+            .join(dir)
+    }
+
+    #[test]
+    fn os_env_wins_over_the_env_file() {
+        let loaded = env(&[("SABAI_TEST_APP_NAME", "From OS")])
+            .with_file_from(&fixtures(""))
+            .unwrap();
+
+        assert_eq!(loaded.get("SABAI_TEST_APP_NAME"), Some("From OS"));
+        assert_eq!(loaded.get("SABAI_TEST_DB"), Some("database.sqlite"));
+    }
+
+    #[test]
+    fn app_env_picks_its_own_file_and_falls_back_to_env() {
+        let testing = env(&[("APP_ENV", "testing")])
+            .with_file_from(&fixtures(""))
+            .unwrap();
+        let staging = env(&[("APP_ENV", "staging")])
+            .with_file_from(&fixtures(""))
+            .unwrap();
+
+        assert_eq!(testing.get("SABAI_TEST_DB"), Some(":memory:"));
+        assert_eq!(staging.get("SABAI_TEST_DB"), Some("database.sqlite"));
+    }
+
+    #[test]
+    fn a_missing_env_file_is_fine() {
+        let loaded = Env::default()
+            .with_file_from(&fixtures("does-not-exist"))
+            .unwrap();
+
+        assert_eq!(loaded.get("SABAI_TEST_DB"), None);
+    }
+
+    #[test]
+    fn a_broken_env_file_names_the_file() {
+        let error = Env::default()
+            .with_file_from(&fixtures("broken-env"))
+            .unwrap_err();
+
+        assert!(error.to_string().contains("broken-env/.env"), "{error}");
     }
 
     fn interpolated(mut value: Value, env: &Env) -> Result<Value, ConfigError> {

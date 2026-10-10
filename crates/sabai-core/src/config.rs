@@ -18,9 +18,14 @@ pub struct Config {
 }
 
 impl Config {
-    /// Loads every `*.toml` file in `dir`, one section per file.
-    pub fn from_dir(dir: impl AsRef<Path>) -> Result<Self> {
-        Self::load_dir(dir.as_ref())
+    /// Loads `base/config/*.toml`, one section per file, filling `${NAME}` from the env and `base/.env`.
+    pub fn load(base: impl AsRef<Path>) -> Result<Self> {
+        Self::load_base(base.as_ref())
+    }
+
+    fn load_base(base: &Path) -> Result<Self> {
+        let env = Env::load(base)?;
+        Self::load_dir(&base.join("config"), &env)
     }
 
     /// Reads a section or a dotted key, like Laravel's `config('app.name')`, into any deserializable type.
@@ -29,12 +34,11 @@ impl Config {
         T::deserialize(value).map_err(|source| invalid(key, source))
     }
 
-    fn load_dir(dir: &Path) -> Result<Self> {
+    fn load_dir(dir: &Path, env: &Env) -> Result<Self> {
         let read_dir = |source| ConfigError::ReadDir {
             dir: dir.to_owned(),
             source,
         };
-        let env = Env::from_process();
         let mut config = Self::default();
         for entry in fs::read_dir(dir).map_err(read_dir)? {
             let path = entry.map_err(read_dir)?.path();
@@ -42,7 +46,7 @@ impl Config {
                 .extension()
                 .is_some_and(|extension| extension == "toml")
             {
-                config.load_file(&path, &env)?;
+                config.load_file(&path, env)?;
             }
         }
         Ok(config)
