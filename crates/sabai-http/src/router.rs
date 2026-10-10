@@ -1,12 +1,13 @@
 use std::collections::HashMap;
 use std::error::Error as StdError;
-use std::fmt;
+use std::fmt::{self, Display};
 use std::future::ready;
 
 use sabai_core::contracts::BoxFuture;
 use sabai_core::{App, Error, IntoResponse, Method, Request, Response, Result, StatusCode};
 
 use crate::handler::{BoxedHandler, Handler, boxed};
+use crate::route_urls::RouteUrls;
 
 /// Collects routes, one statement each like Laravel's `routes/web.php`:
 /// `route.get("/posts", index);`. Mistakes such as a duplicate route are reported by
@@ -16,10 +17,12 @@ pub struct Router {
     routes: Vec<Route>,
 }
 
-struct Route {
+/// One route, returned by [`Router::get`] and friends so it can be named: `.name("posts.show")`.
+pub struct Route {
     method: Method,
     path: String,
     handler: BoxedHandler,
+    name: Option<String>,
 }
 
 /// Routes that share a prefix, started by [`Router::prefix`] like Laravel's `Route::prefix('api')`.
@@ -32,6 +35,7 @@ pub struct RouteGroup<'a> {
 pub struct Routes {
     matcher: matchit::Router<usize>,
     endpoints: Vec<Endpoint>,
+    urls: RouteUrls,
 }
 
 struct Endpoint {
@@ -46,31 +50,35 @@ impl Router {
     }
 
     /// Routes `GET path` to `handler`. Paths use `{id}` for parameters, read with `request.param("id")`.
-    pub fn get<H: Handler<Args>, Args: 'static>(&mut self, path: &str, handler: H) -> &mut Self {
+    pub fn get<H: Handler<Args>, Args: 'static>(&mut self, path: &str, handler: H) -> &mut Route {
         let handler = boxed(handler);
         self.push_route(Method::GET, path, handler)
     }
 
     /// Routes `POST path` to `handler`.
-    pub fn post<H: Handler<Args>, Args: 'static>(&mut self, path: &str, handler: H) -> &mut Self {
+    pub fn post<H: Handler<Args>, Args: 'static>(&mut self, path: &str, handler: H) -> &mut Route {
         let handler = boxed(handler);
         self.push_route(Method::POST, path, handler)
     }
 
     /// Routes `PUT path` to `handler`.
-    pub fn put<H: Handler<Args>, Args: 'static>(&mut self, path: &str, handler: H) -> &mut Self {
+    pub fn put<H: Handler<Args>, Args: 'static>(&mut self, path: &str, handler: H) -> &mut Route {
         let handler = boxed(handler);
         self.push_route(Method::PUT, path, handler)
     }
 
     /// Routes `PATCH path` to `handler`.
-    pub fn patch<H: Handler<Args>, Args: 'static>(&mut self, path: &str, handler: H) -> &mut Self {
+    pub fn patch<H: Handler<Args>, Args: 'static>(&mut self, path: &str, handler: H) -> &mut Route {
         let handler = boxed(handler);
         self.push_route(Method::PATCH, path, handler)
     }
 
     /// Routes `DELETE path` to `handler`.
-    pub fn delete<H: Handler<Args>, Args: 'static>(&mut self, path: &str, handler: H) -> &mut Self {
+    pub fn delete<H: Handler<Args>, Args: 'static>(
+        &mut self,
+        path: &str,
+        handler: H,
+    ) -> &mut Route {
         let handler = boxed(handler);
         self.push_route(Method::DELETE, path, handler)
     }
@@ -89,13 +97,15 @@ impl Router {
         self.routes.extend(routes);
     }
 
-    fn push_route(&mut self, method: Method, path: &str, handler: BoxedHandler) -> &mut Self {
+    fn push_route(&mut self, method: Method, path: &str, handler: BoxedHandler) -> &mut Route {
+        let index = self.routes.len();
         self.routes.push(Route {
             method,
             path: path.to_owned(),
             handler,
+            name: None,
         });
-        self
+        &mut self.routes[index]
     }
 
     /// Checks every route and builds the matcher; call once at boot.
@@ -103,6 +113,7 @@ impl Router {
         let mut routes = Routes {
             matcher: matchit::Router::new(),
             endpoints: Vec::new(),
+            urls: RouteUrls::default(),
         };
         let mut endpoint_by_path = HashMap::new();
         for route in self.routes {
@@ -114,6 +125,7 @@ impl Router {
                     index
                 }
             };
+            routes.add_name(&route)?;
             routes.add_method(index, route)?;
         }
         Ok(routes)
@@ -130,6 +142,12 @@ impl RouteGroup<'_> {
 }
 
 impl Route {
+    /// Names the route, like Laravel's `->name('posts.show')`, so URLs can be built from the name.
+    pub fn name(&mut self, name: &str) -> &mut Self {
+        self.name = Some(name.to_owned());
+        self
+    }
+
     // Like Laravel, `prefix("api")` and `prefix("/api/")` mean the same, and `/` inside the group is `/api`.
     fn prefixed(self, prefix: &str) -> Self {
         let prefix = prefix.trim_matches('/');
@@ -156,6 +174,17 @@ impl Routes {
             }
         }
         Ok(())
+    }
+
+    /// The URL of the route named `name`, like Laravel's `route('posts.show', ['id' => 7])`:
+    /// `route("posts.show", &[("id", 7)])` gives `/posts/7`. Params the path does not use
+    /// become the query string, and every value is percent-encoded.
+    pub fn route<V: Display>(&self, name: &str, params: &[(&str, V)]) -> Result<String> {
+        let params: Vec<_> = params
+            .iter()
+            .map(|(key, value)| (*key, value.to_string()))
+            .collect();
+        self.urls.route(name, &params)
     }
 
     /// Runs the handler for `request`, or responds `404` or `405`.
@@ -190,6 +219,16 @@ impl Routes {
             methods: Vec::new(),
         });
         Ok(index)
+    }
+
+    fn add_name(&mut self, route: &Route) -> Result<()> {
+        match &route.name {
+            Some(name) if !self.urls.insert(name, &route.path) => Err(invalid(
+                route,
+                format!("the name `{name}` is already used by another route"),
+            )),
+            _ => Ok(()),
+        }
     }
 
     fn add_method(&mut self, index: usize, route: Route) -> Result<()> {
