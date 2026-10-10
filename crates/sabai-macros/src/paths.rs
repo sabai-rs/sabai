@@ -6,8 +6,7 @@ use syn::{Error, Result};
 /// The path to `sabai-core` items as the calling crate sees them: `::sabai`, a renamed
 /// `sabai` (`::web`), `::sabai_core`, or `crate` inside `sabai-core` itself.
 pub(crate) fn core() -> Result<TokenStream> {
-    // `Itself` for the facade only happens in its integration tests, where `crate` is the
-    // test crate; the facade's own code never uses these derives, so `::sabai` is right.
+    // `Itself` here means the facade's integration tests, where `crate` is the test crate.
     match crate_name("sabai") {
         Ok(FoundCrate::Itself) => return Ok(quote!(::sabai)),
         Ok(FoundCrate::Name(name)) => return Ok(absolute(&name)),

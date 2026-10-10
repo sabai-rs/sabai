@@ -5,7 +5,6 @@ use super::Address;
 use crate::{Error, Result};
 
 /// A finished email, checked by [`MessageBuilder::build`], ready to hand to a transport.
-// Fields are private so attachments and headers can be added without breaking transports.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Message {
     from: Address,

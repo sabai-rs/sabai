@@ -45,7 +45,7 @@ impl From<&'static str> for Body {
 
 impl http_body::Body for Body {
     type Data = Bytes;
-    // Boxed rather than `Infallible` so streaming bodies (M1-41, M1-48) can fail without an API change.
+    // Boxed, not `Infallible`, so streaming bodies can fail without an API change.
     type Error = BoxError;
 
     fn poll_frame(

@@ -51,8 +51,7 @@ impl Logging {
 
     /// The subscriber without installing it, so tests can scope it with `tracing::subscriber::with_default`.
     pub fn into_subscriber(self) -> impl Subscriber + Send + Sync {
-        // An empty `Vec` of layers answers "not interested" for every callsite, which would
-        // silently turn all logging off, so the extra layers are only added when there are some.
+        // An empty `Vec` of layers disables every callsite, so it is only added when non-empty.
         let extra_layers = (!self.layers.is_empty()).then_some(self.layers);
         tracing_subscriber::registry()
             .with(extra_layers)
@@ -66,8 +65,7 @@ impl Logging {
     }
 }
 
-// `Targets` reads a bare word as a target name, so a typo such as `infoo` would
-// silently turn logging off instead of failing.
+// `Targets` reads a bare word as a target, so a typo like `infoo` would silently log nothing.
 fn first_bare_word_that_is_not_a_level(filter: &str) -> Option<&str> {
     filter
         .split(',')

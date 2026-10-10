@@ -13,8 +13,7 @@ use tokio::net::TcpListener;
 
 use crate::{Router, Routes};
 
-// Bodies are read in full before the handler runs, so this caps memory per request.
-// Per-route limits come in M1-04.
+// Bodies are buffered before the handler runs, so this caps memory per request.
 const BODY_LIMIT: usize = 2 * 1024 * 1024;
 
 /// Serves `router` until the process stops, on `app.host`:`app.port` from config
@@ -45,7 +44,7 @@ async fn accept_forever(listener: StdTcpListener, routes: Arc<Routes>) -> Result
             Ok((stream, _)) => {
                 tokio::spawn(serve_connection(TokioIo::new(stream), routes.clone()));
             }
-            // Such as running out of file descriptors: one failed accept must not stop the server.
+            // One failed accept, such as running out of file descriptors, must not stop the server.
             Err(error) => log::warn!("could not accept a connection: {error}"),
         }
     }
@@ -110,8 +109,7 @@ mod tests {
 
     fn send(address: std::net::SocketAddr, head: &str, body: &[u8]) -> String {
         let mut stream = TcpStream::connect(address).unwrap();
-        // A server that failed to start still accepts the connection (the port is already
-        // bound), so without a timeout the test would wait forever instead of failing.
+        // A server that failed to start still accepts connections, so fail instead of hanging.
         stream
             .set_read_timeout(Some(Duration::from_secs(5)))
             .unwrap();

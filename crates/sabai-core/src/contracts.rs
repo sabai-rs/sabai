@@ -14,8 +14,6 @@ pub use clock::{Clock, SystemClock};
 pub use mail::{Address, MailTransport, Message, MessageBuilder};
 pub use storage::{FileMetadata, StorageDriver};
 
-// Native `async fn` in traits cannot be used as `dyn Trait` yet, and drivers are picked
-// from config at runtime, so async methods return this instead. It is what `async-trait`
-// generates, written by hand to keep `syn` out of core.
+// `async fn` in traits is not `dyn`-compatible yet; this is what `async-trait` expands to, without `syn`.
 /// A boxed `Send` future, returned by async contract methods so the traits work as `Arc<dyn Trait>`.
 pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;

@@ -8,7 +8,6 @@ use super::BoxFuture;
 use crate::{Error, Result};
 
 /// Size and modification time of a stored file.
-// `non_exhaustive` so fields such as a MIME type can be added without breaking drivers.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct FileMetadata {
