@@ -20,13 +20,19 @@ const BODY_LIMIT: usize = 2 * 1024 * 1024;
 /// Serves `router` until the process stops, on `app.host`:`app.port` from config
 /// (default `127.0.0.1:8000`), like `php artisan serve`.
 pub fn serve(app: Arc<App>, router: Router) -> Result<()> {
-    let routes = Arc::new(router.compile()?);
+    let routes = router.compile()?;
     let host: String = app.config().get_or("app.host", "127.0.0.1".to_owned())?;
     let port: u16 = app.config().get_or("app.port", 8000)?;
     let listener = StdTcpListener::bind((host.as_str(), port))
         .map_err(|error| listen_failed(error, &host, port))?;
     log::info!("Sabai is serving on http://{}", listener.local_addr()?);
-    serve_on(listener, routes)
+    serve_on(listener, Arc::new(Site { app, routes }))
+}
+
+/// What every connection needs, shared behind one `Arc`.
+pub(crate) struct Site {
+    app: Arc<App>,
+    routes: Routes,
 }
 
 fn listen_failed(error: io::Error, host: &str, port: u16) -> Error {
@@ -39,20 +45,20 @@ fn listen_failed(error: io::Error, host: &str, port: u16) -> Error {
     Error::from(error).context(format!("could not listen on {host}:{port}{hint}"))
 }
 
-pub(crate) fn serve_on(listener: StdTcpListener, routes: Arc<Routes>) -> Result<()> {
+pub(crate) fn serve_on(listener: StdTcpListener, site: Arc<Site>) -> Result<()> {
     listener.set_nonblocking(true)?;
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_io()
         .build()?;
-    runtime.block_on(accept_forever(listener, routes))
+    runtime.block_on(accept_forever(listener, site))
 }
 
-async fn accept_forever(listener: StdTcpListener, routes: Arc<Routes>) -> Result<()> {
+async fn accept_forever(listener: StdTcpListener, site: Arc<Site>) -> Result<()> {
     let listener = TcpListener::from_std(listener)?;
     loop {
         match listener.accept().await {
             Ok((stream, _)) => {
-                tokio::spawn(serve_connection(TokioIo::new(stream), routes.clone()));
+                tokio::spawn(serve_connection(TokioIo::new(stream), site.clone()));
             }
             // One failed accept, such as running out of file descriptors, must not stop the server.
             Err(error) => log::warn!("could not accept a connection: {error}"),
@@ -60,19 +66,23 @@ async fn accept_forever(listener: StdTcpListener, routes: Arc<Routes>) -> Result
     }
 }
 
-async fn serve_connection(io: TokioIo<tokio::net::TcpStream>, routes: Arc<Routes>) {
-    let service = service_fn(move |request| handle(routes.clone(), request));
+async fn serve_connection(io: TokioIo<tokio::net::TcpStream>, site: Arc<Site>) {
+    let service = service_fn(move |request| handle(site.clone(), request));
     if let Err(error) = http1::Builder::new().serve_connection(io, service).await {
         log::debug!("connection closed: {error}");
     }
 }
 
 async fn handle(
-    routes: Arc<Routes>,
+    site: Arc<Site>,
     request: hyper::Request<Incoming>,
 ) -> Result<Response, Infallible> {
     let response = match read_body(request).await {
-        Ok(request) => routes.dispatch(request).await,
+        Ok(request) => {
+            site.routes
+                .dispatch(request.with_app(site.app.clone()))
+                .await
+        }
         Err(error) => error.into_response(),
     };
     Ok(response)
@@ -101,6 +111,8 @@ mod tests {
     use std::net::TcpStream;
     use std::time::Duration;
 
+    use sabai_core::Config;
+
     use super::*;
 
     async fn hello() -> &'static str {
@@ -112,8 +124,11 @@ mod tests {
         let address = listener.local_addr().unwrap();
         let mut router = Router::new();
         router.get("/", hello);
-        let routes = Arc::new(router.compile().unwrap());
-        std::thread::spawn(move || serve_on(listener, routes));
+        let site = Site {
+            app: App::builder(Config::default()).boot().unwrap(),
+            routes: router.compile().unwrap(),
+        };
+        std::thread::spawn(move || serve_on(listener, Arc::new(site)));
         address
     }
 

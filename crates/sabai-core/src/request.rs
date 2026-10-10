@@ -1,12 +1,15 @@
-use http::{HeaderMap, Method, Uri};
+use std::sync::Arc;
 
-use crate::Body;
+use http::{HeaderMap, Method, StatusCode, Uri};
+
+use crate::{App, Body, Error, Result};
 
 /// An incoming HTTP request, with Laravel-style helpers on top of [`http::Request`].
 #[derive(Clone, Debug)]
 pub struct Request {
     inner: http::Request<Body>,
     route_params: Vec<(String, String)>,
+    app: Option<Arc<App>>,
 }
 
 impl Request {
@@ -60,6 +63,22 @@ impl Request {
         self
     }
 
+    /// The app serving this request, like Laravel's `app()`: `request.app()?.get::<dyn Clock>()`.
+    pub fn app(&self) -> Result<&Arc<App>> {
+        self.app.as_ref().ok_or_else(|| {
+            Error::from_status(StatusCode::INTERNAL_SERVER_ERROR).context(
+                "this request has no app because it was built by hand; \
+                 attach one with `request.with_app(app)`",
+            )
+        })
+    }
+
+    /// Attaches the app; the server calls this for every request.
+    pub fn with_app(mut self, app: Arc<App>) -> Self {
+        self.app = Some(app);
+        self
+    }
+
     /// The request body.
     pub fn body(&self) -> &Body {
         self.inner.body()
@@ -76,6 +95,7 @@ impl From<http::Request<Body>> for Request {
         Self {
             inner,
             route_params: Vec::new(),
+            app: None,
         }
     }
 }
