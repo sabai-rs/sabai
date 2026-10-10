@@ -7,5 +7,6 @@
 mod config;
 mod error;
 mod facade;
+mod log;
 mod request;
 mod response;

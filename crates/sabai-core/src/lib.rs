@@ -3,6 +3,7 @@
 mod body;
 mod config;
 mod error;
+pub mod log;
 mod request;
 mod response;
 
