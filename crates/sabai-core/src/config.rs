@@ -144,7 +144,7 @@ mod tests {
 
         assert_eq!(
             error.to_string(),
-            "Server Error: config key `mail.host` is not set; add it to `config/mail.toml`"
+            "config key `mail.host` is not set; add it to `config/mail.toml`"
         );
     }
 
