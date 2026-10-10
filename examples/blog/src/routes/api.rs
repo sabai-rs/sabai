@@ -3,29 +3,19 @@
 
 use std::time::UNIX_EPOCH;
 
+use sabai::Result;
 use sabai::contracts::Clock;
 use sabai::http::{Router, Service};
-use sabai::{Json, Result, StatusCode};
 
-use crate::models::Post;
-use crate::requests::StorePostRequest;
+use crate::app::http::controllers::PostController;
 
 pub fn routes(route: &mut Router) {
     route.get("/api/health", health);
-    route.post("/api/posts", store_post);
+    route.post("/api/posts", PostController::store);
+    route.get("/api/posts/{id}", PostController::show);
 }
 
 async fn health(clock: Service<dyn Clock>) -> Result<String> {
     let now = clock.now().duration_since(UNIX_EPOCH)?;
     Ok(format!("ok at {}", now.as_secs()))
-}
-
-async fn store_post(request: StorePostRequest) -> (StatusCode, Json<Post>) {
-    // Echoes the post back with a made-up id until the ORM (M2) saves it.
-    let post = Post {
-        id: 1,
-        title: request.title,
-        body: request.body,
-    };
-    (StatusCode::CREATED, Json(post))
 }

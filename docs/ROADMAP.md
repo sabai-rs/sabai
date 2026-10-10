@@ -144,6 +144,7 @@ Macros (sabai-macros)
 - [x] **M0-14** Crate skeleton with minimal `syn` features (`derive`, `parsing`, `printing`, `proc-macro`); first derive: `ConfigSection` (`MailConfig` reads `config/mail.toml`, or `#[config("mail")]`)
 - [x] **M0-15** `proc-macro-crate` lookup so macros work via facade or sub-crates: `::sabai`, a renamed `sabai`, `::sabai_core`, or `crate` inside `sabai-core`
 - [x] **M0-16** `sabai-macros` on syn 3, the version `serde_derive` uses, so apps compile syn once instead of twice (~1s of a clean build)
+- [x] **M0-17** The blog laid out like a Laravel app: `src/app/http/{controllers,requests}`, `src/app/{models,providers,services,repositories}`, `src/routes/{web,api}.rs`; the framework never reads folders, so apps may arrange modules their own way
 
 ## M1: HTTP layer & controllers
 
@@ -176,8 +177,10 @@ Controllers
 - [ ] **M1-15** Handlers as methods: `.get("/posts", PostController::index)`
 - [ ] **M1-16** `Router::resource("posts", PostController)` maps the 7 REST actions
 - [ ] **M1-17** `api_resource` (no `create`/`edit`)
-- [ ] **M1-18** Controllers like Laravel's constructor injection: `FromApp` (`fn new(app) -> Result<Self>`) for controllers, services and repositories, `app.make::<T>()` for concrete types, actions as `async fn store(self: Arc<Self>, ...)`, every controller built once when `serve` starts so a missing binding stops startup
+- [x] **M1-18** Controllers like Laravel's constructor injection: `FromApp` (`fn new(app) -> Result<Self>`) for controllers, services and repositories, `app.make::<T>()` for concrete types, actions as `async fn store(self: Arc<Self>, ...)`, every controller built once when `serve` starts so a missing binding stops startup
   - [x] **M1-18a** `FromApp` and `app.make::<T>()`; `serve` prepares every route's arguments before listening, so a `Service<T>` that is not bound stops startup and names the route
+  - [x] **M1-18b** `Controller` trait and `app.make_shared::<T>()`: a controller is made once when `serve` starts and shared by every request
+  - [x] **M1-18c** The blog's `PostController` -> `PostService` -> `dyn PostRepository`, with an in-memory repository until the ORM (M2)
 
 Middleware
 
@@ -198,6 +201,9 @@ Request & response
 - [x] **M1-19b** `FormRequest`: a request struct is a handler argument, filled from the query string (`GET`) or a JSON or form body picked by Content-Type (malformed JSON 400, invalid input 422); `Json<T>` responses
 - [x] **M1-19c** `Service<T>` handler argument (method injection: `clock: Service<dyn Clock>`) and `request.app()`, like Laravel's `app()`
 - [ ] **M1-19** `Param<(A, B)>` for routes with several parameters
+- [ ] **M1-19d** `Request` as a handler argument without a clone: only the last argument may take the request by value (like axum's `FromRequestParts` / `FromRequest`), so a handler taking `request: Request` no longer copies the `HeaderMap`, `Uri` and params; do it before packages write their own arguments (M6-11)
+- [ ] **M1-19e** `FormRequest` through one deserializer: turn the query, form or JSON input into a `serde_json::Value`, then `T::deserialize(value)`, so each request struct compiles one deserialize path instead of serde_json's and serde_urlencoded's; keep it only if `cargo llvm-lines` shows the drop and the runtime cost is small
+- [ ] **M1-19f** Hot-path trims, each kept only if a benchmark shows it: route parameter names as `Arc<str>` shared from the endpoint (one allocation per parameter instead of two), a cheap hasher for the `TypeId` maps in `Container` and `make_shared`, and `Error` as a `Box` around its fields so every `Result` is one pointer wide
 - [ ] **M1-20** `#[derive(FromRequest)]` for grouping handler arguments
 - [ ] **M1-21** Responses: `json()`, `redirect()`, `view()` hook, `download()`
 - [ ] **M1-22** Cookies (signed + encrypted)
@@ -376,7 +382,7 @@ Built-in commands
 
 - [ ] **M5-07** `route:list`
 - [ ] **M5-08** `new <app>`, `serve`, `about`, `env`
-- [ ] **M5-09** `make:controller`, `make:model -m`, `make:migration`, `make:job`, `make:command`, `make:policy`, `make:middleware`
+- [ ] **M5-09** `make:controller`, `make:model -m`, `make:migration`, `make:job`, `make:command`, `make:policy`, `make:middleware`; Laravel's folders by default, nested names like `make:controller Store/PostController` (to `app/http/controllers/store/post_controller.rs`), and config to point each kind elsewhere (`make.models = "app/domain/models"`)
 - [ ] **M5-10** `migrate`, `migrate:rollback`, `migrate:fresh --seed`, `db:seed`
 - [ ] **M5-11** `queue:work`, `queue:failed`, `queue:retry`
 - [ ] **M5-12** `key:generate`, `config:show`
