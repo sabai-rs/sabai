@@ -8,7 +8,7 @@ license.workspace = true
 publish = false
 
 [dependencies]
-sabai.workspace = true
+sabai = { workspace = true, features = ["orm"] }
 serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]

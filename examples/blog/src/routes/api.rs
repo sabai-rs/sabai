@@ -5,6 +5,7 @@ use std::time::UNIX_EPOCH;
 use sabai::Result;
 use sabai::contracts::Clock;
 use sabai::http::{Router, Service};
+use sabai::orm::Database;
 
 use crate::app::http::controllers::PostController;
 
@@ -17,7 +18,8 @@ pub fn routes(route: &mut Router) {
     });
 }
 
-async fn health(clock: Service<dyn Clock>) -> Result<String> {
+async fn health(clock: Service<dyn Clock>, db: Service<Database>) -> Result<String> {
+    db.ping().await?;
     let now = clock.now().duration_since(UNIX_EPOCH)?;
     Ok(format!("ok at {}", now.as_secs()))
 }
