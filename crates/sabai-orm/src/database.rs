@@ -103,6 +103,32 @@ mod tests {
     }
 
     #[test]
+    fn sqlite_runs_the_schema_builders_sql() {
+        let config = config_with(
+            "schema",
+            "default = \"sqlite\"\n[connections.sqlite]\ndriver = \"sqlite\"\ndatabase = \":memory:\"\n",
+        );
+        let database = Database::from_config(&config).unwrap();
+        let mut schema = crate::Schema::default();
+        schema.create("posts", |table| {
+            table.id();
+            table.string("title");
+            table.timestamps();
+        });
+        schema.drop_if_exists("posts");
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+
+        for sql in schema.to_sql(crate::Driver::Sqlite) {
+            runtime
+                .block_on(sqlx::query(&sql).execute(database.pool()))
+                .unwrap();
+        }
+    }
+
+    #[test]
     fn a_numeric_password_from_the_env_is_read_as_text() {
         let config = config_with(
             "numeric",

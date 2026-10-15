@@ -312,6 +312,7 @@ Migrations, schema & data
 - [ ] **M2-21** `migrations` table with batch numbers, so rollback undoes the last batch
 - [ ] **M2-22** Packages register migrations from their provider; `vendor:publish --tag=migrations` copies them into the app
 - [ ] **M2-23** Schema builder: create/alter/drop table, indexes, foreign keys, `timestamps()`, `soft_deletes()`, `morphs()`
+  - [x] **M2-23a** `schema.create("posts", |table| { table.id(); table.string("title"); table.text("body"); table.timestamps(); })`, `drop_if_exists`, `.nullable()`; `schema.to_sql(Driver::MySql | Driver::Sqlite)` gives Laravel's SQL for each, with quoted names
 - [ ] **M2-24** Commands: `migrate`, `migrate:rollback --step`, `migrate:reset`, `migrate:fresh`, `migrate:status`, `--pretend` (print SQL only)
 - [ ] **M2-25** One transaction per migration where the driver supports transactional DDL
 - [ ] **M2-26** Advisory lock so two deploys never migrate at once
