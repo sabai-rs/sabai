@@ -10,6 +10,13 @@ pub struct InMemoryPostRepository {
 }
 
 impl PostRepository for InMemoryPostRepository {
+    fn all(&self) -> Vec<Post> {
+        self.posts
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone()
+    }
+
     fn create(&self, title: String, body: String) -> Post {
         let mut posts = self.posts.lock().unwrap_or_else(PoisonError::into_inner);
         let post = Post {

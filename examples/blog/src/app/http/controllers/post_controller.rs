@@ -23,6 +23,10 @@ impl FromApp for PostController {
 impl Controller for PostController {}
 
 impl PostController {
+    pub async fn index(self: Arc<Self>) -> Json<Vec<Post>> {
+        Json(self.post_service.all())
+    }
+
     pub async fn store(self: Arc<Self>, request: StorePostRequest) -> (StatusCode, Json<Post>) {
         (StatusCode::CREATED, Json(self.post_service.create(request)))
     }

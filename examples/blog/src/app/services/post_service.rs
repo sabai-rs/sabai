@@ -20,6 +20,10 @@ impl FromApp for PostService {
 }
 
 impl PostService {
+    pub fn all(&self) -> Vec<Post> {
+        self.post_repository.all()
+    }
+
     pub fn create(&self, request: StorePostRequest) -> Post {
         self.post_repository.create(request.title, request.body)
     }

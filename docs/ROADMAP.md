@@ -31,7 +31,7 @@ Compile-time rules that apply to every item below:
 
 `CLAUDE.md` asks for an end-to-end slice before deepening any milestone: `sabai new blog` -> `sabai migrate` -> `sabai serve` -> `GET /posts` returns JSON from the database. M1 went deep first; these come next, in this order, and anything else waits unless it blocks one of them.
 
-1. **M1-16 / M1-17** `api_resource("posts", PostController)`: closes M1's "done when"
+1. ~~**M1-16 / M1-17**~~ `api_resource` done (M1-17); M1-16's web `create`/`edit` waits for views
 2. **M2-01** A Postgres pool from config
 3. **M2-19 / M2-21 / M2-24** (smallest part) Raw `.sql` migrations, the `migrations` table, `migrate`
 4. **M2-09 / M2-10** (smallest part) `#[derive(Model)]` metadata and `all`, `find_or_fail`, `create`
@@ -197,7 +197,7 @@ Controllers
 
 - [x] **M1-15** Handlers as methods: `.get("/posts/{id}", PostController::show)`, with `self: Arc<Self>` (M1-18)
 - [ ] **M1-16** `Router::resource("posts", PostController)` maps the 7 REST actions
-- [ ] **M1-17** `api_resource` (no `create`/`edit`)
+- [x] **M1-17** `route.api_resource("posts", |posts| { posts.index(...); posts.show(...); })`: Laravel's paths, methods and names (`posts.index` ... `posts.destroy`, `update` on `PUT` and `PATCH`), only the actions declared; `{id}` instead of `{post}` since there is no model binding
 - [x] **M1-18** Controllers like Laravel's constructor injection: `FromApp` (`fn new(app) -> Result<Self>`) for controllers, services and repositories, `app.make::<T>()` for concrete types, actions as `async fn store(self: Arc<Self>, ...)`, every controller built once when `serve` starts so a missing binding stops startup
   - [x] **M1-18a** `FromApp` and `app.make::<T>()`; `serve` prepares every route's arguments before listening, so a `Service<T>` that is not bound stops startup and names the route
   - [x] **M1-18b** `Controller` trait and `app.singleton::<T>()`: a controller is made once when `serve` starts and shared by every request
