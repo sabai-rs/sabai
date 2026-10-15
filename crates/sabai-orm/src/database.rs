@@ -7,6 +7,7 @@ use sabai_core::{Config, Error, Result};
 use sqlx::AnyPool;
 use sqlx::any::{AnyConnectOptions, AnyPoolOptions, install_default_drivers};
 
+use crate::Driver;
 use crate::config::default_target;
 
 const ACQUIRE_TIMEOUT: Duration = Duration::from_secs(5);
@@ -16,10 +17,21 @@ const ACQUIRE_TIMEOUT: Duration = Duration::from_secs(5);
 pub struct Database {
     options: AnyConnectOptions,
     in_memory: bool,
+    driver: Driver,
     pool: OnceLock<AnyPool>,
 }
 
 impl Database {
+    #[cfg(test)]
+    pub(crate) fn in_memory() -> Self {
+        Self {
+            options: AnyConnectOptions::from_str("sqlite::memory:").unwrap(),
+            in_memory: true,
+            driver: Driver::Sqlite,
+            pool: OnceLock::new(),
+        }
+    }
+
     /// The default connection from config, checked now; nothing connects until the first query.
     pub fn from_config(config: &Config) -> Result<Self> {
         let target = default_target(config)?;
@@ -29,8 +41,14 @@ impl Database {
         Ok(Self {
             options,
             in_memory: target.in_memory,
+            driver: target.driver,
             pool: OnceLock::new(),
         })
+    }
+
+    /// The SQL dialect of the default connection.
+    pub fn driver(&self) -> Driver {
+        self.driver
     }
 
     /// The sqlx pool, for queries the query builder cannot write yet.
