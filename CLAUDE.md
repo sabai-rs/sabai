@@ -52,6 +52,7 @@ Dependency direction only points down toward `sabai-core`. Crates at the bottom 
 
 - tokio + hyper 1 + matchit for HTTP
 - sqlx under the ORM: MySQL first (dev via `docker compose`), SQLite for tests, then Postgres
+- Schema columns produce exactly Laravel's SQL for each driver: same types, signed or unsigned, lengths, nullability and indexes (`id()` is `bigint unsigned`, `foreignId()` matches it, `morphs()` is `{name}_type varchar(255)` plus `{name}_id bigint unsigned` and an index). Check against Laravel's grammar before adding a column type.
 - clap for the CLI, tracing for logs, thiserror for errors
 - Edition 2024; pin MSRV in CI
 

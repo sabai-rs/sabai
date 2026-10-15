@@ -27,28 +27,52 @@ impl Driver {
         format!("drop table if exists {}", self.quote(table))
     }
 
+    pub(crate) fn has_table(self) -> &'static str {
+        match self {
+            Driver::MySql => {
+                "select count(*) from information_schema.tables \
+                 where table_schema = database() and table_name = ?"
+            }
+            Driver::Sqlite => {
+                "select count(*) from sqlite_master where type = 'table' and name = ?"
+            }
+        }
+    }
+
+    pub(crate) fn last_batch(self) -> &'static str {
+        match self {
+            Driver::MySql => "select cast(coalesce(max(batch), 0) as signed) from migrations",
+            Driver::Sqlite => "select coalesce(max(batch), 0) from migrations",
+        }
+    }
+
     fn column(self, column: &Column) -> String {
         let name = self.quote(&column.name);
-        if let Kind::Id = column.kind {
+        let kind = self.type_of(column.kind);
+        if matches!(column.kind, Kind::Id | Kind::Increments) {
             return match self {
-                Driver::MySql => {
-                    format!("{name} bigint unsigned not null auto_increment primary key")
-                }
-                Driver::Sqlite => format!("{name} integer primary key autoincrement not null"),
+                Driver::MySql => format!("{name} {kind} not null auto_increment primary key"),
+                Driver::Sqlite => format!("{name} {kind} primary key autoincrement not null"),
             };
         }
-        let null = if column.nullable { "null" } else { "not null" };
-        format!("{name} {} {null}", self.type_of(column.kind))
+        match (self, column.nullable) {
+            (_, false) => format!("{name} {kind} not null"),
+            (Driver::MySql, true) => format!("{name} {kind} null"),
+            (Driver::Sqlite, true) => format!("{name} {kind}"),
+        }
     }
 
     fn type_of(self, kind: Kind) -> String {
         match (self, kind) {
+            (Driver::MySql, Kind::Id) => "bigint unsigned".to_owned(),
+            (Driver::MySql, Kind::Increments) => "int unsigned".to_owned(),
+            (Driver::MySql, Kind::Integer) => "int".to_owned(),
+            (Driver::Sqlite, Kind::Id | Kind::Increments | Kind::Integer) => "integer".to_owned(),
             (Driver::MySql, Kind::String(length)) => format!("varchar({length})"),
             (Driver::Sqlite, Kind::String(_)) => "varchar".to_owned(),
             (_, Kind::Text) => "text".to_owned(),
             (Driver::MySql, Kind::Timestamp) => "timestamp".to_owned(),
             (Driver::Sqlite, Kind::Timestamp) => "datetime".to_owned(),
-            (_, Kind::Id) => "integer".to_owned(),
         }
     }
 
@@ -96,8 +120,8 @@ mod tests {
             create_posts().to_sql(Driver::Sqlite),
             [
                 "create table \"posts\" (\"id\" integer primary key autoincrement not null, \
-                 \"title\" varchar not null, \"body\" text null, \"created_at\" datetime null, \
-                 \"updated_at\" datetime null)",
+                 \"title\" varchar not null, \"body\" text, \"created_at\" datetime, \
+                 \"updated_at\" datetime)",
                 "drop table if exists \"posts\"",
             ]
         );

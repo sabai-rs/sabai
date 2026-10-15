@@ -29,6 +29,8 @@ pub struct Column {
 #[derive(Clone, Copy)]
 enum Kind {
     Id,
+    Increments,
+    Integer,
     String(u32),
     Text,
     Timestamp,
@@ -69,9 +71,19 @@ impl Blueprint {
         }
     }
 
-    /// An auto-incrementing `id` primary key.
+    /// An auto-incrementing `bigint unsigned` primary key named `id`.
     pub fn id(&mut self) -> &mut Column {
         self.add("id", Kind::Id)
+    }
+
+    /// An auto-incrementing `int unsigned` primary key.
+    pub fn increments(&mut self, name: &str) -> &mut Column {
+        self.add(name, Kind::Increments)
+    }
+
+    /// An `int` column.
+    pub fn integer(&mut self, name: &str) -> &mut Column {
+        self.add(name, Kind::Integer)
     }
 
     /// A `varchar(255)` column.

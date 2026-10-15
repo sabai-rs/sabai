@@ -4,6 +4,8 @@ use percent_encoding::{NON_ALPHANUMERIC, utf8_percent_encode};
 use sabai_core::{Config, Error, Result, StatusCode};
 use serde::{Deserialize, Deserializer};
 
+use crate::Driver;
+
 #[derive(Deserialize)]
 struct DatabaseConfig {
     default: String,
@@ -33,6 +35,7 @@ enum Connection {
 pub(crate) struct Target {
     pub(crate) url: String,
     pub(crate) in_memory: bool,
+    pub(crate) driver: Driver,
 }
 
 pub(crate) fn default_target(config: &Config) -> Result<Target> {
@@ -51,10 +54,12 @@ fn target(connection: &Connection) -> Target {
         Connection::Sqlite { database } if database == ":memory:" => Target {
             url: "sqlite::memory:".to_owned(),
             in_memory: true,
+            driver: Driver::Sqlite,
         },
         Connection::Sqlite { database } => Target {
             url: format!("sqlite://{database}?mode=rwc"),
             in_memory: false,
+            driver: Driver::Sqlite,
         },
         Connection::Mysql {
             host,
@@ -70,6 +75,7 @@ fn target(connection: &Connection) -> Target {
                 encode(database)
             ),
             in_memory: false,
+            driver: Driver::MySql,
         },
     }
 }
