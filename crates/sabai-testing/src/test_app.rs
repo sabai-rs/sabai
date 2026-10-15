@@ -17,7 +17,6 @@ use crate::{TestResponse, ToUri};
 pub struct TestApp {
     app: Arc<App>,
     routes: Routes,
-    // Tests stay plain `#[test]` functions; handlers still run on tokio, which the ORM needs.
     runtime: Runtime,
 }
 

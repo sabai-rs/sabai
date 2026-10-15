@@ -175,7 +175,6 @@ impl FieldErrors {
         }
     }
 
-    // Laravel's top-level message: "The title field is required. (and 2 more errors)".
     fn summary(&self) -> String {
         let mut messages = self.0.iter().flat_map(|(_, messages)| messages);
         let Some(first) = messages.next() else {
@@ -189,8 +188,7 @@ impl FieldErrors {
     }
 }
 
-// The client's view: `message`, plus `errors` for validation. By hand, because a
-// `serde_json::Map` would sort the fields, and Laravel keeps them in the rules' order.
+// By hand: a `serde_json::Map` would sort the fields.
 impl Serialize for Error {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut body = serializer.serialize_map(None)?;

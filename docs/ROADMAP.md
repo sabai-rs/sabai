@@ -541,6 +541,7 @@ Testing (sabai-testing)
   - [ ] **QA-01b** `assert_json_count(n, "data")`, `assert_json_structure(...)`, `assert_json_path`, `put_json`/`patch_json`/`delete_json`
 - [ ] **QA-02** `acting_as(&user)` for authenticated tests
 - [ ] **QA-03** `RefreshDatabase`: migrate once per run, one rolled-back transaction per test
+  - [x] **QA-03a** `Config::load_for(base, "testing")` reads `.env.testing` with `APP_ENV` forced, like Laravel's tests, so the blog's feature tests run on SQLite in memory even when `.env` points at the development MySQL
 - [ ] **QA-04** DB assertions: `assert_database_has`, `assert_database_missing`, `assert_soft_deleted`, `assert_model_exists`
 - [ ] **QA-05** Factories: states (`.published()`), sequences, relations (`has`, `for`), `make()` without saving
 - [ ] **QA-06** Fakes with assertions: Queue, Mail, Event, Notification, Storage, Http

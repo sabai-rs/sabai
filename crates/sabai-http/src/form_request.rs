@@ -41,7 +41,7 @@ impl<T: FormRequest> FromRequest for T {
 fn parse_input<T: DeserializeOwned>(request: &Request, rules: &Rules) -> Result<T> {
     match validated_input(request, rules)? {
         Validated::Json(value) => T::deserialize(value).map_err(invalid_input),
-        // serde_urlencoded reads `draft=true` into a `bool`; a `Value` of strings would not.
+        // Read from the bytes so `draft=true` becomes a `bool`.
         Validated::Form(bytes) => serde_urlencoded::from_bytes(bytes).map_err(invalid_input),
     }
 }
@@ -51,7 +51,6 @@ enum Validated<'a> {
     Form(&'a [u8]),
 }
 
-// Not generic: parsing and validating compile once, however many request structs an app has.
 fn validated_input<'a>(request: &'a Request, rules: &Rules) -> Result<Validated<'a>> {
     match input_of(request)? {
         Input::Json(bytes) => {
@@ -81,8 +80,7 @@ enum Input<'a> {
     Form(&'a [u8]),
 }
 
-// Like Laravel's `isJson()`, the Content-Type picks the parser, so a JSON body sent as
-// `text/plain` (which a cross-site form can do without a preflight) is never read.
+// A cross-site form can post `text/plain` without a preflight, so only a JSON type is parsed as JSON.
 fn input_of(request: &Request) -> Result<Input<'_>> {
     if request.method() == Method::GET || request.method() == Method::HEAD {
         let query = request.query_string().unwrap_or_default();

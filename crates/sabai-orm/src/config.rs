@@ -4,7 +4,6 @@ use percent_encoding::{NON_ALPHANUMERIC, utf8_percent_encode};
 use sabai_core::{Config, Error, Result, StatusCode};
 use serde::{Deserialize, Deserializer};
 
-/// `config/database.toml`, shaped like Laravel's `config/database.php`.
 #[derive(Deserialize)]
 struct DatabaseConfig {
     default: String,
@@ -15,23 +14,22 @@ struct DatabaseConfig {
 #[serde(tag = "driver", rename_all = "lowercase")]
 enum Connection {
     Sqlite {
-        #[serde(deserialize_with = "text")]
+        #[serde(deserialize_with = "string_or_number")]
         database: String,
     },
     Mysql {
-        #[serde(deserialize_with = "text")]
+        #[serde(deserialize_with = "string_or_number")]
         host: String,
         port: u16,
-        #[serde(deserialize_with = "text")]
+        #[serde(deserialize_with = "string_or_number")]
         database: String,
-        #[serde(deserialize_with = "text")]
+        #[serde(deserialize_with = "string_or_number")]
         username: String,
-        #[serde(deserialize_with = "text")]
+        #[serde(deserialize_with = "string_or_number")]
         password: String,
     },
 }
 
-/// Where the default connection points, as sqlx wants it.
 pub(crate) struct Target {
     pub(crate) url: String,
     pub(crate) in_memory: bool,
@@ -80,8 +78,7 @@ fn encode(part: &str) -> String {
     utf8_percent_encode(part, NON_ALPHANUMERIC).to_string()
 }
 
-// `${DB_PASSWORD}` set to `12345` arrives as a number, like any env value that looks like one.
-fn text<'de, D: Deserializer<'de>>(deserializer: D) -> Result<String, D::Error> {
+fn string_or_number<'de, D: Deserializer<'de>>(deserializer: D) -> Result<String, D::Error> {
     #[derive(Deserialize)]
     #[serde(untagged)]
     enum Text {
