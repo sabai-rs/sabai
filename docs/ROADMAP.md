@@ -6,7 +6,7 @@ Oct 8, 2026 · @SCZ4
 
 Build in milestone order: each one ends with a feature a demo app can actually use, and each later milestone depends only on earlier ones. Built from scratch: no code carries over from oxalin, and every item is judged on developer experience and compile time first.
 
-Every to-do has a ticket ID: `M0-01` to `M7-36` for milestones, plus `DX-`, `QA-`, `DOC-` and `REL-`. Use it in branch names and commits, e.g. branch `m1-03-named-routes`, commit `M1-03: named routes and url_for`.
+Every to-do has a ticket ID: `M0-01` to `M7-36` for milestones, plus `DX-`, `QA-`, `DOC-` and `REL-`. Use it in branch names and commits, e.g. branch `m1-03-named-routes`, commit `feat(M1-03a): named routes and route()`.
 
 | Milestone | Crate | Depends on | Done when |
 | --- | --- | --- | --- |
@@ -24,6 +24,7 @@ Compile-time rules that apply to every item below:
 - Derive macros emit metadata (consts, field lists) only; logic lives in runtime crates.
 - Every public generic API is a one-line shim over a non-generic inner function.
 - Pluggable parts (middleware, guards, queue drivers, DB drivers) are `Arc<dyn Trait>`, not nested generics.
+- A public `async fn` that other crates await returns a `BoxFuture` made in its own crate; otherwise its body, and everything it awaits, compiles again in every app (a plain `async fn ping` put 7,000 lines of sqlx into the blog).
 - `sabai-macros` never depends on runtime crates; it emits `::sabai::...` paths.
 - Integration tests live in one binary: `tests/it/main.rs`.
 
@@ -32,8 +33,8 @@ Compile-time rules that apply to every item below:
 `CLAUDE.md` asks for an end-to-end slice before deepening any milestone: `sabai new blog` -> `sabai migrate` -> `sabai serve` -> `GET /posts` returns JSON from the database. M1 went deep first; these come next, in this order, and anything else waits unless it blocks one of them.
 
 1. ~~**M1-16 / M1-17**~~ `api_resource` done (M1-17); M1-16's web `create`/`edit` waits for views
-2. **M2-01** A Postgres pool from config
-3. **M2-19 / M2-21 / M2-24** (smallest part) Raw `.sql` migrations, the `migrations` table, `migrate`
+2. ~~**M2-01**~~ A MySQL and SQLite pool from config (M2-01a)
+3. **M2-19 / M2-21 / M2-23 / M2-24** (smallest part) Migrations with a small schema builder (`Schema::create("posts", ...)`), since dev runs MySQL and tests run SQLite and raw SQL differs between them; the `migrations` table; `migrate`
 4. **M2-09 / M2-10** (smallest part) `#[derive(Model)]` metadata and `all`, `find_or_fail`, `create`
 5. The blog's `PostRepository` on the database instead of in memory, with feature tests on a test database (QA-03, smallest part)
 6. **M5-01 / M5-02 / M5-08 / M5-10** (smallest part) `sabai new`, `sabai serve`, `sabai migrate`
@@ -241,7 +242,7 @@ Request & response
 - [ ] **M1-46** Status helpers: `created()` with `Location`, `no_content()`, `accepted()`
 - [ ] **M1-47** Redirects: `back()`, `to_route("posts.show", params)`, `.with("status", "Saved")`
 - [ ] **M1-48** Streaming responses, Server-Sent Events, `file()` inline with range requests
-- [ ] **M1-49** Central exception handler: every error becomes one response shape (`{message, errors}`) by default, replaceable by the app via a registered error renderer (`Arc<dyn ErrorRenderer>`); before rendering, errors (5xx by default) go to every registered `Arc<dyn ErrorReporter>`, like Laravel's report/render split; debug page in dev only, no internals in production
+- [ ] **M1-49** Central exception handler: every error becomes one response shape (`{message, errors}`) by default, replaceable by the app via a registered error renderer (`Arc<dyn ErrorRenderer>`); before rendering, errors (5xx by default) go to every registered `Arc<dyn ErrorReporter>`, like Laravel's report/render split; debug page in dev only, no internals in production; server errors are already logged with their cause and context (M2-01a)
 
 Validation
 
@@ -271,11 +272,12 @@ HTTP caching
 
 ## M2: ORM (Eloquent-style)
 
-Goal: `Post::query().where("published", true).with("author").paginate(20)` against Postgres, MySQL and SQLite.
+Goal: `Post::query().where("published", true).with("author").paginate(20)` against MySQL, SQLite and Postgres.
 
 Connection
 
-- [ ] **M2-01** Pool on top of `sqlx` (Postgres first, then MySQL, SQLite)
+- [ ] **M2-01** Pool on top of `sqlx`: MySQL first (what most of our Laravel apps run), SQLite for tests, then Postgres
+  - [x] **M2-01a** `Database` from `config/database.toml` (Laravel's `default` + `connections`), bound by `DatabaseServiceProvider`; `sqlx::Any` so `DB_CONNECTION` picks MySQL or SQLite at runtime; the pool starts on first use (sqlx needs tokio, which starts after boot); `:memory:` keeps one connection; a down database fails in 5 seconds with a hint; `docker-compose.yml` runs MySQL for dev; the blog's `/api/health` pings it
 - [ ] **M2-02** Multiple named connections from config
 - [ ] **M2-03** Transactions: `db.transaction(|tx| async { ... })`
 

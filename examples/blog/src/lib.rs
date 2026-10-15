@@ -6,6 +6,7 @@ pub mod routes;
 
 use std::sync::Arc;
 
+use sabai::orm::DatabaseServiceProvider;
 use sabai::{App, Config, Result};
 
 use crate::app::providers::AppServiceProvider;
@@ -19,5 +20,8 @@ pub fn config() -> Result<Config> {
 
 /// Boots the blog with its providers, like Laravel's `bootstrap/app.php`.
 pub fn app(config: Config) -> Result<Arc<App>> {
-    App::builder(config).provider(AppServiceProvider).boot()
+    App::builder(config)
+        .provider(DatabaseServiceProvider)
+        .provider(AppServiceProvider)
+        .boot()
 }

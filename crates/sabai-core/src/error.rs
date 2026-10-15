@@ -157,6 +157,10 @@ impl fmt::Debug for Error {
 
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
+        if self.status.is_server_error() {
+            crate::log::error!("{self}");
+        }
+
         let body =
             serde_json::to_string(&self).unwrap_or_else(|_| r#"{"message":"Server Error"}"#.into());
         with_status(json(body), self.status)

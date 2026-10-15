@@ -35,8 +35,9 @@ quote = "1"
 serde = "1"
 serde_json = "1"
 serde_urlencoded = "0.7"
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "any", "mysql", "sqlite"] }
 syn = { version = "3", default-features = false, features = ["derive", "parsing", "printing", "proc-macro"] }
-tokio = { version = "1", default-features = false, features = ["rt-multi-thread", "net"] }
+tokio = { version = "1", default-features = false, features = ["rt-multi-thread", "net", "time"] }
 toml = { version = "0.9", default-features = false, features = ["std", "parse", "serde"] }
 tracing = { version = "0.1", default-features = false, features = ["std"] }
 tracing-subscriber = { version = "0.3", default-features = false, features = ["std", "fmt", "ansi"] }

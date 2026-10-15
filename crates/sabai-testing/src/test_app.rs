@@ -27,6 +27,7 @@ impl TestApp {
         let routes = router.compile().expect("the routes are valid");
         routes.prepare(&app).expect("every route can start");
         let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
             .build()
             .expect("a tokio runtime starts");
         Self {

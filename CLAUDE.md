@@ -21,6 +21,7 @@ Full roadmap and to-do list: `docs/ROADMAP.md`.
   ```
 - Closures passed to builders (`group`, `transaction`) are called first, then work goes to a non-generic fn.
 - Pluggable parts (middleware, guards, queue/cache/storage/mail drivers) are `Arc<dyn Trait>`, never nested generic layers.
+- A public `async fn` that other crates await returns a `BoxFuture` built in its own crate (`Box::pin(self.inner())`). A plain `pub async fn` compiles its body, and everything it awaits, into every app that calls it.
 - `impl Handler` for at most 8 arguments (`FromRequest` types).
 - `sabai-macros` never depends on runtime crates; it emits `::sabai::...` paths.
 - Heavy optional deps (AWS SDK, mail, views) live in their own crate or behind a feature.
@@ -50,7 +51,7 @@ Dependency direction only points down toward `sabai-core`. Crates at the bottom 
 ## Stack decisions
 
 - tokio + hyper 1 + matchit for HTTP
-- sqlx under the ORM (Postgres first, then MySQL, SQLite)
+- sqlx under the ORM: MySQL first (dev via `docker compose`), SQLite for tests, then Postgres
 - clap for the CLI, tracing for logs, thiserror for errors
 - Edition 2024; pin MSRV in CI
 
@@ -65,7 +66,7 @@ Dependency direction only points down toward `sabai-core`. Crates at the bottom 
   Report build-time impact in the summary.
 - Use the feature in `examples/blog` before calling it done.
 - Work one ticket at a time by its ID from `docs/ROADMAP.md` (e.g. `M1-03`). If a ticket is too big for one small step, split it into `M1-03a`, `M1-03b` and say so.
-- Branch per ticket: `m1-03-named-routes`. Commit messages start with the ID: `M1-03: named routes and url_for`.
+- Branch per ticket: `m1-03-named-routes`. Commit messages start with the ID: `feat(M1-03a): named routes and route()`.
 - Tick the ticket in `docs/ROADMAP.md` in the same commit that finishes it.
 
 ## Commands
