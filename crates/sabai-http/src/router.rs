@@ -97,7 +97,12 @@ impl Router {
         self.routes.extend(routes);
     }
 
-    fn push_route(&mut self, method: Method, path: &str, handler: BoxedHandler) -> &mut Route {
+    pub(crate) fn push_route(
+        &mut self,
+        method: Method,
+        path: &str,
+        handler: BoxedHandler,
+    ) -> &mut Route {
         let index = self.routes.len();
         self.routes.push(Route {
             method,

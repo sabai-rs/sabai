@@ -300,3 +300,65 @@ fn a_group_route_that_repeats_another_is_reported_with_its_full_path() {
         "route `GET /api/health` is invalid: it is defined twice; remove one of them"
     );
 }
+
+async fn method_and_path(request: Request) -> String {
+    format!("{} {}", request.method(), request.path())
+}
+
+#[test]
+fn an_api_resource_routes_each_action_with_laravels_paths_and_names() {
+    let mut router = Router::new();
+    router.prefix("/api").group(|route| {
+        route.api_resource("posts", |posts| {
+            posts.index(method_and_path);
+            posts.store(method_and_path);
+            posts.show(method_and_path);
+            posts.update(method_and_path);
+            posts.destroy(method_and_path);
+        });
+    });
+    let routes = router.compile().unwrap();
+
+    let requests = [
+        (Method::GET, "/api/posts"),
+        (Method::POST, "/api/posts"),
+        (Method::GET, "/api/posts/7"),
+        (Method::PUT, "/api/posts/7"),
+        (Method::PATCH, "/api/posts/7"),
+        (Method::DELETE, "/api/posts/7"),
+    ];
+    for (method, path) in requests {
+        let response = send(&routes, method.clone(), path);
+        assert_eq!(
+            response.body().as_bytes(),
+            format!("{method} {path}").as_bytes()
+        );
+    }
+    assert_eq!(
+        routes.route::<&str>("posts.index", &[]).unwrap(),
+        "/api/posts"
+    );
+    assert_eq!(
+        routes.route("posts.update", &[("id", 7)]).unwrap(),
+        "/api/posts/7"
+    );
+}
+
+#[test]
+fn an_api_resource_routes_only_the_actions_it_declares() {
+    let mut router = Router::new();
+    router.api_resource("posts", |posts| {
+        posts.index(method_and_path);
+    });
+    let routes = router.compile().unwrap();
+
+    assert_eq!(
+        send(&routes, Method::POST, "/posts").status(),
+        StatusCode::METHOD_NOT_ALLOWED
+    );
+    assert_eq!(
+        send(&routes, Method::GET, "/posts/7").status(),
+        StatusCode::NOT_FOUND
+    );
+    assert!(routes.route::<&str>("posts.store", &[]).is_err());
+}

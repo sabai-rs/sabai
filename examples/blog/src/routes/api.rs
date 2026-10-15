@@ -10,12 +10,11 @@ use crate::app::http::controllers::PostController;
 
 pub fn routes(route: &mut Router) {
     route.get("/health", health).name("health");
-    route
-        .post("/posts", PostController::store)
-        .name("posts.store");
-    route
-        .get("/posts/{id}", PostController::show)
-        .name("posts.show");
+    route.api_resource("posts", |posts| {
+        posts.index(PostController::index);
+        posts.store(PostController::store);
+        posts.show(PostController::show);
+    });
 }
 
 async fn health(clock: Service<dyn Clock>) -> Result<String> {

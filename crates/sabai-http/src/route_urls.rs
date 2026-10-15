@@ -20,13 +20,16 @@ pub(crate) struct RouteUrls {
 }
 
 impl RouteUrls {
-    /// Remembers `path` under `name`; `false` if the name is taken.
+    /// Remembers `path` under `name`; `false` if the name already belongs to another path.
+    /// One name may cover several methods on one path, like `posts.update` for `PUT` and `PATCH`.
     pub(crate) fn insert(&mut self, name: &str, path: &str) -> bool {
-        if self.paths.contains_key(name) {
-            return false;
+        match self.paths.get(name) {
+            Some(existing) => existing == path,
+            None => {
+                self.paths.insert(name.to_owned(), path.to_owned());
+                true
+            }
         }
-        self.paths.insert(name.to_owned(), path.to_owned());
-        true
     }
 
     /// The URL of the route named `name`. Params the path does not use become the query string.
