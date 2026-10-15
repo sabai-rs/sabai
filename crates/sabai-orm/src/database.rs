@@ -66,12 +66,7 @@ impl Database {
         sqlx::query("SELECT 1")
             .execute(self.pool())
             .await
-            .map_err(|error| {
-                Error::from(error).context(
-                    "the database did not answer; is it running (`docker compose up -d`), \
-                     and are DB_HOST and DB_PORT in .env right?",
-                )
-            })?;
+            .map_err(unreachable)?;
         Ok(())
     }
 
@@ -88,6 +83,10 @@ impl Database {
         };
         options.connect_lazy_with(self.options.clone())
     }
+}
+
+pub(crate) fn unreachable(error: sqlx::Error) -> Error {
+    Error::from(error).context("could not connect to the database")
 }
 
 #[cfg(test)]

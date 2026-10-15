@@ -34,7 +34,7 @@ Compile-time rules that apply to every item below:
 
 1. ~~**M1-16 / M1-17**~~ `api_resource` done (M1-17); M1-16's web `create`/`edit` waits for views
 2. ~~**M2-01**~~ A MySQL and SQLite pool from config (M2-01a)
-3. **M2-19 / M2-21 / M2-23 / M2-24** (smallest part) Migrations with a small schema builder (`Schema::create("posts", ...)`), since dev runs MySQL and tests run SQLite and raw SQL differs between them; the `migrations` table; `migrate`
+3. ~~**M2-19 / M2-21 / M2-23 / M2-24**~~ Migrations with a schema builder and `migrate` (M2-21a, M2-23a, M2-24a)
 4. **M2-09 / M2-10** (smallest part) `#[derive(Model)]` metadata and `all`, `find_or_fail`, `create`
 5. The blog's `PostRepository` on the database instead of in memory, with feature tests on a test database (QA-03, smallest part)
 6. **M5-01 / M5-02 / M5-08 / M5-10** (smallest part) `sabai new`, `sabai serve`, `sabai migrate`
@@ -315,6 +315,7 @@ Migrations, schema & data
 - [ ] **M2-23** Schema builder: create/alter/drop table, indexes, foreign keys, `timestamps()`, `soft_deletes()`, `morphs()`. Every column type and modifier produces exactly Laravel's SQL for that driver (signed or unsigned, lengths, nullability, `morphs` as `{name}_type varchar(255)` plus `{name}_id bigint unsigned` and an index)
   - [x] **M2-23a** `schema.create("posts", |table| { table.id(); table.string("title"); table.text("body"); table.timestamps(); })`, `drop_if_exists`, `.nullable()`; `schema.to_sql(Driver::MySql | Driver::Sqlite)` gives Laravel's SQL for each, with quoted names; `increments` and `integer` for the `migrations` table
 - [ ] **M2-24** Commands: `migrate`, `migrate:rollback --step`, `migrate:reset`, `migrate:fresh`, `migrate:status`, `--pretend` (print SQL only)
+  - [x] **M2-24a** `sabai::orm::migrate(&app, &migrations)` prints like `php artisan migrate`; the blog runs it as `cargo run -p blog -- migrate`, keeps its migrations in `src/database/migrations`, and its tests call `TestApp::refresh_database(&blog::migrations())` like Laravel's `RefreshDatabase`
 - [ ] **M2-25** One transaction per migration where the driver supports transactional DDL
 - [ ] **M2-26** Advisory lock so two deploys never migrate at once
 - [ ] **M2-27** `schema:dump` to squash old migrations into one SQL file

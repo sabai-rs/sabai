@@ -36,6 +36,20 @@ impl TestApp {
         }
     }
 
+    /// Runs `migrations` on the app's database, like Laravel's `RefreshDatabase`; with SQLite in
+    /// memory every `TestApp` starts from an empty database.
+    #[cfg(feature = "orm")]
+    pub fn refresh_database(self, migrations: &sabai_orm::Migrations) -> Self {
+        let database = self
+            .app
+            .get::<sabai_orm::Database>()
+            .expect("a database is bound");
+        self.runtime
+            .block_on(database.migrate(migrations))
+            .expect("the migrations run");
+        self
+    }
+
     /// Sends `GET` as a JSON client, like Laravel's `$this->getJson(route(...))`.
     pub fn get_json(&self, uri: impl ToUri) -> TestResponse {
         self.send_json(Method::GET, uri.to_uri(&self.routes), Body::empty())

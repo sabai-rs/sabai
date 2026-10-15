@@ -11,9 +11,13 @@ repository.workspace = true
 http.workspace = true
 sabai-core.workspace = true
 sabai-http.workspace = true
+sabai-orm = { workspace = true, optional = true }
 serde.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
+
+[features]
+orm = ["dep:sabai-orm"]
 
 [lints]
 workspace = true

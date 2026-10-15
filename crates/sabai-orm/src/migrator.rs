@@ -1,6 +1,7 @@
 use sabai_core::contracts::BoxFuture;
 use sabai_core::{Error, Result};
 
+use crate::database::unreachable;
 use crate::{Database, Migration, Migrations, Schema};
 
 const TABLE: &str = "migrations";
@@ -46,7 +47,8 @@ impl Database {
         let exists: i64 = sqlx::query_scalar(self.driver().has_table())
             .bind(TABLE)
             .fetch_one(self.pool())
-            .await?;
+            .await
+            .map_err(unreachable)?;
         if exists > 0 {
             return Ok(());
         }

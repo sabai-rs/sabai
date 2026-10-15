@@ -1089,6 +1089,7 @@ dependencies = [
  "http",
  "sabai-core",
  "sabai-http",
+ "sabai-orm",
  "serde",
  "serde_json",
  "tokio",

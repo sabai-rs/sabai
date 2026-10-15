@@ -12,7 +12,7 @@ sabai = { workspace = true, features = ["orm"] }
 serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
-sabai-testing.workspace = true
+sabai-testing = { workspace = true, features = ["orm"] }
 
 [lints]
 workspace = true
