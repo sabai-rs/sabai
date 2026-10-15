@@ -14,6 +14,7 @@ impl Database {
     }
 
     async fn run_pending(&self, migrations: &Migrations) -> Result<Vec<String>> {
+        migrations.check_order()?;
         self.create_migrations_table().await?;
         let ran: Vec<String> = sqlx::query_scalar("select migration from migrations")
             .fetch_all(self.pool())
@@ -171,6 +172,32 @@ mod tests {
                 "{error}"
             );
             assert_eq!(recorded, ["2026_10_15_000000_create_posts_table"]);
+        });
+    }
+
+    #[test]
+    fn a_list_out_of_name_order_or_with_a_repeat_is_refused_before_anything_runs() {
+        let database = Database::in_memory();
+        let unsorted = Migrations::new()
+            .add("2026_10_16_000000_create_tags_table", CreateTagsTable)
+            .add("2026_10_15_000000_create_posts_table", CreatePostsTable);
+        let twice = Migrations::new()
+            .add("2026_10_15_000000_create_posts_table", CreatePostsTable)
+            .add("2026_10_15_000000_create_posts_table", CreatePostsTable);
+
+        block_on(async {
+            let unsorted = database.migrate(&unsorted).await.err().unwrap().to_string();
+            let twice = database.migrate(&twice).await.err().unwrap().to_string();
+
+            assert_eq!(
+                unsorted,
+                "migration `2026_10_15_000000_create_posts_table` is added after \
+                 `2026_10_16_000000_create_tags_table`; move it up so names run in order"
+            );
+            assert_eq!(
+                twice,
+                "migration `2026_10_15_000000_create_posts_table` is added twice"
+            );
         });
     }
 }

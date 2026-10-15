@@ -1,3 +1,5 @@
+use sabai_core::{Error, Result, StatusCode};
+
 use crate::Schema;
 
 /// One schema change, like a Laravel migration class: `up` makes it, `down` undoes it.
@@ -31,10 +33,30 @@ impl Migrations {
         self
     }
 
+    // Laravel runs migrations sorted by file name; a list out of that order is a mistake.
+    pub(crate) fn check_order(&self) -> Result<()> {
+        for pair in self.list.windows(2) {
+            let (before, after) = (&pair[0].0, &pair[1].0);
+            if before == after {
+                return Err(wrong_list(format!("migration `{after}` is added twice")));
+            }
+            if before > after {
+                return Err(wrong_list(format!(
+                    "migration `{after}` is added after `{before}`; move it up so names run in order"
+                )));
+            }
+        }
+        Ok(())
+    }
+
     pub(crate) fn pending<'a>(
         &'a self,
         ran: &'a [String],
     ) -> impl Iterator<Item = &'a (String, Box<dyn Migration>)> {
         self.list.iter().filter(|(name, _)| !ran.contains(name))
     }
+}
+
+fn wrong_list(problem: String) -> Error {
+    Error::new(StatusCode::INTERNAL_SERVER_ERROR, problem)
 }
