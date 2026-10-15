@@ -17,6 +17,18 @@ impl Env {
         Self::from_process().with_file_from(base)
     }
 
+    /// Like [`Env::load`] with `APP_ENV` forced to `app_env`, so `base/.env.{app_env}` is read.
+    pub(crate) fn load_for(base: &Path, app_env: &str) -> Result<Self, ConfigError> {
+        Self::from_process()
+            .with_app_env(app_env)
+            .with_file_from(base)
+    }
+
+    fn with_app_env(mut self, app_env: &str) -> Self {
+        self.vars.insert("APP_ENV".to_owned(), app_env.to_owned());
+        self
+    }
+
     fn with_file_from(mut self, base: &Path) -> Result<Self, ConfigError> {
         let path = env_file(base, self.get("APP_ENV"));
         for (name, value) in read_env_file(&path)? {
@@ -179,6 +191,16 @@ mod tests {
 
         assert_eq!(testing.get("SABAI_TEST_DB"), Some(":memory:"));
         assert_eq!(staging.get("SABAI_TEST_DB"), Some("database.sqlite"));
+    }
+
+    #[test]
+    fn load_for_reads_that_environments_file_even_when_the_shell_sets_another() {
+        let loaded = env(&[("APP_ENV", "local")])
+            .with_app_env("testing")
+            .with_file_from(&fixtures(""))
+            .unwrap();
+
+        assert_eq!(loaded.get("SABAI_TEST_DB"), Some(":memory:"));
     }
 
     #[test]

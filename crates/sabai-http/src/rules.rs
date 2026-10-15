@@ -13,7 +13,6 @@ pub struct Rules {
 /// One rule, made by [`required`], [`sometimes`], [`string`] or [`max`].
 pub struct Rule(Check);
 
-// Private, so custom rules (M1-55) can be added without breaking apps.
 enum Check {
     Required,
     Sometimes,
@@ -88,12 +87,10 @@ fn check_field(
                     name.to_owned(),
                     format!("The {attribute} field is required."),
                 ));
-                // Like Laravel, a missing field gets one message, not one per rule.
                 return;
             }
             continue;
         }
-        // Like Laravel, other rules skip a field that is missing or an empty string.
         let Some(value) = value.filter(|value| !is_blank_text(value)) else {
             continue;
         };

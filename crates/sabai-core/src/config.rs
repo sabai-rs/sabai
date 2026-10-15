@@ -34,6 +34,13 @@ impl Config {
         self.get(T::KEY)
     }
 
+    /// Like [`Config::load`], but reads `.env.{app_env}` with `APP_ENV` forced: `load_for(base, "testing")`.
+    pub fn load_for(base: impl AsRef<Path>, app_env: &str) -> Result<Self> {
+        let base = base.as_ref();
+        let env = Env::load_for(base, app_env)?;
+        Self::load_dir(&base.join("config"), &env)
+    }
+
     fn load_base(base: &Path) -> Result<Self> {
         let env = Env::load(base)?;
         Self::load_dir(&base.join("config"), &env)

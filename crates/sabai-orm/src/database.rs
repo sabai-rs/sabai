@@ -9,6 +9,8 @@ use sqlx::any::{AnyConnectOptions, AnyPoolOptions, install_default_drivers};
 
 use crate::config::default_target;
 
+const ACQUIRE_TIMEOUT: Duration = Duration::from_secs(5);
+
 /// The app's database, like Laravel's `DB`: a pool for the default connection in
 /// `config/database.toml`. Handlers take it as `db: Service<Database>`.
 pub struct Database {
@@ -32,14 +34,12 @@ impl Database {
     }
 
     /// The sqlx pool, for queries the query builder cannot write yet.
-    // Made on first use: sqlx starts pool tasks on tokio, which runs only after boot.
+    // sqlx needs the tokio runtime, which starts after boot.
     pub fn pool(&self) -> &AnyPool {
         self.pool.get_or_init(|| self.new_pool())
     }
 
     /// Runs `SELECT 1`, so a health check can tell that the database answers.
-    // Boxed here: a plain `pub async fn` is compiled into every app that awaits it, which
-    // pulled about 7,000 LLVM lines of sqlx's pool into the blog.
     pub fn ping(&self) -> BoxFuture<'_, Result<()>> {
         Box::pin(self.select_one())
     }
@@ -61,13 +61,12 @@ impl Database {
         static DRIVERS: Once = Once::new();
         DRIVERS.call_once(install_default_drivers);
         let options = match self.in_memory {
-            // Each connection to `:memory:` is its own empty database, so keep exactly one, forever.
+            // Every `:memory:` connection is a separate database.
             true => AnyPoolOptions::new()
                 .max_connections(1)
                 .idle_timeout(None)
                 .max_lifetime(None),
-            // sqlx waits 30 seconds by default; a database that is down should fail fast, like Laravel.
-            false => AnyPoolOptions::new().acquire_timeout(Duration::from_secs(5)),
+            false => AnyPoolOptions::new().acquire_timeout(ACQUIRE_TIMEOUT),
         };
         options.connect_lazy_with(self.options.clone())
     }

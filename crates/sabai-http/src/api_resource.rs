@@ -3,9 +3,7 @@ use sabai_core::Method;
 use crate::handler::{BoxedHandler, Handler, boxed};
 use crate::router::Router;
 
-/// The actions of a REST resource, started by [`Router::api_resource`] like Laravel's
-/// `Route::apiResource('posts', PostController::class)`. Declare only the actions the
-/// controller has, which is Laravel's `->only([...])`.
+/// The REST actions of a resource; declare only the ones the controller has.
 ///
 /// | Action    | Method       | Path          | Name            |
 /// |-----------|--------------|---------------|-----------------|
@@ -37,8 +35,6 @@ impl Router {
 }
 
 impl<'a> ApiResource<'a> {
-    // `{id}`, not Laravel's `{post}`: without route model binding the name only matters to
-    // `route("posts.show").with("id", 1)`, and English plurals need no guessing.
     fn new(router: &'a mut Router, name: &str) -> Self {
         let name = name.trim_matches('/');
         Self {
