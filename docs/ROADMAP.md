@@ -311,6 +311,7 @@ Migrations, schema & data
 - [ ] **M2-20** Timestamped names, run in order across the app and every package
 - [ ] **M2-21** `migrations` table with batch numbers, so rollback undoes the last batch
   - [x] **M2-21a** `trait Migration { fn up(&self, schema); fn down(&self, schema) }`, `Migrations::new().add(name, migration)`, `database.migrate(&migrations)` runs the pending ones as one batch and records them in Laravel's `migrations` table (`increments id`, `string migration`, `integer batch`); a failed migration is named and not recorded
+  - [x] **M2-21b** `migrate` refuses a list with a repeated name or names out of order, before anything runs, since Laravel always runs migrations sorted by file name
 - [ ] **M2-22** Packages register migrations from their provider; `vendor:publish --tag=migrations` copies them into the app
 - [ ] **M2-23** Schema builder: create/alter/drop table, indexes, foreign keys, `timestamps()`, `soft_deletes()`, `morphs()`. Every column type and modifier produces exactly Laravel's SQL for that driver (signed or unsigned, lengths, nullability, `morphs` as `{name}_type varchar(255)` plus `{name}_id bigint unsigned` and an index)
   - [x] **M2-23a** `schema.create("posts", |table| { table.id(); table.string("title"); table.text("body"); table.timestamps(); })`, `drop_if_exists`, `.nullable()`; `schema.to_sql(Driver::MySql | Driver::Sqlite)` gives Laravel's SQL for each, with quoted names; `increments` and `integer` for the `migrations` table
