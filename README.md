@@ -131,7 +131,7 @@ cargo run -p blog          # serves on http://127.0.0.1:8000
 cargo nextest run -p blog  # runs the blog's feature tests
 ```
 
-The [documentation](https://sabai-rs.github.io/sabai/) covers installation, configuration, routing and controllers so far; its source is in [`docs/`](docs) (`bun run dev` there to preview it). The [roadmap](docs/ROADMAP.md) lists every feature, what is done, and what comes next.
+The [documentation](https://sabai-rs.github.io/sabai/) covers everything above, from installation and routing to migrations, models and tests; its source is in [`docs/`](docs) (`bun run dev` there to preview it). The [roadmap](docs/ROADMAP.md) lists every feature, what is done, and what comes next.
 
 ## Contributing
 
