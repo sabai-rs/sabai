@@ -67,7 +67,11 @@ impl Driver {
             (Driver::MySql, Kind::Id) => "bigint unsigned".to_owned(),
             (Driver::MySql, Kind::Increments) => "int unsigned".to_owned(),
             (Driver::MySql, Kind::Integer) => "int".to_owned(),
-            (Driver::Sqlite, Kind::Id | Kind::Increments | Kind::Integer) => "integer".to_owned(),
+            (Driver::MySql, Kind::UnsignedBigInteger) => "bigint unsigned".to_owned(),
+            (
+                Driver::Sqlite,
+                Kind::Id | Kind::Increments | Kind::Integer | Kind::UnsignedBigInteger,
+            ) => "integer".to_owned(),
             (Driver::MySql, Kind::String(length)) => format!("varchar({length})"),
             (Driver::Sqlite, Kind::String(_)) => "varchar".to_owned(),
             (_, Kind::Text) => "text".to_owned(),
@@ -95,6 +99,7 @@ mod tests {
             table.id();
             table.string("title");
             table.text("body").nullable();
+            table.unsigned_big_integer("author_id");
             table.timestamps();
         });
         schema.drop_if_exists("posts");
@@ -107,7 +112,8 @@ mod tests {
             create_posts().to_sql(Driver::MySql),
             [
                 "create table `posts` (`id` bigint unsigned not null auto_increment primary key, \
-                 `title` varchar(255) not null, `body` text null, `created_at` timestamp null, \
+                 `title` varchar(255) not null, `body` text null, `author_id` bigint unsigned not null, \
+                 `created_at` timestamp null, \
                  `updated_at` timestamp null) default character set utf8mb4 collate 'utf8mb4_unicode_ci'",
                 "drop table if exists `posts`",
             ]
@@ -120,7 +126,8 @@ mod tests {
             create_posts().to_sql(Driver::Sqlite),
             [
                 "create table \"posts\" (\"id\" integer primary key autoincrement not null, \
-                 \"title\" varchar not null, \"body\" text, \"created_at\" datetime, \
+                 \"title\" varchar not null, \"body\" text, \"author_id\" integer not null, \
+                 \"created_at\" datetime, \
                  \"updated_at\" datetime)",
                 "drop table if exists \"posts\"",
             ]

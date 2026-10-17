@@ -15,5 +15,22 @@ services:
       interval: 5s
       retries: 10
 
+  mysql-report:
+    image: mysql:8.4
+    ports:
+      - "${REPORT_DB_PORT:-3307}:3306"
+    environment:
+      MYSQL_DATABASE: report
+      MYSQL_USER: sabai
+      MYSQL_PASSWORD: secret
+      MYSQL_ROOT_PASSWORD: secret
+    volumes:
+      - sabai-report-db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-psecret"]
+      interval: 5s
+      retries: 10
+
 volumes:
   sabai-db:
+  sabai-report-db:

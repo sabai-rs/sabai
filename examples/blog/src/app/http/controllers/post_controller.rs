@@ -38,6 +38,6 @@ impl PostController {
     }
 
     pub async fn show(self: Arc<Self>, Param(id): Param<u64>) -> Result<Json<Post>> {
-        Ok(Json(self.post_service.find_or_fail(id).await?))
+        Ok(Json(self.post_service.read(id).await?))
     }
 }
