@@ -45,7 +45,7 @@ impl TestApp {
             .get::<sabai_orm::Database>()
             .expect("a database is bound");
         self.runtime
-            .block_on(database.migrate(migrations))
+            .block_on(self.app.scope(database.migrate(migrations)))
             .expect("the migrations run");
         self
     }
@@ -70,6 +70,7 @@ impl TestApp {
             .body(body)
             .expect("the test request is valid");
         let request = Request::from(request).with_app(self.app.clone());
-        TestResponse::new(self.runtime.block_on(self.routes.dispatch(request)))
+        let dispatch = self.routes.dispatch(request);
+        TestResponse::new(self.runtime.block_on(self.app.scope(dispatch)))
     }
 }
