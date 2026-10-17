@@ -1,0 +1,16 @@
+{
+  "name": "sabai-docs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vitepress dev",
+    "build": "vitepress build",
+    "preview": "vitepress preview"
+  },
+  "devDependencies": {
+    "@types/markdown-it-container": "2.0.10",
+    "markdown-it-container": "4.0.0",
+    "vitepress": "1.6.4",
+    "vitepress-plugin-llms": "1.14.0"
+  }
+}

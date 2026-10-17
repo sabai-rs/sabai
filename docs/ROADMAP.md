@@ -571,6 +571,9 @@ Docs & example
 
 - [ ] **DOC-01** `examples/blog` exercising every milestone, with the same nouns as the docs (posts, comments, users)
 - [ ] **DOC-02** getsabai.dev docs site: install, routing, controllers, ORM, auth, queue, CLI
+  - [x] **DOC-02a** VitePress site in `docs/` (Laravel's page names), built on every PR and deployed to GitHub Pages from `main`; its own theme (teal and marigold, Anuphan and IBM Plex Sans Thai, a hammock logo, Ferris in a hammock on the home page), `::: laravel` notes, a Try it panel, Copy as Markdown and `llms.txt`; pages: At a glance, Introduction, Installation, Configuration, Directory Structure, Routing, Controllers
+  - [ ] **DOC-02b** Requests (form requests), Validation, Responses, Errors, Service Container, Service Providers
+  - [ ] **DOC-02c** Database, Migrations, Eloquent, HTTP Tests
 - [ ] **DOC-03** "Coming from Laravel" page mapping each Laravel concept to Sabai
 
 Release
