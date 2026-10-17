@@ -64,6 +64,17 @@ export default defineConfig({
         items: [
           { text: 'Routing', link: '/routing' },
           { text: 'Controllers', link: '/controllers' },
+          { text: 'Requests', link: '/requests' },
+          { text: 'Validation', link: '/validation' },
+          { text: 'Responses', link: '/responses' },
+          { text: 'Errors', link: '/errors' },
+        ],
+      },
+      {
+        text: 'Architecture',
+        items: [
+          { text: 'Service container', link: '/container' },
+          { text: 'Service providers', link: '/providers' },
         ],
       },
     ],
