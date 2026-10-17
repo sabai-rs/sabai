@@ -244,6 +244,10 @@ Request & response
 - [ ] **M1-47** Redirects: `back()`, `to_route("posts.show", params)`, `.with("status", "Saved")`
 - [ ] **M1-48** Streaming responses, Server-Sent Events, `file()` inline with range requests
 - [ ] **M1-49** Central exception handler: every error becomes one response shape (`{message, errors}`) by default, replaceable by the app via a registered error renderer (`Arc<dyn ErrorRenderer>`); before rendering, errors (5xx by default) go to every registered `Arc<dyn ErrorReporter>`, like Laravel's report/render split; debug page in dev only, no internals in production; server errors are already logged with their cause and context (M2-01a)
+  - [ ] **M1-49a** Errors remember where they were made (`#[track_caller]`, a `&'static Location`, no stack walk), and logs print `at src/app/...rs:18`
+  - [ ] **M1-49b** With `APP_DEBUG=true`, a `500` answers like Laravel: `{"message", "exception", "file", "line", "trace"}` with the context chain; with it off, only `{"message": "Server Error"}`
+  - [ ] **M1-49c** Optional full backtrace when `APP_DEBUG=true` and `RUST_BACKTRACE=1`, tokio frames filtered out
+  - [ ] **M1-49d** Logs drop the client message (`: Internal Server Error`) when an error already has context
 
 Validation
 
@@ -332,6 +336,7 @@ Migrations, schema & data
   - [x] **M2-31a** `App::current()` (Laravel's `app()`), set per task by `serve`, `TestApp` and `migrate` through `app.scope(future)`; `sabai::spawn` carries it into background tasks, and a missing one says to use it. Measured against passing `db`: the same query time (+19 ns), fewer LLVM lines per route
   - [x] **M2-31b** Several connections: `DatabaseManager` reads every `[connections.*]` (one lazy pool each) and `connection("report")` like `DB::connection('report')`; `Database` stays bound as `default`; `#[model(connection = "report")]` like `$connection`; a migration's `fn connection()` runs it there while `migrations` stays on `default`. Checked on two SQLite and two MySQL databases. A connection missing from config is found at the first query, not at startup, since models are not route arguments
   - [x] **M2-31c** The blog keeps `post_views` on a second connection, `report`: a second MySQL container in docker compose for dev (port 3307, its own `MYSQL_DATABASE`, so no init script and no root grants), SQLite in memory in tests; `GET /api/posts/{id}` records a read and `GET /api/stats` counts them (with `all().len()` until `count()` in M2-07); schema gets `unsigned_big_integer`, Laravel's `bigint unsigned`
+  - [ ] **M2-31d** A misspelled connection fails to compile: `#[model(connection = REPORT)]` takes a constant as well as a string; `migrate` checks every migration's connection exists before running any
 
 ## M3: Auth
 
@@ -465,7 +470,7 @@ Stability & tooling
 - [ ] **M6-15** `sabai-testing` boots a test app with just one provider, for package tests
 - [ ] **M6-16** Dogfood: ship `sabai-sanctum` and `sabai-media` as separate crates, public APIs only
 - [ ] **M6-17** Package directory page on getsabai.dev
-- [ ] **M6-18** `sabai-sentry` package: an `ErrorReporter` plus a `tracing` layer, DSN, release and environment from `config/sentry.toml` (`${SENTRY_DSN}`), request context (route, user id, request id); public API only, so the `sentry` SDK stays out of apps that skip it
+- [ ] **M6-18** `sabai-sentry` package: an `ErrorReporter` plus a `tracing` layer, DSN, release and environment from `config/sentry.toml` (`${SENTRY_DSN}`), request context (route, user id, request id); public API only, so the `sentry` SDK stays out of apps that skip it; uses the location, context chain and backtrace from M1-49
 
 ## M7: Storage, cache, mail & app services
 
