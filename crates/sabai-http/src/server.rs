@@ -81,9 +81,8 @@ async fn handle(
 ) -> Result<Response, Infallible> {
     let response = match read_body(request).await {
         Ok(request) => {
-            site.routes
-                .dispatch(request.with_app(site.app.clone()))
-                .await
+            let dispatch = site.routes.dispatch(request.with_app(site.app.clone()));
+            site.app.scope(dispatch).await
         }
         Err(error) => error.into_response(),
     };
@@ -121,11 +120,20 @@ mod tests {
         "Hello, Sabai"
     }
 
+    async fn current_app() -> &'static str {
+        if App::current().is_ok() {
+            "current"
+        } else {
+            "none"
+        }
+    }
+
     fn running_server() -> std::net::SocketAddr {
         let listener = StdTcpListener::bind("127.0.0.1:0").unwrap();
         let address = listener.local_addr().unwrap();
         let mut router = Router::new();
         router.get("/", hello);
+        router.get("/current", current_app);
         let site = Site {
             app: App::builder(Config::default()).boot().unwrap(),
             routes: router.compile().unwrap(),
@@ -157,6 +165,17 @@ mod tests {
 
         assert!(response.starts_with("HTTP/1.1 200 OK"), "{response}");
         assert!(response.ends_with("Hello, Sabai"));
+    }
+
+    #[test]
+    fn handlers_run_with_the_served_app_as_current() {
+        let response = send(
+            running_server(),
+            "GET /current HTTP/1.1\r\nHost: test\r\nConnection: close\r\n\r\n",
+            b"",
+        );
+
+        assert!(response.ends_with("current"), "{response}");
     }
 
     #[test]

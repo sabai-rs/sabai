@@ -323,6 +323,8 @@ Migrations, schema & data
 - [ ] **M2-28** Migrations live in the app's own `database` crate, so editing them never rebuilds handlers
 - [ ] **M2-29** Seeders and factories (`Post::factory().count(10).create()`)
 - [ ] **M2-30** Pagination: `paginate(n)` and `cursor_paginate(n)` with JSON shape
+- [ ] **M2-31** Models find their connection like Laravel's, without passing `db`: `Post::all()`, `#[model(connection = "report")]`
+  - [x] **M2-31a** `App::current()` (Laravel's `app()`), set per task by `serve`, `TestApp` and `migrate` through `app.scope(future)`; `sabai::spawn` carries it into background tasks, and a missing one says to use it. Measured against passing `db`: the same query time (+19 ns), fewer LLVM lines per route
 
 ## M3: Auth
 
