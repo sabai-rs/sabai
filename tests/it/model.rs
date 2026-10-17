@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use std::{fs, process};
 
+use sabai::StatusCode;
 use sabai::orm::{Database, DatabaseServiceProvider, Model};
 use sabai::{App, Config};
 
@@ -118,4 +119,51 @@ fn a_negative_id_cannot_become_a_u64() {
     .to_string();
 
     assert!(error.starts_with("could not read column `id`"), "{error}");
+}
+
+#[test]
+fn save_inserts_a_new_row_fills_in_its_id_and_then_updates_it() {
+    let (inserted, updated) = run(&app("save"), &[CREATE_POSTS], async {
+        let mut post = Post {
+            id: 0,
+            title: "Draft".into(),
+            body: None,
+        };
+        post.save().await.unwrap();
+        let inserted = Post::find_or_fail(post.id).await.unwrap();
+        post.title = "Published".into();
+        post.save().await.unwrap();
+        (inserted, Post::all().await.unwrap())
+    });
+
+    assert_eq!(
+        inserted,
+        Post {
+            id: 1,
+            title: "Draft".into(),
+            body: None
+        }
+    );
+    assert_eq!(
+        updated,
+        [Post {
+            id: 1,
+            title: "Published".into(),
+            body: None
+        }]
+    );
+}
+
+#[test]
+fn a_missing_row_is_none_for_find_and_a_404_for_find_or_fail() {
+    let (found, error) = run(&app("missing"), &[CREATE_POSTS], async {
+        (
+            Post::find(9).await.unwrap(),
+            Post::find_or_fail(9).await.err().unwrap(),
+        )
+    });
+
+    assert_eq!(found, None);
+    assert_eq!(error.status(), StatusCode::NOT_FOUND);
+    assert_eq!(error.to_string(), "no `posts` row has id 9: Not Found");
 }
