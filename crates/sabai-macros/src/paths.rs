@@ -22,6 +22,26 @@ pub(crate) fn core() -> Result<TokenStream> {
     }
 }
 
+/// The path to `sabai-orm` items: `::sabai::orm`, or `::sabai_orm` and `crate` without the facade.
+pub(crate) fn orm() -> Result<TokenStream> {
+    match crate_name("sabai") {
+        Ok(FoundCrate::Itself) => return Ok(quote!(::sabai::orm)),
+        Ok(FoundCrate::Name(name)) => {
+            let name = absolute(&name);
+            return Ok(quote!(#name::orm));
+        }
+        Err(_) => {}
+    }
+    match crate_name("sabai-orm") {
+        Ok(FoundCrate::Itself) => Ok(quote!(crate)),
+        Ok(FoundCrate::Name(name)) => Ok(absolute(&name)),
+        Err(_) => Err(Error::new(
+            Span::call_site(),
+            "`Model` needs `sabai` with the `orm` feature; add `features = [\"orm\"]` to `sabai` in Cargo.toml",
+        )),
+    }
+}
+
 fn absolute(name: &str) -> TokenStream {
     let name = format_ident!("{name}");
     quote!(::#name)

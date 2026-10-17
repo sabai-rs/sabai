@@ -76,7 +76,7 @@ impl Driver {
         }
     }
 
-    fn quote(self, name: &str) -> String {
+    pub(crate) fn quote(self, name: &str) -> String {
         match self {
             Driver::MySql => format!("`{}`", name.replace('`', "``")),
             Driver::Sqlite => format!("\"{}\"", name.replace('"', "\"\"")),
