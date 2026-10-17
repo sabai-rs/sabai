@@ -5,7 +5,7 @@ use sabai_core::{App, Error, Result, StatusCode};
 use sqlx::any::{AnyArguments, AnyRow};
 use sqlx::query::Query;
 
-use crate::{Database, Driver, Row, SqlValue};
+use crate::{Database, DatabaseManager, Driver, Row, SqlValue};
 
 /// A table row as a struct, like an Eloquent model. Write `#[derive(Model)]`, not this impl.
 pub trait Model: Sized + Send + 'static {
@@ -14,6 +14,9 @@ pub trait Model: Sized + Send + 'static {
 
     /// The columns, in field order.
     const COLUMNS: &'static [&'static str];
+
+    /// The connection in `config/database.toml`, like Laravel's `$connection`; `None` is `default`.
+    const CONNECTION: Option<&'static str> = None;
 
     /// Builds the model from one row.
     fn from_row(row: &Row) -> Result<Self>;
@@ -29,13 +32,13 @@ pub trait Model: Sized + Send + 'static {
 
     /// Every row of the table, like Laravel's `Post::all()`.
     fn all() -> BoxFuture<'static, Result<Vec<Self>>> {
-        let rows = select(Self::TABLE, Self::COLUMNS, None);
+        let rows = select(Self::CONNECTION, Self::TABLE, Self::COLUMNS, None);
         Box::pin(async move { rows.await?.iter().map(Self::from_row).collect() })
     }
 
     /// The row with this primary key, or `None`, like Laravel's `Post::find($id)`.
     fn find(id: u64) -> BoxFuture<'static, Result<Option<Self>>> {
-        let rows = select(Self::TABLE, Self::COLUMNS, Some(id));
+        let rows = select(Self::CONNECTION, Self::TABLE, Self::COLUMNS, Some(id));
         Box::pin(async move { rows.await?.first().map(Self::from_row).transpose() })
     }
 
@@ -51,8 +54,9 @@ pub trait Model: Sized + Send + 'static {
         let id = self.id();
         Box::pin(async move {
             match id {
-                0 => self.set_id(insert(Self::TABLE, Self::COLUMNS, values?).await?),
-                id => update(Self::TABLE, Self::COLUMNS, values?, id).await?,
+                0 => self
+                    .set_id(insert(Self::CONNECTION, Self::TABLE, Self::COLUMNS, values?).await?),
+                id => update(Self::CONNECTION, Self::TABLE, Self::COLUMNS, values?, id).await?,
             }
             Ok(())
         })
@@ -60,12 +64,13 @@ pub trait Model: Sized + Send + 'static {
 }
 
 fn select(
+    connection: Option<&'static str>,
     table: &'static str,
     columns: &'static [&'static str],
     id: Option<u64>,
 ) -> BoxFuture<'static, Result<Vec<Row>>> {
     Box::pin(async move {
-        let database = current_database()?;
+        let database = database(connection)?;
         let driver = database.driver();
         let columns: Vec<_> = columns.iter().map(|column| driver.quote(column)).collect();
         let mut sql = format!("select {} from {}", columns.join(", "), driver.quote(table));
@@ -82,12 +87,13 @@ fn select(
 }
 
 fn insert(
+    connection: Option<&'static str>,
     table: &'static str,
     columns: &'static [&'static str],
     values: Vec<SqlValue>,
 ) -> BoxFuture<'static, Result<u64>> {
     Box::pin(async move {
-        let database = current_database()?;
+        let database = database(connection)?;
         let driver = database.driver();
         let (names, values): (Vec<_>, Vec<_>) = columns
             .iter()
@@ -126,13 +132,14 @@ fn insert(
 }
 
 fn update(
+    connection: Option<&'static str>,
     table: &'static str,
     columns: &'static [&'static str],
     values: Vec<SqlValue>,
     id: u64,
 ) -> BoxFuture<'static, Result<()>> {
     Box::pin(async move {
-        let database = current_database()?;
+        let database = database(connection)?;
         let driver = database.driver();
         let (sets, mut values): (Vec<_>, Vec<_>) = columns
             .iter()
@@ -173,8 +180,12 @@ fn bind_all<'q>(
     query
 }
 
-fn current_database() -> Result<Arc<Database>> {
-    App::current()?.get::<Database>()
+fn database(connection: Option<&str>) -> Result<Arc<Database>> {
+    let app = App::current()?;
+    match connection {
+        None => app.get::<Database>(),
+        Some(name) => app.get::<DatabaseManager>()?.connection(name),
+    }
 }
 
 fn no_id(table: &str) -> Error {

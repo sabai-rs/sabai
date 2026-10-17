@@ -38,15 +38,23 @@ pub(crate) struct Target {
     pub(crate) driver: Driver,
 }
 
-pub(crate) fn default_target(config: &Config) -> Result<Target> {
+/// The name of the default connection, and every connection's target.
+pub(crate) fn targets(config: &Config) -> Result<(String, Vec<(String, Target)>)> {
     let config: DatabaseConfig = config.get("database")?;
-    let connection = config.connections.get(&config.default).ok_or_else(|| {
-        Error::from_status(StatusCode::INTERNAL_SERVER_ERROR).context(format!(
-            "config/database.toml: `default` is `{0}`, but there is no `[connections.{0}]`",
-            config.default
-        ))
-    })?;
-    Ok(target(connection))
+    if !config.connections.contains_key(&config.default) {
+        return Err(
+            Error::from_status(StatusCode::INTERNAL_SERVER_ERROR).context(format!(
+                "config/database.toml: `default` is `{0}`, but there is no `[connections.{0}]`",
+                config.default
+            )),
+        );
+    }
+    let targets = config
+        .connections
+        .iter()
+        .map(|(name, connection)| (name.clone(), target(connection)))
+        .collect();
+    Ok((config.default, targets))
 }
 
 fn target(connection: &Connection) -> Target {

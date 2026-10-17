@@ -9,6 +9,12 @@ pub trait Migration: Send + Sync {
 
     /// Describes how to undo it.
     fn down(&self, schema: &mut Schema);
+
+    /// The connection it changes, like a Laravel migration's `$connection`; `None` is `default`.
+    /// The `migrations` table that records it is always on `default`.
+    fn connection(&self) -> Option<&'static str> {
+        None
+    }
 }
 
 /// The app's migrations, run in the order they are added.

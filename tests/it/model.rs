@@ -2,7 +2,9 @@ use std::sync::Arc;
 use std::{fs, process};
 
 use sabai::StatusCode;
-use sabai::orm::{Database, DatabaseServiceProvider, Model};
+use sabai::orm::{
+    Database, DatabaseManager, DatabaseServiceProvider, Migration, Migrations, Model, Schema,
+};
 use sabai::{App, Config};
 
 #[derive(Model, Debug, PartialEq)]
@@ -18,14 +20,34 @@ struct Person {
     id: u64,
 }
 
+#[derive(Model, Debug, PartialEq)]
+#[model(connection = "report")]
+struct Sale {
+    id: u64,
+    amount: i64,
+}
+
+#[derive(Model, Debug)]
+#[model(connection = "nope")]
+struct Lost {
+    id: u64,
+}
+
+const ONE_CONNECTION: &str =
+    "default = \"sqlite\"\n[connections.sqlite]\ndriver = \"sqlite\"\ndatabase = \":memory:\"\n";
+
+const TWO_CONNECTIONS: &str = "default = \"sqlite\"\n\
+    [connections.sqlite]\ndriver = \"sqlite\"\ndatabase = \":memory:\"\n\
+    [connections.report]\ndriver = \"sqlite\"\ndatabase = \":memory:\"\n";
+
 fn app(name: &str) -> Arc<App> {
+    app_with(name, ONE_CONNECTION)
+}
+
+fn app_with(name: &str, database_toml: &str) -> Arc<App> {
     let base = std::env::temp_dir().join(format!("sabai-it-model-{name}-{}", process::id()));
     fs::create_dir_all(base.join("config")).unwrap();
-    fs::write(
-        base.join("config/database.toml"),
-        "default = \"sqlite\"\n[connections.sqlite]\ndriver = \"sqlite\"\ndatabase = \":memory:\"\n",
-    )
-    .unwrap();
+    fs::write(base.join("config/database.toml"), database_toml).unwrap();
     let config = Config::load(&base).unwrap();
     App::builder(config)
         .provider(DatabaseServiceProvider)
@@ -188,4 +210,67 @@ fn a_missing_row_is_none_for_find_and_a_404_for_find_or_fail() {
     assert_eq!(found, None);
     assert_eq!(error.status(), StatusCode::NOT_FOUND);
     assert_eq!(error.to_string(), "no `posts` row has id 9: Not Found");
+}
+
+struct CreateSalesTable;
+
+impl Migration for CreateSalesTable {
+    fn up(&self, schema: &mut Schema) {
+        schema.create("sales", |table| {
+            table.id();
+            table.integer("amount");
+        });
+    }
+
+    fn down(&self, schema: &mut Schema) {
+        schema.drop_if_exists("sales");
+    }
+
+    fn connection(&self) -> Option<&'static str> {
+        Some("report")
+    }
+}
+
+#[test]
+fn a_model_on_another_connection_uses_that_database_only() {
+    let migrations =
+        Migrations::new().add("2026_10_17_000000_create_sales_table", CreateSalesTable);
+
+    let (sales, on_default, recorded_on) = run(&app_with("report", TWO_CONNECTIONS), &[], async {
+        let default = App::current().unwrap().get::<Database>().unwrap();
+        default.migrate(&migrations).await.unwrap();
+        Sale { id: 0, amount: 120 }.save().await.unwrap();
+        let on_default = default.statement("select * from sales").await.is_ok();
+        let report = App::current()
+            .unwrap()
+            .get::<DatabaseManager>()
+            .unwrap()
+            .connection("report")
+            .unwrap();
+        let recorded_on = report.statement("select * from migrations").await.is_ok();
+        (Sale::all().await.unwrap(), on_default, recorded_on)
+    });
+
+    assert_eq!(sales, [Sale { id: 1, amount: 120 }]);
+    assert!(
+        !on_default,
+        "the sales table must not exist on the default connection"
+    );
+    assert!(
+        !recorded_on,
+        "migrations are recorded on the default connection only"
+    );
+}
+
+#[test]
+fn a_connection_missing_from_config_says_where_to_add_it() {
+    let error = run(&app("nope"), &[], Lost::all())
+        .err()
+        .unwrap()
+        .to_string();
+
+    assert!(
+        error.contains("no database connection is named `nope`; add `[connections.nope]` to config/database.toml"),
+        "{error}"
+    );
 }

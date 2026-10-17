@@ -8,7 +8,7 @@ use sqlx::AnyPool;
 use sqlx::any::{AnyConnectOptions, AnyPoolOptions, install_default_drivers};
 
 use crate::Driver;
-use crate::config::default_target;
+use crate::config::{Target, targets};
 
 const ACQUIRE_TIMEOUT: Duration = Duration::from_secs(5);
 
@@ -34,7 +34,15 @@ impl Database {
 
     /// The default connection from config, checked now; nothing connects until the first query.
     pub fn from_config(config: &Config) -> Result<Self> {
-        let target = default_target(config)?;
+        let (default, mut targets) = targets(config)?;
+        let index = targets
+            .iter()
+            .position(|(name, _)| *name == default)
+            .unwrap_or(0);
+        Self::from_target(targets.swap_remove(index).1)
+    }
+
+    pub(crate) fn from_target(target: Target) -> Result<Self> {
         let options = AnyConnectOptions::from_str(&target.url).map_err(|error| {
             Error::from(error).context("config/database.toml has an invalid connection")
         })?;
