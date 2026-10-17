@@ -1,8 +1,8 @@
 # Controllers
 
-## Writing Controllers
+## Write a Controller
 
-A controller groups related actions. An action that needs nothing from the app is a plain `async fn` without `self`, and is routed as `PostController::index`:
+A controller groups actions. An action that needs nothing from the app is a plain `async fn` with no `self`:
 
 ```rust
 pub struct PostController;
@@ -24,6 +24,8 @@ impl PostController {
 }
 ```
 
+Route it by name:
+
 ```rust
 route.api_resource("posts", |posts| {
     posts.index(PostController::index);
@@ -32,7 +34,7 @@ route.api_resource("posts", |posts| {
 });
 ```
 
-Models find their database by themselves, so `Post::all()` works in a controller, a service or a repository alike.
+Models find their database on their own. `Post::all()` works the same in a controller, a service or a repository.
 
 ::: laravel
 ```php
@@ -46,20 +48,20 @@ class PostController extends Controller
 
 ## Action Arguments
 
-Like Laravel's method injection, an action declares what it needs and receives it filled in:
+An action lists what it needs, and Sabai passes it in, like Laravel's method injection:
 
-| Argument | What it gives |
+| Argument | You get |
 | --- | --- |
-| `request: StorePostRequest` | A form request, validated |
-| `Param(id): Param<u64>` | The route parameter, parsed |
-| `clock: Service<dyn Clock>` | A service bound in a provider |
-| `request: Request` | The whole request |
+| `request: StorePostRequest` | a form request, already validated |
+| `Param(id): Param<u64>` | the route parameter |
+| `clock: Service<dyn Clock>` | a service bound in a provider |
+| `request: Request` | the whole request |
 
-An action takes up to 8 arguments, in any order.
+Up to 8 arguments, in any order.
 
 ## Constructor Injection
 
-When every action needs the same service, take it in the constructor instead. Implement `FromApp` to build the controller from the app, and `Controller` to mark it; actions then take `self: Arc<Self>`:
+When every action needs the same service, put it in the constructor:
 
 ```rust
 pub struct PostController {
@@ -83,8 +85,11 @@ impl PostController {
 }
 ```
 
-`app.make::<T>()` builds a class the way Laravel autowires one, through its own `FromApp`. `app.get::<dyn Trait>()` gives an interface bound in a provider.
+- `FromApp` builds the controller from the app.
+- `Controller` marks it as a controller. Its actions take `self: Arc<Self>`.
+- `app.make::<T>()` builds a class, like Laravel's autowiring.
+- `app.get::<dyn Trait>()` gives an interface you bound in a provider.
 
-The controller is made once, when `serve` starts, and shared by every request. If something it needs is not bound, the app does not start, and the message names the route, the controller and the missing service.
+The controller is built once, when the app starts, and shared by every request. If it needs a service nobody bound, the app does not start.
 
-Services and repositories follow the same rules: a struct that needs something implements `FromApp`, and one that needs nothing can be a unit struct or plain functions.
+Services and repositories work the same way. Implement `FromApp` if they need something. If not, use a plain struct or plain functions.

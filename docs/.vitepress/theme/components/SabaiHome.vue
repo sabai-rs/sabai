@@ -81,7 +81,7 @@ const current = ref<Example>('Routes')
           request.
         </p>
         <div class="actions">
-          <a class="btn primary" :href="withBase('/at-a-glance')">Get started</a>
+          <a class="btn primary" :href="withBase('/introduction')">Get started</a>
           <a class="btn plain" :href="withBase('/introduction#coming-from-laravel')">Coming from Laravel</a>
         </div>
         <code class="pill">$ <b>cargo run -p blog</b></code>
@@ -184,7 +184,7 @@ bind it in a provider's `register`:
         <h2 class="big">Lie back. It compiles.</h2>
         <p class="sub">Start with the example blog, then read the routing guide.</p>
         <div class="actions">
-          <a class="btn primary" :href="withBase('/at-a-glance')">Get started</a>
+          <a class="btn primary" :href="withBase('/introduction')">Get started</a>
           <a class="btn plain" href="https://github.com/sabai-rs/sabai/blob/main/docs/ROADMAP.md">Read the roadmap</a>
         </div>
       </div>
@@ -194,6 +194,7 @@ bind it in a provider's `register`:
 
 <style scoped>
 .home { font-size: 15.5px; line-height: 1.65; color: var(--vp-c-text-1); }
+.home pre, .home code { font-variant-ligatures: none; font-feature-settings: 'calt' 0, 'liga' 0; }
 .inner { max-width: 1152px; margin: 0 auto; padding: 0 24px; }
 section { padding: 64px 0; }
 .band { background: var(--sabai-band); }
@@ -236,10 +237,10 @@ h1 span { color: var(--sabai-teal); }
 .file .tab { display: flex; justify-content: space-between; gap: 8px; padding: 6px 12px; font-family: var(--vp-font-family-mono); font-size: 12px; color: var(--vp-c-text-2); border-bottom: 1px solid var(--vp-c-divider); }
 .file.sabai { border-color: var(--sabai-teal); }
 .file.sabai .tab { color: var(--sabai-teal); background: var(--sabai-teal-soft); }
-.file pre { margin: 0; padding: 14px; font-family: var(--vp-font-family-mono); font-size: 13px; line-height: 1.6; overflow-x: auto; min-height: 150px; }
+.file pre { margin: 0; padding: 14px; font-family: var(--vp-font-family-mono); font-size: 13px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; min-height: 150px; }
 
 .split { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 32px; align-items: center; }
-.term { margin: 0; background: var(--sabai-term-bg); color: var(--sabai-term-fg); border-radius: 8px; padding: 16px 18px; font-family: var(--vp-font-family-mono); font-size: 13px; line-height: 1.7; overflow-x: auto; }
+.term { margin: 0; background: var(--sabai-term-bg); color: var(--sabai-term-fg); border-radius: 8px; padding: 16px 18px; font-family: var(--vp-font-family-mono); font-size: 13px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
 .term .dim { color: var(--sabai-term-dim); }
 .term .err { color: var(--sabai-term-red); font-weight: 500; }
 .callouts { display: grid; gap: 14px; }
