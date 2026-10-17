@@ -27,6 +27,12 @@ pub trait Provider: Send + Sync {
 ///     }
 /// }
 /// ```
+#[diagnostic::on_unimplemented(
+    message = "`{Self}` cannot be built from the app",
+    label = "needs `impl FromApp for {Self}`",
+    note = "actions that need nothing from the app can skip `self`: `pub async fn index() -> ...`",
+    note = "otherwise build it from the app: `impl FromApp for {Self} {{ fn new(app: &App) -> Result<Self> {{ Ok(Self {{ ... }}) }} }}`"
+)]
 pub trait FromApp: Sized {
     /// Builds `Self`, like a Laravel constructor whose arguments come from the container.
     fn new(app: &App) -> Result<Self>;

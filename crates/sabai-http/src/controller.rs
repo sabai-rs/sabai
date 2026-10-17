@@ -6,13 +6,14 @@ use sabai_core::{App, FromApp, Request, Result};
 
 use crate::FromRequest;
 
-/// A Laravel-style controller: made once from the app's services when `serve` starts,
-/// then shared by every request. Actions take `self: Arc<Self>` and are routed as `PostController::store`.
+/// A controller with constructor injection: made once from the app when `serve` starts, then
+/// shared by every request through actions that take `self: Arc<Self>`. Actions that need nothing
+/// from the app skip this trait and `self`: `pub async fn index() -> ...`.
 ///
 /// ```ignore
 /// impl PostController {
 ///     pub async fn store(self: Arc<Self>, request: StorePostRequest) -> Result<Json<Post>> {
-///         Ok(Json(self.posts.create(request).await?))
+///         Ok(Json(self.post_service.create(request).await?))
 ///     }
 /// }
 /// ```
