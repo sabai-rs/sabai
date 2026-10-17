@@ -330,6 +330,8 @@ Migrations, schema & data
 - [ ] **M2-30** Pagination: `paginate(n)` and `cursor_paginate(n)` with JSON shape
 - [ ] **M2-31** Models find their connection like Laravel's, without passing `db`: `Post::all()`, `#[model(connection = "report")]`
   - [x] **M2-31a** `App::current()` (Laravel's `app()`), set per task by `serve`, `TestApp` and `migrate` through `app.scope(future)`; `sabai::spawn` carries it into background tasks, and a missing one says to use it. Measured against passing `db`: the same query time (+19 ns), fewer LLVM lines per route
+  - [x] **M2-31b** Several connections: `DatabaseManager` reads every `[connections.*]` (one lazy pool each) and `connection("report")` like `DB::connection('report')`; `Database` stays bound as `default`; `#[model(connection = "report")]` like `$connection`; a migration's `fn connection()` runs it there while `migrations` stays on `default`. Checked on two SQLite and two MySQL databases. A connection missing from config is found at the first query, not at startup, since models are not route arguments
+  - [ ] **M2-31c** The blog uses a second connection for real, with a `report` database created by docker compose
 
 ## M3: Auth
 

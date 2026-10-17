@@ -3,6 +3,7 @@
 mod command;
 mod config;
 mod database;
+mod manager;
 mod migration;
 mod migrator;
 mod model;
@@ -13,6 +14,7 @@ mod value;
 
 pub use command::migrate;
 pub use database::Database;
+pub use manager::DatabaseManager;
 pub use migration::{Migration, Migrations};
 pub use model::Model;
 pub use provider::DatabaseServiceProvider;

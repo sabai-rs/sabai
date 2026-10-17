@@ -2,7 +2,9 @@ use sabai_core::contracts::BoxFuture;
 use sabai_core::{Error, Result};
 
 use crate::database::unreachable;
-use crate::{Database, Migration, Migrations, Schema};
+use sabai_core::App;
+
+use crate::{Database, DatabaseManager, Migration, Migrations, Schema};
 
 const TABLE: &str = "migrations";
 
@@ -38,8 +40,16 @@ impl Database {
     async fn run_up(&self, migration: &dyn Migration) -> Result<()> {
         let mut schema = Schema::default();
         migration.up(&mut schema);
-        for sql in schema.to_sql(self.driver()) {
-            sqlx::query(&sql).execute(self.pool()).await?;
+        let other;
+        let target = match migration.connection() {
+            Some(name) => {
+                other = App::current()?.get::<DatabaseManager>()?.connection(name)?;
+                other.as_ref()
+            }
+            None => self,
+        };
+        for sql in schema.to_sql(target.driver()) {
+            sqlx::query(&sql).execute(target.pool()).await?;
         }
         Ok(())
     }

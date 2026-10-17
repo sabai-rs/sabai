@@ -7,7 +7,13 @@ use crate::{paths, snake_case};
 pub(crate) fn expand(input: &DeriveInput) -> Result<TokenStream> {
     let orm = paths::orm()?;
     let name = &input.ident;
-    let table = table_name(input)?;
+    let options = options(input)?;
+    let table = options
+        .table
+        .unwrap_or_else(|| plural(&snake_case(&name.to_string())));
+    let connection = options.connection.map(|connection| {
+        quote!(const CONNECTION: ::core::option::Option<&'static str> = ::core::option::Option::Some(#connection);)
+    });
     let fields = named_fields(input)?;
     let columns: Vec<String> = fields.iter().map(|field| field.to_string()).collect();
     if !columns.iter().any(|column| column == "id") {
@@ -20,6 +26,7 @@ pub(crate) fn expand(input: &DeriveInput) -> Result<TokenStream> {
         impl #orm::Model for #name {
             const TABLE: &'static str = #table;
             const COLUMNS: &'static [&'static str] = &[#(#columns),*];
+            #connection
 
             fn from_row(row: &#orm::Row) -> #orm::Result<Self> {
                 Ok(Self { #(#fields: row.get(#columns)?),* })
@@ -60,22 +67,34 @@ fn named_fields(input: &DeriveInput) -> Result<Vec<&syn::Ident>> {
         .collect())
 }
 
-fn table_name(input: &DeriveInput) -> Result<String> {
-    let mut table = None;
+#[derive(Default)]
+struct Options {
+    table: Option<String>,
+    connection: Option<String>,
+}
+
+fn options(input: &DeriveInput) -> Result<Options> {
+    let mut options = Options::default();
     for attribute in input
         .attrs
         .iter()
         .filter(|attribute| attribute.path().is_ident("model"))
     {
         attribute.parse_nested_meta(|meta| {
+            let value = meta.value()?.parse::<LitStr>()?.value();
             if meta.path.is_ident("table") {
-                table = Some(meta.value()?.parse::<LitStr>()?.value());
-                return Ok(());
+                options.table = Some(value);
+            } else if meta.path.is_ident("connection") {
+                options.connection = Some(value);
+            } else {
+                return Err(meta.error(
+                    "unknown `model` option; use `table = \"...\"` or `connection = \"...\"`",
+                ));
             }
-            Err(meta.error("unknown `model` option; use `#[model(table = \"...\")]`"))
+            Ok(())
         })?;
     }
-    Ok(table.unwrap_or_else(|| plural(&snake_case(&input.ident.to_string()))))
+    Ok(options)
 }
 
 // Laravel's `Str::plural` for regular English; irregular ones use `#[model(table = "people")]`.
