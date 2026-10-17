@@ -23,15 +23,21 @@ impl FromApp for PostController {
 impl Controller for PostController {}
 
 impl PostController {
-    pub async fn index(self: Arc<Self>) -> Json<Vec<Post>> {
-        Json(self.post_service.all())
+    pub async fn index(self: Arc<Self>) -> Result<Json<Vec<Post>>> {
+        Ok(Json(self.post_service.all().await?))
     }
 
-    pub async fn store(self: Arc<Self>, request: StorePostRequest) -> (StatusCode, Json<Post>) {
-        (StatusCode::CREATED, Json(self.post_service.create(request)))
+    pub async fn store(
+        self: Arc<Self>,
+        request: StorePostRequest,
+    ) -> Result<(StatusCode, Json<Post>)> {
+        Ok((
+            StatusCode::CREATED,
+            Json(self.post_service.create(request).await?),
+        ))
     }
 
     pub async fn show(self: Arc<Self>, Param(id): Param<u64>) -> Result<Json<Post>> {
-        Ok(Json(self.post_service.find_or_fail(id)?))
+        Ok(Json(self.post_service.find_or_fail(id).await?))
     }
 }

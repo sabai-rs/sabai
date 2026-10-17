@@ -53,11 +53,31 @@ read_directly!(
     i32,
     f64,
     bool,
-    String,
     Option<i64>,
     Option<i32>,
     Option<f64>,
-    Option<bool>,
-    Option<String>
+    Option<bool>
 );
 read_through_i64!(u64, u32);
+
+// sqlx's `Any` driver hands MySQL `TEXT` columns over as `BLOB`, so text may arrive as bytes.
+impl FromColumn for String {
+    fn from_column(row: &Row, column: &str) -> Result<Self> {
+        match row.0.try_get::<String, _>(column) {
+            Ok(text) => Ok(text),
+            Err(_) => Ok(String::from_utf8(row.0.try_get::<Vec<u8>, _>(column)?)?),
+        }
+    }
+}
+
+impl FromColumn for Option<String> {
+    fn from_column(row: &Row, column: &str) -> Result<Self> {
+        match row.0.try_get::<Option<String>, _>(column) {
+            Ok(text) => Ok(text),
+            Err(_) => {
+                let bytes: Option<Vec<u8>> = row.0.try_get(column)?;
+                Ok(bytes.map(String::from_utf8).transpose()?)
+            }
+        }
+    }
+}
