@@ -184,3 +184,47 @@
 .vp-doc .custom-block.danger { --sabai-callout: var(--sabai-danger); --sabai-callout-soft: var(--sabai-danger-soft); }
 .vp-doc .custom-block.info,
 .vp-doc .custom-block.note { --sabai-callout: var(--vp-c-text-2); --sabai-callout-soft: var(--sabai-band); }
+
+/* Copy: a small "Copy" label where the language label sits, which says "Copied" in place. */
+.vp-doc [class*='language-'] > button.copy {
+  top: 6px;
+  right: 8px;
+  width: auto;
+  height: auto;
+  padding: 2px 10px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 6px;
+  background: var(--vp-c-bg-elv);
+  font-family: var(--vp-font-family-mono);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  color: var(--vp-c-text-2);
+}
+.vp-doc [class*='language-'] > button.copy::after {
+  content: 'Copy';
+}
+.vp-doc [class*='language-'] > button.copy:hover {
+  border-color: var(--sabai-teal);
+  color: var(--vp-c-text-1);
+  background: var(--vp-c-bg-elv);
+}
+.vp-doc [class*='language-'] > button.copy.copied,
+.vp-doc [class*='language-'] > button.copy:hover.copied {
+  border-radius: 6px;
+  border-color: var(--sabai-teal);
+  background: var(--sabai-teal-soft);
+  color: var(--sabai-teal);
+}
+.vp-doc [class*='language-'] > button.copy.copied::after {
+  content: 'Copied';
+}
+.vp-doc [class*='language-'] > button.copy.copied::before,
+.vp-doc [class*='language-'] > button.copy:hover.copied::before {
+  display: none;
+}
+.vp-doc [class*='language-'] > button.copy:focus-visible {
+  opacity: 1;
+  outline: 2px solid var(--sabai-teal);
+  outline-offset: 2px;
+}

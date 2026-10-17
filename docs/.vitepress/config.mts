@@ -71,6 +71,18 @@ export default defineConfig({
         ],
       },
       {
+        text: 'Database',
+        items: [
+          { text: 'Getting started', link: '/database' },
+          { text: 'Migrations', link: '/migrations' },
+          { text: 'Eloquent', link: '/eloquent' },
+        ],
+      },
+      {
+        text: 'Testing',
+        items: [{ text: 'HTTP tests', link: '/http-tests' }],
+      },
+      {
         text: 'Architecture',
         items: [
           { text: 'Service container', link: '/container' },
