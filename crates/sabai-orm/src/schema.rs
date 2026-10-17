@@ -31,6 +31,7 @@ enum Kind {
     Id,
     Increments,
     Integer,
+    UnsignedBigInteger,
     String(u32),
     Text,
     Timestamp,
@@ -84,6 +85,11 @@ impl Blueprint {
     /// An `int` column.
     pub fn integer(&mut self, name: &str) -> &mut Column {
         self.add(name, Kind::Integer)
+    }
+
+    /// A `bigint unsigned` column, such as an id from another table.
+    pub fn unsigned_big_integer(&mut self, name: &str) -> &mut Column {
+        self.add(name, Kind::UnsignedBigInteger)
     }
 
     /// A `varchar(255)` column.

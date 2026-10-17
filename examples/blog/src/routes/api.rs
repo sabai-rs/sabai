@@ -7,7 +7,7 @@ use sabai::contracts::Clock;
 use sabai::http::{Router, Service};
 use sabai::orm::Database;
 
-use crate::app::http::controllers::PostController;
+use crate::app::http::controllers::{PostController, StatsController};
 
 pub fn routes(route: &mut Router) {
     route.get("/health", health).name("health");
@@ -16,6 +16,9 @@ pub fn routes(route: &mut Router) {
         posts.store(PostController::store);
         posts.show(PostController::show);
     });
+    route
+        .get("/stats", StatsController::index)
+        .name("stats.index");
 }
 
 async fn health(clock: Service<dyn Clock>, db: Service<Database>) -> Result<String> {
