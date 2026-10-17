@@ -10,6 +10,12 @@ pub(crate) fn expand(input: &DeriveInput) -> Result<TokenStream> {
     let table = table_name(input)?;
     let fields = named_fields(input)?;
     let columns: Vec<String> = fields.iter().map(|field| field.to_string()).collect();
+    if !columns.iter().any(|column| column == "id") {
+        return Err(Error::new_spanned(
+            name,
+            "`Model` needs an `id: u64` field for the primary key, like Laravel's `$table->id()`",
+        ));
+    }
     Ok(quote! {
         impl #orm::Model for #name {
             const TABLE: &'static str = #table;
@@ -17,6 +23,18 @@ pub(crate) fn expand(input: &DeriveInput) -> Result<TokenStream> {
 
             fn from_row(row: &#orm::Row) -> #orm::Result<Self> {
                 Ok(Self { #(#fields: row.get(#columns)?),* })
+            }
+
+            fn values(&self) -> #orm::Result<::std::vec::Vec<#orm::SqlValue>> {
+                Ok(::std::vec![#(#orm::ToColumn::to_column(&self.#fields)?),*])
+            }
+
+            fn id(&self) -> u64 {
+                self.id
+            }
+
+            fn set_id(&mut self, id: u64) {
+                self.id = id;
             }
         }
     })

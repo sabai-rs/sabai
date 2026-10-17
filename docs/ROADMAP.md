@@ -278,6 +278,7 @@ Connection
 
 - [ ] **M2-01** Pool on top of `sqlx`: MySQL first (what most of our Laravel apps run), SQLite for tests, then Postgres
   - [x] **M2-01a** `Database` from `config/database.toml` (Laravel's `default` + `connections`), bound by `DatabaseServiceProvider`; `sqlx::Any` so `DB_CONNECTION` picks MySQL or SQLite at runtime; the pool starts on first use (sqlx needs tokio, which starts after boot); `:memory:` keeps one connection; a down database fails in 5 seconds with a hint; `docker-compose.yml` runs MySQL for dev; the blog's `/api/health` pings it
+  - [ ] **M2-01b** A pool made on one tokio runtime times out on another, so `migrate` followed by `serve` in one process would hang for 5 seconds per query; make the pool per runtime or close it when a command's runtime ends
 - [ ] **M2-02** Multiple named connections from config
 - [ ] **M2-03** Transactions: `db.transaction(|tx| async { ... })`
 
@@ -294,6 +295,7 @@ Models
 - [ ] **M2-09** `#[derive(Model)]` emits `TABLE`, `COLUMNS`, `values()`, `from_row()` only
   - [x] **M2-09a** `#[derive(Model)]` emits `TABLE` (`Post` -> `posts`, `BlogPost` -> `blog_posts`, `Category` -> `categories`; `#[model(table = "people")]` for irregular plurals), `COLUMNS` and `from_row`; `Post::all()` finds its database through `App::current()`; `Row::get` reads `u64` through `i64` and refuses negatives; `database.statement(sql)` like `DB::statement`
 - [ ] **M2-10** `find`, `find_or_fail` (404), `all`, `first`, `create`, `save`, `delete`
+  - [x] **M2-10a** `Post::find(id)`, `Post::find_or_fail(id)` (404, like `ModelNotFoundException`), `post.save()` inserts when `id` is `0` and fills it in, otherwise updates; values bind as `SqlValue` in one non-generic function; SQLite gets its id through `returning`, MySQL through `last_insert_id`. Checked on MySQL 8.4 and SQLite
 - [ ] **M2-11** Timestamps (`created_at`, `updated_at`) on by default
 - [ ] **M2-12** Soft deletes via `#[model(soft_delete)]`
 - [ ] **M2-13** Mass-assignment guard: `#[model(fillable(...))]`
