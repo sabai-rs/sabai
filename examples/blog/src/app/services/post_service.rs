@@ -1,34 +1,34 @@
-use std::sync::Arc;
-
-use sabai::{App, Error, FromApp, Result};
+use sabai::{App, FromApp, Result};
 
 use crate::app::http::requests::StorePostRequest;
 use crate::app::models::Post;
 use crate::app::repositories::PostRepository;
 
-/// Creating and finding posts, whichever repository stores them.
+/// Creating and finding posts.
 pub struct PostService {
-    post_repository: Arc<dyn PostRepository>,
+    post_repository: PostRepository,
 }
 
 impl FromApp for PostService {
     fn new(app: &App) -> Result<Self> {
         Ok(Self {
-            post_repository: app.get::<dyn PostRepository>()?,
+            post_repository: app.make::<PostRepository>()?,
         })
     }
 }
 
 impl PostService {
-    pub fn all(&self) -> Vec<Post> {
-        self.post_repository.all()
+    pub async fn all(&self) -> Result<Vec<Post>> {
+        self.post_repository.all().await
     }
 
-    pub fn create(&self, request: StorePostRequest) -> Post {
-        self.post_repository.create(request.title, request.body)
+    pub async fn create(&self, request: StorePostRequest) -> Result<Post> {
+        self.post_repository
+            .create(request.title, request.body)
+            .await
     }
 
-    pub fn find_or_fail(&self, id: u64) -> Result<Post> {
-        self.post_repository.find(id).ok_or_else(Error::not_found)
+    pub async fn find_or_fail(&self, id: u64) -> Result<Post> {
+        self.post_repository.find_or_fail(id).await
     }
 }

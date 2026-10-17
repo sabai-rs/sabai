@@ -35,8 +35,8 @@ Compile-time rules that apply to every item below:
 1. ~~**M1-16 / M1-17**~~ `api_resource` done (M1-17); M1-16's web `create`/`edit` waits for views
 2. ~~**M2-01**~~ A MySQL and SQLite pool from config (M2-01a)
 3. ~~**M2-19 / M2-21 / M2-23 / M2-24**~~ Migrations with a schema builder and `migrate` (M2-21a, M2-23a, M2-24a)
-4. **M2-09 / M2-10** (smallest part) `#[derive(Model)]` metadata and `all`, `find_or_fail`, `create`
-5. The blog's `PostRepository` on the database instead of in memory, with feature tests on a test database (QA-03, smallest part)
+4. ~~**M2-09 / M2-10**~~ (smallest part) `#[derive(Model)]` metadata and `all`, `find_or_fail`, `create`
+5. ~~The blog's `PostRepository` on the database instead of in memory~~, with feature tests on a test database (QA-03, smallest part)
 6. **M5-01 / M5-02 / M5-08 / M5-10** (smallest part) `sabai new`, `sabai serve`, `sabai migrate`
 7. **M0-05b** Compile budgets in CI, measured on the skeleton
 
@@ -296,6 +296,7 @@ Models
   - [x] **M2-09a** `#[derive(Model)]` emits `TABLE` (`Post` -> `posts`, `BlogPost` -> `blog_posts`, `Category` -> `categories`; `#[model(table = "people")]` for irregular plurals), `COLUMNS` and `from_row`; `Post::all()` finds its database through `App::current()`; `Row::get` reads `u64` through `i64` and refuses negatives; `database.statement(sql)` like `DB::statement`
 - [ ] **M2-10** `find`, `find_or_fail` (404), `all`, `first`, `create`, `save`, `delete`
   - [x] **M2-10a** `Post::find(id)`, `Post::find_or_fail(id)` (404, like `ModelNotFoundException`), `post.save()` inserts when `id` is `0` and fills it in, otherwise updates; values bind as `SqlValue` in one non-generic function; SQLite gets its id through `returning`, MySQL through `last_insert_id`. Checked on MySQL 8.4 and SQLite
+  - [x] **M2-10b** The blog's `PostRepository` is a plain struct with `async fn`s over `Post::all`, `find_or_fail` and `save`, like a Laravel repository class; the in-memory store is gone. Text columns read as `String` even when MySQL sends `TEXT` as `BLOB` through sqlx's `Any`
 - [ ] **M2-11** Timestamps (`created_at`, `updated_at`) on by default
 - [ ] **M2-12** Soft deletes via `#[model(soft_delete)]`
 - [ ] **M2-13** Mass-assignment guard: `#[model(fillable(...))]`

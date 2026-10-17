@@ -1,9 +1,29 @@
+use sabai::orm::Model;
+use sabai::{App, FromApp, Result};
+
 use crate::app::models::Post;
 
-/// Stores posts. Not async yet: an `async fn` is not allowed in a `dyn` trait, and the ORM (M2)
-/// will decide how repositories wait on the database.
-pub trait PostRepository: Send + Sync {
-    fn all(&self) -> Vec<Post>;
-    fn create(&self, title: String, body: String) -> Post;
-    fn find(&self, id: u64) -> Option<Post>;
+/// Reads and writes posts.
+pub struct PostRepository;
+
+impl FromApp for PostRepository {
+    fn new(_app: &App) -> Result<Self> {
+        Ok(Self)
+    }
+}
+
+impl PostRepository {
+    pub async fn all(&self) -> Result<Vec<Post>> {
+        Post::all().await
+    }
+
+    pub async fn find_or_fail(&self, id: u64) -> Result<Post> {
+        Post::find_or_fail(id).await
+    }
+
+    pub async fn create(&self, title: String, body: String) -> Result<Post> {
+        let mut post = Post { id: 0, title, body };
+        post.save().await?;
+        Ok(post)
+    }
 }

@@ -105,6 +105,28 @@ fn all_reads_every_row_into_the_model() {
 }
 
 #[test]
+fn text_that_arrives_as_bytes_is_read_as_a_string() {
+    let posts = run(
+        &app("blob"),
+        &[
+            "create table posts (id integer primary key, title blob not null, body blob)",
+            "insert into posts (id, title, body) values (1, x'5361626169', null)",
+        ],
+        Post::all(),
+    )
+    .unwrap();
+
+    assert_eq!(
+        posts,
+        [Post {
+            id: 1,
+            title: "Sabai".into(),
+            body: None
+        }]
+    );
+}
+
+#[test]
 fn a_negative_id_cannot_become_a_u64() {
     let error = run(
         &app("negative"),
