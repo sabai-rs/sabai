@@ -57,6 +57,16 @@ impl Database {
         self.pool.get_or_init(|| self.new_pool())
     }
 
+    /// Runs one SQL statement as written, like Laravel's `DB::statement(...)`.
+    pub fn statement<'a>(&'a self, sql: &'a str) -> BoxFuture<'a, Result<()>> {
+        Box::pin(self.execute(sql))
+    }
+
+    async fn execute(&self, sql: &str) -> Result<()> {
+        sqlx::query(sql).execute(self.pool()).await?;
+        Ok(())
+    }
+
     /// Runs `SELECT 1`, so a health check can tell that the database answers.
     pub fn ping(&self) -> BoxFuture<'_, Result<()>> {
         Box::pin(self.select_one())

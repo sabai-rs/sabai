@@ -2,7 +2,7 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{DeriveInput, Error, LitStr, Result};
 
-use crate::paths;
+use crate::{paths, snake_case};
 
 pub(crate) fn expand(input: &DeriveInput) -> Result<TokenStream> {
     let key = section_key(input)?;
@@ -49,20 +49,9 @@ fn explicit_key(key: LitStr) -> Result<String> {
     Ok(value)
 }
 
-fn snake_case(name: &str) -> String {
-    let mut snake = String::with_capacity(name.len() + 4);
-    for (index, character) in name.chars().enumerate() {
-        if character.is_uppercase() && index > 0 {
-            snake.push('_');
-        }
-        snake.extend(character.to_lowercase());
-    }
-    snake
-}
-
 #[cfg(test)]
 mod tests {
-    use super::snake_case;
+    use crate::snake_case;
 
     #[test]
     fn struct_names_become_file_names() {

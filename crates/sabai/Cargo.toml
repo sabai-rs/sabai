@@ -24,6 +24,7 @@ sabai-auth = { workspace = true, optional = true }
 sabai-queue = { workspace = true, optional = true }
 
 [dev-dependencies]
+tokio.workspace = true
 http.workspace = true
 pollster.workspace = true
 serde = { workspace = true, features = ["derive"] }

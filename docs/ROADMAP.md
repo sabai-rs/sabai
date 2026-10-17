@@ -292,6 +292,7 @@ Query builder
 Models
 
 - [ ] **M2-09** `#[derive(Model)]` emits `TABLE`, `COLUMNS`, `values()`, `from_row()` only
+  - [x] **M2-09a** `#[derive(Model)]` emits `TABLE` (`Post` -> `posts`, `BlogPost` -> `blog_posts`, `Category` -> `categories`; `#[model(table = "people")]` for irregular plurals), `COLUMNS` and `from_row`; `Post::all()` finds its database through `App::current()`; `Row::get` reads `u64` through `i64` and refuses negatives; `database.statement(sql)` like `DB::statement`
 - [ ] **M2-10** `find`, `find_or_fail` (404), `all`, `first`, `create`, `save`, `delete`
 - [ ] **M2-11** Timestamps (`created_at`, `updated_at`) on by default
 - [ ] **M2-12** Soft deletes via `#[model(soft_delete)]`

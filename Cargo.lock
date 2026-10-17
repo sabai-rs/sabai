@@ -993,6 +993,7 @@ dependencies = [
  "sabai-orm",
  "sabai-queue",
  "serde",
+ "tokio",
 ]
 
 [[package]]
@@ -1066,6 +1067,7 @@ version = "0.0.0"
 dependencies = [
  "percent-encoding",
  "sabai-core",
+ "sabai-macros",
  "serde",
  "sqlx",
  "tokio",

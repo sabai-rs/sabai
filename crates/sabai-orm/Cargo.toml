@@ -10,6 +10,7 @@ repository.workspace = true
 [dependencies]
 percent-encoding.workspace = true
 sabai-core.workspace = true
+sabai-macros.workspace = true
 serde = { workspace = true, features = ["derive"] }
 sqlx.workspace = true
 tokio.workspace = true
