@@ -26,7 +26,7 @@ bun run preview
 ```text
 docs/
   index.md              home page (renders .vitepress/theme/components/SabaiHome.vue)
-  at-a-glance.md        one page per topic, named like Laravel's docs
+  introduction.md       one page per topic, named like Laravel's docs
   routing.md
   ...
   public/               logo and other static files

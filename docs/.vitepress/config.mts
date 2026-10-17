@@ -45,7 +45,7 @@ export default defineConfig({
     siteTitle: 'sabai',
 
     nav: [
-      { text: 'Docs', link: '/at-a-glance', activeMatch: '^/(?!$)' },
+      { text: 'Docs', link: '/introduction', activeMatch: '^/(?!$)' },
       { text: 'Roadmap', link: 'https://github.com/sabai-rs/sabai/blob/main/docs/ROADMAP.md' },
     ],
 
@@ -53,7 +53,6 @@ export default defineConfig({
       {
         text: 'Getting started',
         items: [
-          { text: 'At a glance', link: '/at-a-glance' },
           { text: 'Introduction', link: '/introduction' },
           { text: 'Installation', link: '/installation' },
           { text: 'Configuration', link: '/configuration' },

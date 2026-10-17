@@ -104,16 +104,83 @@
 .laravel-note {
   margin: 16px 0;
   padding: 10px 16px;
-  border-left: 3px solid var(--sabai-marigold);
-  background: var(--sabai-marigold-soft);
+  border-left: 3px solid var(--sabai-laravel);
+  background: var(--sabai-band);
   border-radius: 0 8px 8px 0;
 }
 .laravel-note .laravel-note-title {
   margin: 0 0 4px;
   font-weight: 600;
   font-size: 14px;
-  color: var(--sabai-marigold);
+  color: var(--sabai-laravel);
 }
 .laravel-note div[class*='language-'] {
   margin: 6px 0 4px;
 }
+
+/* Long code lines wrap instead of scrolling sideways. */
+.vp-doc div[class*='language-'] pre {
+  overflow-x: hidden;
+}
+.vp-doc div[class*='language-'] code {
+  width: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* A wide search box, like a real search field rather than a small button. */
+@media (min-width: 768px) {
+  .VPNavBarSearch .DocSearch-Button {
+    width: 300px;
+    justify-content: space-between;
+    border: 1px solid var(--vp-c-divider);
+    background: var(--vp-c-bg-elv);
+    border-radius: 8px;
+  }
+  .VPNavBarSearch .DocSearch-Button:hover {
+    border-color: var(--sabai-teal);
+  }
+}
+
+/* Code shows `->` and `=>` as typed, not as arrows. */
+.vp-doc code,
+.vp-doc pre {
+  font-variant-ligatures: none;
+  font-feature-settings: 'calt' 0, 'liga' 0;
+}
+
+/* Every callout looks like the Laravel note: a rule on the left, a soft fill, a colored title. */
+:root {
+  --sabai-crab-soft: #fbe6df;
+  --sabai-laravel: #e5341d;
+  --sabai-danger: #b42318;
+  --sabai-danger-soft: #fbe4e2;
+}
+.dark {
+  --sabai-crab-soft: #2e1a14;
+  --sabai-laravel: #ff6a52;
+  --sabai-danger: #f97066;
+  --sabai-danger-soft: #2f1615;
+}
+.vp-doc .custom-block {
+  border: 0;
+  border-left: 3px solid var(--sabai-callout);
+  border-radius: 0 8px 8px 0;
+  background: var(--sabai-callout-soft);
+  color: var(--vp-c-text-1);
+  padding: 10px 16px;
+}
+.vp-doc .custom-block .custom-block-title {
+  color: var(--sabai-callout);
+  font-weight: 600;
+  font-size: 14px;
+}
+.vp-doc .custom-block a,
+.vp-doc .custom-block code {
+  color: inherit;
+}
+.vp-doc .custom-block.tip { --sabai-callout: var(--sabai-teal); --sabai-callout-soft: var(--sabai-teal-soft); }
+.vp-doc .custom-block.warning { --sabai-callout: var(--sabai-crab); --sabai-callout-soft: var(--sabai-crab-soft); }
+.vp-doc .custom-block.danger { --sabai-callout: var(--sabai-danger); --sabai-callout-soft: var(--sabai-danger-soft); }
+.vp-doc .custom-block.info,
+.vp-doc .custom-block.note { --sabai-callout: var(--vp-c-text-2); --sabai-callout-soft: var(--sabai-band); }

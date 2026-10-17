@@ -2,7 +2,7 @@
 
 ## Basic Routing
 
-Routes live in `src/routes/`, one file per group like Laravel's `routes/web.php` and `routes/api.php`. Each route is one statement:
+Routes live in `src/routes/`. One file per group, like `routes/web.php` and `routes/api.php`.
 
 ```rust
 use sabai::http::Router;
@@ -16,9 +16,15 @@ async fn home() -> &'static str {
 }
 ```
 
-A handler is any `async fn` that returns something that can become a response: a string, `Json(value)`, `(StatusCode, T)` or a `Result` of those.
+A handler is an `async fn`. It can return a string, `Json(value)`, `(StatusCode, value)`, or a `Result` of those.
 
-### Available Router Methods
+::: laravel
+```php
+Route::get('/', fn () => 'Hello, Laravel');
+```
+:::
+
+### Router Methods
 
 ```rust
 route.get(path, handler);
@@ -28,17 +34,11 @@ route.patch(path, handler);
 route.delete(path, handler);
 ```
 
-A path with the wrong method answers `405`, and an unknown path answers `404`, both as JSON.
-
-::: laravel
-```php
-Route::get('/', fn () => 'Hello, Laravel');
-```
-:::
+An unknown path answers `404`. A known path with the wrong method answers `405`. Both are JSON.
 
 ## Route Parameters
 
-Wrap a parameter in braces, and take it as `Param<T>`:
+Put the parameter in braces. Take it as `Param<T>`:
 
 ```rust
 route.get("/posts/{id}", show);
@@ -48,13 +48,21 @@ async fn show(Param(id): Param<u64>) -> Result<Json<Post>> {
 }
 ```
 
-A value that does not parse as `T` answers `404`, like Laravel's `whereNumber('id')`, so `/posts/abc` never reaches the handler.
+If the value does not parse as `T`, the answer is `404`. `/posts/abc` never reaches `show`. This is like `whereNumber('id')`.
 
-`Param` reads a route with exactly one parameter. For routes with several, take the `Request` and read them by name: `request.param("comment")`.
+Try it on the blog:
+
+<TryIt :requests="[
+  { label: 'GET /api/posts/1', status: '200 OK', ok: true, body: '{&quot;id&quot;:1,&quot;title&quot;:&quot;Sabai&quot;,&quot;body&quot;:&quot;Rust, but sabai&quot;}', why: 'Post::find_or_fail(1) found the post.' },
+  { label: 'GET /api/posts/99', status: '404 Not Found', ok: false, body: '{&quot;message&quot;:&quot;Not Found&quot;}', why: 'No post has id 99, so find_or_fail answers 404.' },
+  { label: 'GET /api/posts/abc', status: '404 Not Found', ok: false, body: '{&quot;message&quot;:&quot;Not Found&quot;}', why: 'abc is not a u64, so the handler never runs.' },
+]" />
+
+`Param` works when the route has one parameter. With more, take the `Request` and read each one: `request.param("comment")`.
 
 ### Wildcards
 
-`{*path}` matches the rest of the path, slashes included:
+`{*path}` matches the rest of the path, including slashes:
 
 ```rust
 route.get("/files/{*path}", file);
@@ -62,38 +70,36 @@ route.get("/files/{*path}", file);
 
 ## Named Routes
 
-Name a route to build its URL later:
-
 ```rust
 route.get("/posts/{id}", PostController::show).name("posts.show");
 ```
 
-Parameters fill the path and any others become the query string, all percent-encoded. In feature tests:
+Build the URL from the name in a feature test:
 
 ```rust
-app().get_json(route("posts.show").with("id", 1));
-app().get_json(route("posts.index").with("page", 2));   // /posts?page=2
+app().get_json(route("posts.show").with("id", 1));       // /posts/1
+app().get_json(route("posts.index").with("page", 2));    // /posts?page=2
 ```
 
-Two routes with one name stop the app at startup.
+Extra values become the query string. Every value is URL-encoded. Two routes with the same name stop the app at startup.
 
 ## Route Groups
 
-`prefix` puts every route of a group under a path, like `Route::prefix('api')->group(...)`:
+`prefix` puts every route in the group under a path:
 
 ```rust
 route.prefix("/api").group(|route| {
-    route.get("/health", health);
+    route.get("/health", health);    // GET /api/health
 });
 ```
 
-A group can take a whole routes file, which is how the blog puts `routes/api.rs` under `/api`:
+A group can take a whole routes file. This is how the blog puts `routes/api.rs` under `/api`:
 
 ```rust
 route.prefix("/api").group(api::routes);
 ```
 
-Groups nest, and `prefix("api")`, `prefix("/api")` and `prefix("/api/")` mean the same.
+Groups can nest. `"api"`, `"/api"` and `"/api/"` all mean the same prefix.
 
 ::: laravel
 ```php
@@ -103,7 +109,7 @@ Route::prefix('api')->group(base_path('routes/api.php'));
 
 ## Resource Routes
 
-`api_resource` routes a controller's REST actions with Laravel's paths and names. Declare only the actions the controller has, which is Laravel's `->only([...])`:
+`api_resource` adds the REST routes for a controller. List only the actions it has:
 
 ```rust
 route.api_resource("posts", |posts| {
@@ -123,7 +129,7 @@ route.api_resource("posts", |posts| {
 | `update` | `PUT`, `PATCH` | `/posts/{id}` | `posts.update` |
 | `destroy` | `DELETE` | `/posts/{id}` | `posts.destroy` |
 
-The parameter is `{id}`, not Laravel's `{post}`, since there is no route model binding yet.
+The parameter is `{id}`, not `{post}`. Sabai has no route model binding yet.
 
 ::: laravel
 ```php
@@ -131,9 +137,14 @@ Route::apiResource('posts', PostController::class)->only(['index', 'store', 'sho
 ```
 :::
 
-## Mistakes Are Found at Startup
+## Startup Checks
 
-Routes are checked when the app starts, before it listens. A duplicate route, a duplicate name, a malformed path, or a handler that needs a service nobody bound, all stop `serve` with a message that names the route:
+Sabai checks every route before it starts listening. These stop the app with a message that names the route:
+
+- the same method and path twice
+- the same name twice
+- a bad path
+- a handler that needs a service nobody bound
 
 ```text
 Error: route `GET /api/health` cannot start: no service is bound to `dyn Clock`;

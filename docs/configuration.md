@@ -1,8 +1,8 @@
 # Configuration
 
-## Configuration Files
+## Config Files
 
-Each file in `config/` is one section, named after the file, like Laravel's `config/*.php`. Files are TOML:
+Each file in `config/` is one section. `config/app.toml` is the `app` section, like Laravel's `config/app.php`.
 
 ```toml
 # config/app.toml
@@ -11,11 +11,11 @@ host = "${APP_HOST:-127.0.0.1}"
 port = "${APP_PORT:-8000}"
 ```
 
-`${NAME}` reads an environment variable and `${NAME:-default}` falls back to a default, like `env('APP_NAME', 'Blog')`. A value that looks like a number or a boolean becomes one, so `port` above is the number `8000`.
+- `${NAME}` reads an environment variable.
+- `${NAME:-default}` uses the default when the variable is not set, like `env('APP_NAME', 'Blog')`.
+- A value that looks like a number or `true`/`false` becomes one. `port` above is the number `8000`.
 
-## Environment Variables
-
-Variables come from the process environment first, then from `.env` in the app's folder:
+## The `.env` File
 
 ```bash
 # .env
@@ -24,11 +24,17 @@ APP_PORT=8000
 LOG_LEVEL=info,sabai=debug
 ```
 
-When `APP_ENV` is set, `.env.{APP_ENV}` is read instead of `.env`, so `APP_ENV=staging` reads `.env.staging`. Keep `.env` out of Git and commit an `.env.example` instead.
+- Real environment variables win over `.env`.
+- When `APP_ENV` is set, Sabai reads `.env.{APP_ENV}` instead. `APP_ENV=staging` reads `.env.staging`.
+- Do not commit `.env`. Commit `.env.example`.
 
-### The Testing Environment
+### Tests
 
-Feature tests load config with `Config::load_for(base, "testing")`, which reads `.env.testing` and forces `APP_ENV=testing`, like `phpunit.xml`. A shell that sets `APP_ENV=local` can therefore never point tests at the development database.
+Feature tests read `.env.testing`, like Laravel's `phpunit.xml`:
+
+```rust
+let config = Config::load_for(env!("CARGO_MANIFEST_DIR"), "testing")?;
+```
 
 ```bash
 # .env.testing
@@ -37,20 +43,20 @@ DB_CONNECTION=sqlite
 DB_DATABASE=:memory:
 ```
 
-## Reading Configuration
+`load_for` always sets `APP_ENV=testing`, even if your shell sets something else. Tests never touch your dev database.
 
-`config.get` reads a section or a dotted key into any type that implements `Deserialize`, like Laravel's `config('app.name')`:
+## Read Config
 
 ```rust
 let name: String = config.get("app.name")?;
 let port: u16 = config.get_or("app.port", 8000)?;
 ```
 
-`get_or` gives the default only when the key is missing. A key that is set with the wrong type is still an error, so a typo in a config file never goes unnoticed.
+`get` reads a key into any type, like `config('app.name')`. `get_or` uses the default only when the key is missing. A key with the wrong type is still an error.
 
 ### Typed Sections
 
-For a whole section, derive `ConfigSection`. `MailConfig` reads `config/mail.toml`:
+Derive `ConfigSection` to read a whole file into a struct:
 
 ```rust
 #[derive(Deserialize, ConfigSection)]
@@ -59,11 +65,11 @@ pub struct MailConfig {
     pub port: u16,
 }
 
-let mail = config.section::<MailConfig>()?;
+let mail = config.section::<MailConfig>()?;   // reads config/mail.toml
 ```
 
-Name the struct `<Section>Config`, or set the file with `#[config("mail")]`.
+Name the struct `<File>Config`, or set the file with `#[config("mail")]`.
 
 ## Errors
 
-A missing variable, a broken `.env` line or an unclosed `${` stops the app at startup and names the file and key.
+A missing variable, a bad `.env` line or an unclosed `${` stops the app at startup. The message names the file and the key.
