@@ -59,7 +59,23 @@ impl FormRequest for StorePostRequest {
 }
 ```
 
-A controller that gets its dependencies from the container:
+A controller, with models straight from Eloquent:
+
+```rust
+pub struct PostController;
+
+impl PostController {
+    pub async fn index() -> Result<Json<Vec<Post>>> {
+        Ok(Json(Post::all().await?))
+    }
+
+    pub async fn show(Param(id): Param<u64>) -> Result<Json<Post>> {
+        Ok(Json(Post::find_or_fail(id).await?))
+    }
+}
+```
+
+When every action needs the same service, take it in the constructor instead, like Laravel's constructor injection:
 
 ```rust
 pub struct PostController {
@@ -77,8 +93,8 @@ impl FromApp for PostController {
 impl Controller for PostController {}
 
 impl PostController {
-    pub async fn store(self: Arc<Self>, request: StorePostRequest) -> (StatusCode, Json<Post>) {
-        (StatusCode::CREATED, Json(self.post_service.create(request)))
+    pub async fn store(self: Arc<Self>, request: StorePostRequest) -> Result<(StatusCode, Json<Post>)> {
+        Ok((StatusCode::CREATED, Json(self.post_service.create(request).await?)))
     }
 }
 ```
@@ -101,8 +117,8 @@ fn store_requires_a_title_and_a_body() {
 A missing service binding stops the app at startup and names the route, instead of failing a request (type paths shortened):
 
 ```text
-Error: route `POST /api/posts` cannot start: could not make `PostController`: could not make `PostService`:
-no service is bound to `dyn PostRepository`; bind it in a provider's `register`: `app.bind::<dyn PostRepository>(Arc::new(...))`
+Error: route `GET /api/health` cannot start: no service is bound to `dyn Clock`;
+bind it in a provider's `register`: `app.bind::<dyn Clock>(Arc::new(...))`
 ```
 
 ## Learning Sabai
