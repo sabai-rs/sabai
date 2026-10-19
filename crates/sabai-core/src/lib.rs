@@ -11,6 +11,7 @@ mod events;
 pub mod log;
 mod request;
 mod response;
+mod runtime;
 
 pub use app::{App, AppBuilder, FromApp, Provider};
 pub use body::Body;
@@ -23,3 +24,4 @@ pub use events::{Event, Listener};
 pub use http::{Method, StatusCode};
 pub use request::Request;
 pub use response::{IntoResponse, Json, Response};
+pub use runtime::{block_on, runtime};

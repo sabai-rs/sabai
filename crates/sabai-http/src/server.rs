@@ -48,11 +48,7 @@ fn listen_failed(error: io::Error, host: &str, port: u16) -> Error {
 
 pub(crate) fn serve_on(listener: StdTcpListener, site: Arc<Site>) -> Result<()> {
     listener.set_nonblocking(true)?;
-    let runtime = tokio::runtime::Builder::new_multi_thread()
-        .enable_io()
-        .enable_time()
-        .build()?;
-    runtime.block_on(accept_forever(listener, site))
+    sabai_core::block_on(accept_forever(listener, site))?
 }
 
 async fn accept_forever(listener: StdTcpListener, site: Arc<Site>) -> Result<()> {
