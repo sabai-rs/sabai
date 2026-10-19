@@ -24,6 +24,7 @@ pub struct Column {
     name: String,
     kind: Kind,
     nullable: bool,
+    unique: bool,
 }
 
 #[derive(Clone, Copy)]
@@ -54,11 +55,9 @@ impl Schema {
     pub fn to_sql(&self, driver: Driver) -> Vec<String> {
         self.changes
             .iter()
-            .map(|change| match change {
-                Change::Create(blueprint) => {
-                    driver.create_table(&blueprint.table, &blueprint.columns)
-                }
-                Change::DropIfExists(table) => driver.drop_table_if_exists(table),
+            .flat_map(|change| match change {
+                Change::Create(blueprint) => blueprint.to_sql(driver),
+                Change::DropIfExists(table) => vec![driver.drop_table_if_exists(table)],
             })
             .collect()
     }
@@ -107,6 +106,11 @@ impl Blueprint {
         self.add(name, Kind::Timestamp)
     }
 
+    /// A nullable `varchar(100)` named `remember_token`, for "remember me" logins.
+    pub fn remember_token(&mut self) -> &mut Column {
+        self.add("remember_token", Kind::String(100)).nullable()
+    }
+
     /// Nullable `created_at` and `updated_at` timestamps.
     pub fn timestamps(&mut self) {
         self.timestamp("created_at").nullable();
@@ -119,8 +123,22 @@ impl Blueprint {
             name: name.to_owned(),
             kind,
             nullable: false,
+            unique: false,
         });
         &mut self.columns[index]
+    }
+
+    // Like Laravel, unique indexes are their own statements after `create table`.
+    fn to_sql(&self, driver: Driver) -> Vec<String> {
+        let unique_indexes = self
+            .columns
+            .iter()
+            .filter(|column| column.unique)
+            .map(|column| driver.add_unique(&self.table, &column.name));
+        [driver.create_table(&self.table, &self.columns)]
+            .into_iter()
+            .chain(unique_indexes)
+            .collect()
     }
 }
 
@@ -128,6 +146,12 @@ impl Column {
     /// Allows `NULL`.
     pub fn nullable(&mut self) -> &mut Self {
         self.nullable = true;
+        self
+    }
+
+    /// Adds a unique index named like Laravel's: `users_email_unique`.
+    pub fn unique(&mut self) -> &mut Self {
+        self.unique = true;
         self
     }
 }

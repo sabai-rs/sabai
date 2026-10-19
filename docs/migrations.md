@@ -91,11 +91,22 @@ Every column gives the same SQL as Laravel for each database.
 | `table.text("body")` | `text` | `text` |
 | `table.timestamp("sent_at")` | `timestamp` | `datetime` |
 | `table.timestamps()` | nullable `created_at` and `updated_at` | |
+| `table.remember_token()` | nullable `varchar(100)` named `remember_token` | nullable `varchar` |
 
 Add `.nullable()` to allow `NULL`:
 
 ```rust
 table.text("summary").nullable();
+```
+
+Add `.unique()` for a unique index. Like Laravel, it is named `{table}_{column}_unique` and added right after the table:
+
+```rust
+table.string("email").unique();
+```
+
+```sql
+alter table `users` add unique `users_email_unique`(`email`)
 ```
 
 More column types, indexes and foreign keys are coming.
