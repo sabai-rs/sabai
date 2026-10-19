@@ -418,9 +418,11 @@ Kernel
 - [ ] **M5-01** `sabai-cli` on `clap`, installed as `cargo install sabai-cli`
 - [ ] **M5-02** Two modes: global (`sabai new`) and in-app (delegates to the app's own binary so app commands see app code)
 - [ ] **M5-03** `trait Command` with `signature`, `description`, `async fn handle(&self, io)`
+  - [x] **M5-03a** `trait Command` with `name`, `description` and `handle(&self, app, args)`; apps and packages add commands in a provider with `app.command(...)`, like `$this->commands([...])`; they show in `list`, and a duplicate name is an error. Sabai's own commands are `Command`s in the crate that owns them: `ServeCommand` in sabai-http, `MigrateCommand` in sabai-orm
 - [ ] **M5-04** `#[derive(Command)]` maps struct fields to args/options
 - [ ] **M5-05** Console IO helpers: `info`, `warn`, `error`, `table`, `confirm`, `ask`, progress bar
 - [ ] **M5-06** Commands registered in a `ConsoleKernel` like the HTTP router
+  - [x] **M5-06a** `sabai::console::Console::new(app).routes(...).migrations(...).run()` in the app's `main`: `serve` (the default), `migrate` and `list`, read without clap so apps compile no argument parser; an unknown command says to run `--help`
 
 Built-in commands
 
