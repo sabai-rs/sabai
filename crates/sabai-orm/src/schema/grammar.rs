@@ -27,6 +27,15 @@ impl Driver {
         format!("drop table if exists {}", self.quote(table))
     }
 
+    pub(crate) fn add_unique(self, table: &str, column: &str) -> String {
+        let index = self.quote(&index_name(table, column, "unique"));
+        let (table, column) = (self.quote(table), self.quote(column));
+        match self {
+            Driver::MySql => format!("alter table {table} add unique {index}({column})"),
+            Driver::Sqlite => format!("create unique index {index} on {table} ({column})"),
+        }
+    }
+
     pub(crate) fn has_table(self) -> &'static str {
         match self {
             Driver::MySql => {
@@ -88,6 +97,13 @@ impl Driver {
     }
 }
 
+/// Laravel's index name: `users_email_unique`.
+fn index_name(table: &str, column: &str, kind: &str) -> String {
+    format!("{table}_{column}_{kind}")
+        .to_lowercase()
+        .replace(['-', '.'], "_")
+}
+
 #[cfg(test)]
 mod tests {
     use super::Driver;
@@ -142,6 +158,41 @@ mod tests {
         assert_eq!(
             schema.to_sql(Driver::MySql),
             ["drop table if exists `posts`` ; drop table users; --`"]
+        );
+    }
+
+    fn create_users() -> Schema {
+        let mut schema = Schema::default();
+        schema.create("users", |table| {
+            table.id();
+            table.string("email").unique();
+            table.remember_token();
+        });
+        schema
+    }
+
+    #[test]
+    fn mysql_adds_a_unique_index_after_the_table_like_laravel() {
+        assert_eq!(
+            create_users().to_sql(Driver::MySql),
+            [
+                "create table `users` (`id` bigint unsigned not null auto_increment primary key, \
+                 `email` varchar(255) not null, `remember_token` varchar(100) null) \
+                 default character set utf8mb4 collate 'utf8mb4_unicode_ci'",
+                "alter table `users` add unique `users_email_unique`(`email`)",
+            ]
+        );
+    }
+
+    #[test]
+    fn sqlite_adds_a_unique_index_after_the_table_like_laravel() {
+        assert_eq!(
+            create_users().to_sql(Driver::Sqlite),
+            [
+                "create table \"users\" (\"id\" integer primary key autoincrement not null, \
+                 \"email\" varchar not null, \"remember_token\" varchar)",
+                "create unique index \"users_email_unique\" on \"users\" (\"email\")",
+            ]
         );
     }
 }
