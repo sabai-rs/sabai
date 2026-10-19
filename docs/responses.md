@@ -46,4 +46,4 @@ pub async fn store(request: StorePostRequest) -> Result<(StatusCode, Json<Post>)
 
 ## Not Yet
 
-These are on the [roadmap](https://github.com/sabai-rs/sabai/blob/main/docs/ROADMAP.md): response headers, redirects (`redirect()->route()`), views, file downloads and cookies.
+These are on the [roadmap](https://github.com/sabai-rs/sabai/blob/main/ROADMAP.md): response headers, redirects (`redirect()->route()`), views, file downloads and cookies.

@@ -185,7 +185,7 @@ bind it in a provider's `register`:
         <p class="sub">Start with the example blog, then read the routing guide.</p>
         <div class="actions">
           <a class="btn primary" :href="withBase('/introduction')">Get started</a>
-          <a class="btn plain" href="https://github.com/sabai-rs/sabai/blob/main/docs/ROADMAP.md">Read the roadmap</a>
+          <a class="btn plain" href="https://github.com/sabai-rs/sabai/blob/main/ROADMAP.md">Read the roadmap</a>
         </div>
       </div>
     </section>

@@ -35,7 +35,6 @@ docs/
     theme/
       style.css         colors and fonts
       components/       SabaiHome, TryIt, PageMarkdown
-  ROADMAP.md            not part of the site
   README.md             this file, not part of the site
 ```
 

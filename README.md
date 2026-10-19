@@ -29,7 +29,7 @@ What works today:
 - Migrations with a schema builder, and Eloquent-style models (`Post::all()`, `find_or_fail`, `save`) on MySQL or SQLite, with several connections.
 - A feature-test client: `app().get_json(route("posts.show").with("id", 1)).assert_status(200)`.
 
-On the way: middleware, auth, queues, the `sabai` console, storage, cache and mail. See the [roadmap](docs/ROADMAP.md).
+On the way: middleware, auth, queues, the `sabai` console, storage, cache and mail. See the [roadmap](ROADMAP.md).
 
 ## A Taste
 
@@ -131,11 +131,11 @@ cargo run -p blog          # serves on http://127.0.0.1:8000
 cargo nextest run -p blog  # runs the blog's feature tests
 ```
 
-The [documentation](https://sabai-rs.github.io/sabai/) covers everything above, from installation and routing to migrations, models and tests; its source is in [`docs/`](docs) (`bun run dev` there to preview it). The [roadmap](docs/ROADMAP.md) lists every feature, what is done, and what comes next.
+The [documentation](https://sabai-rs.github.io/sabai/) covers everything above, from installation and routing to migrations, models and tests; its source is in [`docs/`](docs) (`bun run dev` there to preview it). The [roadmap](ROADMAP.md) lists every feature, what is done, and what comes next.
 
 ## Contributing
 
-Thank you for considering contributing to Sabai! Work follows the [roadmap](docs/ROADMAP.md), one ticket at a time:
+Thank you for considering contributing to Sabai! Work follows the [roadmap](ROADMAP.md), one ticket at a time:
 
 - One branch per ticket, named after it: `m1-03-named-routes`.
 - Commit messages start with the ticket: `feat(M1-03a): named routes ...`.
