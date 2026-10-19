@@ -4,6 +4,11 @@ version = "0.1.0"
 edition = "2024"
 publish = false
 
+# `main.rs` and tests call the app's code `bootstrap::...`, like Laravel's `bootstrap/app.php`,
+# so it reads the same in every app whatever its name.
+[lib]
+name = "bootstrap"
+
 [dependencies]
 sabai = {{sabai}}
 

@@ -5,31 +5,8 @@ use std::path::Path;
 
 use clap::{Arg, ArgMatches, Command};
 
-macro_rules! stub {
-    ($path:literal) => {
-        include_str!(concat!("../../../templates/app/", $path))
-    };
-}
-
-// Dotfiles and `Cargo.toml` are stubs, so they do not act on this repository's git and Cargo.
-const TEMPLATE: &[(&str, &str)] = &[
-    ("Cargo.toml", stub!("Cargo.toml.stub")),
-    (".gitignore", stub!("gitignore.stub")),
-    (".env.example", stub!("env.stub")),
-    (".env", stub!("env.stub")),
-    ("config/app.toml", stub!("config/app.toml")),
-    ("config/logging.toml", stub!("config/logging.toml")),
-    ("src/main.rs", stub!("src/main.rs")),
-    ("src/lib.rs", stub!("src/lib.rs")),
-    ("src/app.rs", stub!("src/app.rs")),
-    ("src/app/providers.rs", stub!("src/app/providers.rs")),
-    (
-        "src/app/providers/app_service_provider.rs",
-        stub!("src/app/providers/app_service_provider.rs"),
-    ),
-    ("src/routes.rs", stub!("src/routes.rs")),
-    ("src/routes/web.rs", stub!("src/routes/web.rs")),
-];
+/// Every file in `templates/app` and where it goes in the new app, listed by `build.rs`.
+const TEMPLATE: &[(&str, &str)] = include!(concat!(env!("OUT_DIR"), "/template.rs"));
 
 const SABAI_FROM_GITHUB: &str = r#"{ git = "https://github.com/sabai-rs/sabai" }"#;
 
@@ -70,7 +47,11 @@ fn create(parent: &Path, name: &str, sabai: &str) -> Result<(), String> {
         ));
     }
     for (path, stub) in TEMPLATE {
-        write_file(&folder.join(path), &fill(stub, name, sabai))?;
+        let contents = fill(stub, name, sabai);
+        write_file(&folder.join(path), &contents)?;
+        if *path == ".env.example" {
+            write_file(&folder.join(".env"), &contents)?;
+        }
     }
     Ok(())
 }
@@ -87,9 +68,7 @@ fn check_name(name: &str) -> Result<(), String> {
 }
 
 fn fill(stub: &str, name: &str, sabai: &str) -> String {
-    stub.replace("{{name}}", name)
-        .replace("{{crate}}", &name.replace('-', "_"))
-        .replace("{{sabai}}", sabai)
+    stub.replace("{{name}}", name).replace("{{sabai}}", sabai)
 }
 
 fn sabai_from_clone(clone: &Path) -> Result<String, String> {
@@ -133,11 +112,30 @@ mod tests {
         for (path, _) in TEMPLATE {
             assert!(app.join(path).is_file(), "{path} is missing");
         }
+        assert!(
+            app.join(".env").is_file(),
+            ".env was not copied from .env.example"
+        );
         let main = fs::read_to_string(app.join("src/main.rs")).unwrap();
-        assert!(main.contains("my_shop::config()"), "{main}");
+        assert!(main.contains("bootstrap::config()"), "{main}");
         let manifest = fs::read_to_string(app.join("Cargo.toml")).unwrap();
         assert!(manifest.contains("name = \"my-shop\""), "{manifest}");
         assert!(manifest.contains("sabai = { git = "), "{manifest}");
+    }
+
+    #[test]
+    fn template_names_become_the_app_names() {
+        let paths: Vec<&str> = TEMPLATE.iter().map(|(path, _)| *path).collect();
+
+        assert!(paths.contains(&"Cargo.toml"), "{paths:?}");
+        assert!(paths.contains(&".gitignore"), "{paths:?}");
+        assert!(paths.contains(&"src/routes/web.rs"), "{paths:?}");
+        assert!(
+            !paths
+                .iter()
+                .any(|path| path.contains("stub") || path.contains("dot-")),
+            "{paths:?}"
+        );
     }
 
     #[test]

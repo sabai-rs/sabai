@@ -7,6 +7,11 @@ rust-version.workspace = true
 license.workspace = true
 publish = false
 
+# `main.rs` and tests call the app's code `bootstrap::...`, like Laravel's `bootstrap/app.php`,
+# so it reads the same in every app whatever its name.
+[lib]
+name = "bootstrap"
+
 [dependencies]
 sabai = { workspace = true, features = ["orm"] }
 serde = { workspace = true, features = ["derive"] }

@@ -62,7 +62,7 @@ impl Provider for NotificationProvider {
 A provider that fails stops the app and is named in the message:
 
 ```text
-Error: provider `blog::app::providers::app_service_provider::AppServiceProvider` failed to register: ...
+Error: provider `bootstrap::app::providers::app_service_provider::AppServiceProvider` failed to register: ...
 ```
 
 ## Framework Providers

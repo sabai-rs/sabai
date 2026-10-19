@@ -21,8 +21,8 @@ use sabai_testing::TestApp;
 
 fn app() -> TestApp {
     let config = Config::load_for(env!("CARGO_MANIFEST_DIR"), "testing").expect("the config loads");
-    TestApp::new(blog::app(config).expect("the blog boots"), blog::routes())
-        .refresh_database(&blog::migrations())
+    TestApp::new(bootstrap::app(config).expect("the blog boots"), bootstrap::routes())
+        .refresh_database(&bootstrap::migrations())
 }
 ```
 
