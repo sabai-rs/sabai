@@ -274,3 +274,31 @@ fn a_connection_missing_from_config_says_where_to_add_it() {
         "{error}"
     );
 }
+
+struct CreatePostsTable;
+
+impl Migration for CreatePostsTable {
+    fn up(&self, schema: &mut Schema) {
+        schema.create("posts", |table| {
+            table.id();
+            table.string("title");
+            table.text("body").nullable();
+        });
+    }
+
+    fn down(&self, schema: &mut Schema) {
+        schema.drop_if_exists("posts");
+    }
+}
+
+#[test]
+fn a_query_after_migrate_in_the_same_process_reuses_the_pool() {
+    let app = app("migrate-then-query");
+    let migrations =
+        Migrations::new().add("2026_10_19_000000_create_posts_table", CreatePostsTable);
+
+    sabai::orm::migrate(&app, &migrations).unwrap();
+    let posts = sabai::block_on(app.scope(Post::all())).unwrap();
+
+    assert_eq!(posts.unwrap(), []);
+}

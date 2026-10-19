@@ -77,3 +77,11 @@ let clock = App::current()?.get::<dyn Clock>()?;
 ```
 
 For background work, use `sabai::spawn` instead of `tokio::spawn`. It takes the app along.
+
+To run code outside a request, such as a one-off script in `main`, give it the app and run it on Sabai's runtime:
+
+```rust
+let posts = sabai::block_on(app.scope(Post::all()))??;
+```
+
+Do not build your own tokio runtime. Database pools belong to the runtime that opened them, and `serve` and `migrate` share this one.
