@@ -417,6 +417,8 @@ Kernel
 
 - [ ] **M5-01** `sabai-cli` on `clap`, installed as `cargo install sabai-cli`
   - [x] **M5-01a** The `sabai` binary (clap builder API, no derive): every command goes to the nearest app's binary as `cargo run -q -- <command>`, so app and package commands work at once; `sabai` alone lists them; outside an app it says to `cd` into one
+  - [ ] **M5-01b** Publish: move `templates/` into `crates/sabai-cli` so `cargo publish` packs it, and have `sabai new` write `sabai = "<the CLI's version>"` instead of the git dependency, so template and framework always match
+  - [ ] **M5-01c** `sabai new <name> --using <git-url>` for a team's or the community's starter kit, like `laravel new --using=`
 - [ ] **M5-02** Two modes: global (`sabai new`) and in-app (delegates to the app's own binary so app commands see app code)
 - [ ] **M5-03** `trait Command` with `signature`, `description`, `async fn handle(&self, io)`
   - [x] **M5-03a** `trait Command` with `name`, `description` and `handle(&self, app, args)`; apps and packages add commands in a provider with `app.command(...)`, like `$this->commands([...])`; they show in `list`, and a duplicate name is an error. Sabai's own commands are `Command`s in the crate that owns them: `ServeCommand` in sabai-http, `MigrateCommand` in sabai-orm
@@ -430,6 +432,7 @@ Built-in commands
 - [ ] **M5-07** `route:list`
 - [ ] **M5-08** `new <app>`, `serve`, `about`, `env`
   - [x] **M5-08a** `sabai new <name>` writes `templates/app` (embedded with `include_str!`, so it works offline): `Cargo.toml`, `.env` copied from `.env.example`, `config/`, `main.rs` on `Console`, `AppServiceProvider`, `routes/web.rs` with one closure route for `/`, like Laravel's `routes/web.php`; `--sabai-path <clone>` for a local Sabai; refuses an existing folder or a name Cargo cannot use
+  - [x] **M5-08c** `build.rs` lists every file in `templates/app`, so a new template file needs no code; `dot-` names become `.` names and `.stub` is dropped (`templates/README.md`); the app's library is named `bootstrap` (`[lib] name`), so `main.rs` and tests read `bootstrap::app(config)` in every app and the template needs no crate-name placeholder
   - [ ] **M5-08b** The template gets the database: `users` migration and `User` model like Laravel's, `.env.testing`, `docker-compose.yml` and one feature test
 - [ ] **M5-09** `make:controller`, `make:model -m`, `make:migration`, `make:job`, `make:command`, `make:policy`, `make:middleware`; Laravel's folders by default, nested names like `make:controller Store/PostController` (to `app/http/controllers/store/post_controller.rs`), and config to point each kind elsewhere (`make.models = "app/domain/models"`)
 - [ ] **M5-10** `migrate`, `migrate:rollback`, `migrate:fresh --seed`, `db:seed`

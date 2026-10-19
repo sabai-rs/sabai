@@ -46,6 +46,21 @@ Sabai never reads folders. You can arrange them your own way, for example `app/d
 
 Feature tests are a separate crate. They can only use what the app exports. `lib.rs` exports `config()`, `app(config)` and `routes()`, and both `main.rs` and the tests use them.
 
+`Cargo.toml` names that library `bootstrap`, so every app calls it the same way, whatever the app's name:
+
+```toml
+[lib]
+name = "bootstrap"
+```
+
+```rust
+let app = bootstrap::app(bootstrap::config()?)?;
+```
+
+::: laravel
+`bootstrap::app(config)` does what `bootstrap/app.php` does: it loads config, registers providers and boots the app. Laravel loads that file by path from `artisan`, `public/index.php` and `TestCase`; Rust needs a crate name instead.
+:::
+
 ## Tests in One Binary
 
 Cargo builds every file directly under `tests/` as its own program. So feature tests live as modules of one `tests/feature/main.rs`, one file per controller action. Adding a test file does not add a build.
