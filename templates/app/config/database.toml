@@ -1,0 +1,13 @@
+default = "${DB_CONNECTION:-sqlite}"
+
+[connections.sqlite]
+driver = "sqlite"
+database = "${DB_DATABASE:-database/database.sqlite}"
+
+[connections.mysql]
+driver = "mysql"
+host = "${DB_HOST:-127.0.0.1}"
+port = "${DB_PORT:-3306}"
+database = "${DB_DATABASE:-{{name}}}"
+username = "${DB_USERNAME:-root}"
+password = "${DB_PASSWORD:-}"
