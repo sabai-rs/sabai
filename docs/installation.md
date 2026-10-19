@@ -56,15 +56,40 @@ Tests use SQLite in memory, so they need no database.
 
 ## Start a New App
 
-`sabai new` does not exist yet. For now, copy `examples/blog`, or add Sabai to a new binary crate:
-
-```toml
-[dependencies]
-sabai = { git = "https://github.com/sabai-rs/sabai", features = ["orm"] }
-serde = { version = "1", features = ["derive"] }
-
-[dev-dependencies]
-sabai-testing = { git = "https://github.com/sabai-rs/sabai", features = ["orm"] }
+```bash
+sabai new my-app
+cd my-app
+sabai serve
 ```
 
-`orm` adds the database layer. Skip it if your app has no database. Then sqlx is never compiled.
+Open `http://127.0.0.1:8000` to see `Welcome to Sabai`.
+
+`sabai new` writes Laravel's layout in Rust:
+
+```text
+my-app/
+  Cargo.toml
+  .env, .env.example
+  config/       app.toml, logging.toml
+  src/
+    main.rs     runs the app's commands
+    lib.rs      config() and app(), like bootstrap/app.php
+    app/providers/app_service_provider.rs
+    routes.rs, routes/web.rs
+```
+
+The app depends on Sabai from GitHub. To try a local clone instead, pass its folder:
+
+```bash
+sabai new my-app --sabai-path ~/code/sabai
+```
+
+::: laravel
+`sabai new` is `laravel new`. Like Laravel, it copies `.env.example` to `.env` for you.
+:::
+
+The new app has no database yet. To add one, turn on the `orm` feature and follow [Database](/database):
+
+```toml
+sabai = { git = "https://github.com/sabai-rs/sabai", features = ["orm"] }
+```

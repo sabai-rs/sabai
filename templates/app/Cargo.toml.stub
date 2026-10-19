@@ -1,0 +1,11 @@
+[package]
+name = "{{name}}"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+sabai = {{sabai}}
+
+# Keeps the app its own workspace, even inside another project's folder.
+[workspace]

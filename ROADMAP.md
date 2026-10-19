@@ -429,6 +429,8 @@ Built-in commands
 
 - [ ] **M5-07** `route:list`
 - [ ] **M5-08** `new <app>`, `serve`, `about`, `env`
+  - [x] **M5-08a** `sabai new <name>` writes `templates/app` (embedded with `include_str!`, so it works offline): `Cargo.toml`, `.env` copied from `.env.example`, `config/`, `main.rs` on `Console`, `AppServiceProvider`, `routes/web.rs` with one closure route for `/`, like Laravel's `routes/web.php`; `--sabai-path <clone>` for a local Sabai; refuses an existing folder or a name Cargo cannot use
+  - [ ] **M5-08b** The template gets the database: `users` migration and `User` model like Laravel's, `.env.testing`, `docker-compose.yml` and one feature test
 - [ ] **M5-09** `make:controller`, `make:model -m`, `make:migration`, `make:job`, `make:command`, `make:policy`, `make:middleware`; Laravel's folders by default, nested names like `make:controller Store/PostController` (to `app/http/controllers/store/post_controller.rs`), and config to point each kind elsewhere (`make.models = "app/domain/models"`)
 - [ ] **M5-10** `migrate`, `migrate:rollback`, `migrate:fresh --seed`, `db:seed`
 - [ ] **M5-11** `queue:work`, `queue:failed`, `queue:retry`
