@@ -1,4 +1,7 @@
-//! The `sabai` command: runs the app's own commands from anywhere inside it, like `php artisan`.
+//! The `sabai` command: creates apps like `laravel new`, and runs an app's own commands
+//! from anywhere inside it, like `php artisan`.
+
+mod new_app;
 
 use std::env;
 use std::fs;
@@ -8,9 +11,13 @@ use std::process::{self, ExitCode, ExitStatus};
 use clap::{ArgMatches, Command, value_parser};
 
 fn main() -> ExitCode {
-    let args = app_args(&cli().get_matches());
-    match run_in_app(&args) {
-        Ok(status) => exit_code(status),
+    let matches = cli().get_matches();
+    let ran = match matches.subcommand() {
+        Some(("new", new)) => new_app::run(new).map(|()| ExitCode::SUCCESS),
+        _ => run_in_app(&app_args(&matches)).map(exit_code),
+    };
+    match ran {
+        Ok(code) => code,
         Err(problem) => {
             eprintln!("Error: {problem}");
             ExitCode::FAILURE
@@ -21,10 +28,12 @@ fn main() -> ExitCode {
 fn cli() -> Command {
     Command::new("sabai")
         .version(env!("CARGO_PKG_VERSION"))
-        .about("Runs your Sabai app's commands, like `php artisan`")
+        .about("Creates Sabai apps and runs their commands, like `laravel new` and `php artisan`")
         .after_help(
-            "Commands run in your app: `sabai migrate` is `cargo run -q -- migrate`, and `sabai` alone lists them.",
+            "Other commands run in your app: `sabai migrate` is `cargo run -q -- migrate`, and `sabai` alone lists them.",
         )
+        .subcommand(new_app::command())
+        .disable_help_subcommand(true)
         .allow_external_subcommands(true)
         .external_subcommand_value_parser(value_parser!(String))
 }
