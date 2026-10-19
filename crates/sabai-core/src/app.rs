@@ -3,8 +3,9 @@ use std::collections::HashMap;
 use std::fmt;
 use std::sync::{Arc, PoisonError, RwLock};
 
+use crate::command::Commands;
 use crate::events::Events;
-use crate::{Config, Container, Error, Event, Listener, Result};
+use crate::{Command, Config, Container, Error, Event, Listener, Result};
 
 /// A package's or an app's entry point, like a Laravel service provider.
 pub trait Provider: Send + Sync {
@@ -38,12 +39,14 @@ pub trait FromApp: Sized {
     fn new(app: &App) -> Result<Self>;
 }
 
-/// The application: config, the service container and event listeners, filled by providers at boot.
+/// The application: config, the service container, event listeners and console commands,
+/// filled by providers at boot.
 #[derive(Debug)]
 pub struct App {
     config: Config,
     container: Container,
     events: Events,
+    commands: Commands,
     singletons: Singletons,
 }
 
@@ -70,6 +73,7 @@ impl App {
                 config,
                 container: Container::default(),
                 events: Events::default(),
+                commands: Commands::default(),
                 singletons: Singletons::default(),
             },
             providers: Vec::new(),
@@ -94,6 +98,22 @@ impl App {
     /// Runs every listener for `event`, stopping at the first error; no listeners is fine.
     pub fn dispatch<E: Event>(&self, event: &E) -> Result<()> {
         self.events.dispatch(TypeId::of::<E>(), event, self)
+    }
+
+    /// Adds a console command, like `$this->commands([...])` in a Laravel provider.
+    /// Two commands with the same name are an error.
+    pub fn command<C: Command + 'static>(&mut self, command: C) -> Result<()> {
+        self.commands.add(Box::new(command))
+    }
+
+    /// The command named `name`, if a provider added one.
+    pub fn find_command(&self, name: &str) -> Option<&dyn Command> {
+        self.commands.find(name)
+    }
+
+    /// Every command providers added, in the order they were added.
+    pub fn commands(&self) -> impl Iterator<Item = &dyn Command> {
+        self.commands.iter()
     }
 
     /// Resolves a service; see [`Container::get`].

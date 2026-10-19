@@ -87,6 +87,7 @@ export default defineConfig({
         items: [
           { text: 'Service container', link: '/container' },
           { text: 'Service providers', link: '/providers' },
+          { text: 'Console', link: '/console' },
         ],
       },
     ],

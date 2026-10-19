@@ -5,6 +5,8 @@ pub use sabai_macros::ConfigSection;
 
 pub use sabai_http as http;
 
+pub mod console;
+
 #[cfg(feature = "orm")]
 pub use sabai_orm as orm;
 

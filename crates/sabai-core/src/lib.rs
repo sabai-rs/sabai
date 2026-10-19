@@ -2,6 +2,7 @@
 
 mod app;
 mod body;
+mod command;
 mod config;
 mod container;
 pub mod contracts;
@@ -16,6 +17,7 @@ mod runtime;
 pub use app::{App, AppBuilder, FromApp, Provider};
 pub use body::Body;
 pub use bytes::Bytes;
+pub use command::Command;
 pub use config::{Config, ConfigSection};
 pub use container::Container;
 pub use current::spawn;

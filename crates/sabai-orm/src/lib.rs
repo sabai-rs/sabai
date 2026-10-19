@@ -1,6 +1,6 @@
 //! Query builder, models, relations, schema builder and migrator for Sabai.
 
-mod command;
+mod commands;
 mod config;
 mod database;
 mod manager;
@@ -12,7 +12,7 @@ mod row;
 mod schema;
 mod value;
 
-pub use command::migrate;
+pub use commands::{MigrateCommand, migrate};
 pub use database::Database;
 pub use manager::DatabaseManager;
 pub use migration::{Migration, Migrations};
