@@ -11,5 +11,8 @@ repository.workspace = true
 name = "sabai"
 path = "src/main.rs"
 
+[dependencies]
+clap.workspace = true
+
 [lints]
 workspace = true

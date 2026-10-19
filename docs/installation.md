@@ -14,6 +14,12 @@ git clone https://github.com/sabai-rs/sabai
 cd sabai
 ```
 
+Install the `sabai` command from the clone. It runs your app's commands, like `php artisan`:
+
+```bash
+cargo install --path crates/sabai-cli
+```
+
 The blog uses two databases: `blog` for posts and `report` for post views.
 
 ### With Docker (MySQL)
@@ -21,8 +27,9 @@ The blog uses two databases: `blog` for posts and `report` for post views.
 ```bash
 docker compose up -d
 cp examples/blog/.env.example examples/blog/.env
-cargo run -p blog -- migrate
-cargo run -p blog
+cd examples/blog
+sabai migrate
+sabai serve
 ```
 
 ### Without Docker (SQLite)
@@ -30,9 +37,12 @@ cargo run -p blog
 ```bash
 export DB_CONNECTION=sqlite DB_DATABASE=blog.sqlite
 export REPORT_DB_CONNECTION=sqlite REPORT_DB_DATABASE=report.sqlite
-cargo run -p blog -- migrate
-cargo run -p blog
+cd examples/blog
+sabai migrate
+sabai serve
 ```
+
+Without the `sabai` command, `cargo run -p blog -- migrate` and `cargo run -p blog` do the same from the repository root.
 
 The blog runs on `http://127.0.0.1:8000`. Try `curl http://127.0.0.1:8000/api/posts`.
 

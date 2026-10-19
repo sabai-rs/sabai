@@ -18,7 +18,7 @@ fn an_unknown_command_says_how_to_see_the_commands() {
 
     assert_eq!(
         error,
-        "there is no `migrat` command; run with `--help` to see the commands"
+        "there is no `migrat` command; run `list` to see them"
     );
 }
 
@@ -151,5 +151,35 @@ fn a_package_command_cannot_hide_a_built_in_one() {
     assert!(
         error.starts_with("two commands are named `serve`"),
         "{error}"
+    );
+}
+
+#[test]
+fn a_typo_suggests_the_command_it_looks_like() {
+    let (app, _) = app_with_commands(&["inspire", "greet"]);
+
+    assert_eq!(
+        run(Console::new(app.unwrap()), &["inspi"]),
+        "there is no `inspi` command; did you mean `inspire`?"
+    );
+}
+
+#[test]
+fn a_wrong_letter_is_a_typo_too() {
+    let (app, _) = app_with_commands(&["greet"]);
+
+    assert_eq!(
+        run(Console::new(app.unwrap()), &["graet"]),
+        "there is no `graet` command; did you mean `greet`?"
+    );
+}
+
+#[test]
+fn every_lookalike_is_suggested() {
+    let (app, _) = app_with_commands(&["cache:clear", "view:clear", "inspire"]);
+
+    assert_eq!(
+        run(Console::new(app.unwrap()), &["clear"]),
+        "there is no `clear` command; did you mean `cache:clear` or `view:clear`?"
     );
 }

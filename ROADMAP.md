@@ -416,6 +416,7 @@ Goal: one `sabai` binary for generators and framework tasks, plus user-defined c
 Kernel
 
 - [ ] **M5-01** `sabai-cli` on `clap`, installed as `cargo install sabai-cli`
+  - [x] **M5-01a** The `sabai` binary (clap builder API, no derive): every command goes to the nearest app's binary as `cargo run -q -- <command>`, so app and package commands work at once; `sabai` alone lists them; outside an app it says to `cd` into one
 - [ ] **M5-02** Two modes: global (`sabai new`) and in-app (delegates to the app's own binary so app commands see app code)
 - [ ] **M5-03** `trait Command` with `signature`, `description`, `async fn handle(&self, io)`
   - [x] **M5-03a** `trait Command` with `name`, `description` and `handle(&self, app, args)`; apps and packages add commands in a provider with `app.command(...)`, like `$this->commands([...])`; they show in `list`, and a duplicate name is an error. Sabai's own commands are `Command`s in the crate that owns them: `ServeCommand` in sabai-http, `MigrateCommand` in sabai-orm
