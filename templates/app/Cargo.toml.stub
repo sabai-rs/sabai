@@ -10,7 +10,11 @@ publish = false
 name = "bootstrap"
 
 [dependencies]
-sabai = {{sabai}}
+sabai = { {{sabai}}, features = ["orm"] }
+serde = { version = "1", features = ["derive"] }
+
+[dev-dependencies]
+sabai-testing = { {{sabai-testing}}, features = ["orm"] }
 
 # Keeps the app its own workspace, even inside another project's folder.
 [workspace]

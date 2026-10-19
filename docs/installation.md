@@ -59,24 +59,33 @@ Tests use SQLite in memory, so they need no database.
 ```bash
 sabai new my-app
 cd my-app
+sabai migrate
 sabai serve
 ```
 
 Open `http://127.0.0.1:8000` to see `Welcome to Sabai`.
+
+The app starts on SQLite in `database/database.sqlite`, so there is nothing to set up. `sabai migrate` creates the file and Laravel's `users` table. To use MySQL, set the `DB_` lines in `.env`; `.env.example` lists them.
 
 `sabai new` writes Laravel's layout in Rust:
 
 ```text
 my-app/
   Cargo.toml
-  .env, .env.example
-  config/       app.toml, logging.toml
+  .env, .env.example, .env.testing
+  config/            app.toml, database.toml, logging.toml
+  database/          database.sqlite, once you migrate
   src/
-    main.rs     runs the app's commands
-    lib.rs      config() and app(), like bootstrap/app.php
+    main.rs          runs the app's commands
+    lib.rs           config(), app(), routes() and migrations(), like bootstrap/app.php
+    app/models/user.rs
     app/providers/app_service_provider.rs
+    database/migrations/m0001_01_01_000000_create_users_table.rs
     routes.rs, routes/web.rs
+  tests/feature/     main.rs and example_test.rs
 ```
+
+`cargo test` runs the example test on a SQLite database in memory, like Laravel's `ExampleTest`.
 
 The app depends on Sabai from GitHub. To try a local clone instead, pass its folder:
 
@@ -85,11 +94,5 @@ sabai new my-app --sabai-path ~/code/sabai
 ```
 
 ::: laravel
-`sabai new` is `laravel new`. Like Laravel, it copies `.env.example` to `.env` for you.
+`sabai new` is `laravel new`. Like Laravel 11, it copies `.env.example` to `.env`, starts on SQLite, and ships the `users` migration and a `User` model whose `password` never appears in JSON.
 :::
-
-The new app has no database yet. To add one, turn on the `orm` feature and follow [Database](/database):
-
-```toml
-sabai = { git = "https://github.com/sabai-rs/sabai", features = ["orm"] }
-```

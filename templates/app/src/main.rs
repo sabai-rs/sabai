@@ -7,5 +7,6 @@ fn main() -> Result<()> {
     Logging::new(&config.get_or("logging.level", String::from("info"))?)?.init()?;
     Console::new(bootstrap::app(config)?)
         .routes(bootstrap::routes())
+        .migrations(bootstrap::migrations())
         .run()
 }

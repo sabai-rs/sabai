@@ -37,7 +37,7 @@ Compile-time rules that apply to every item below:
 3. ~~**M2-19 / M2-21 / M2-23 / M2-24**~~ Migrations with a schema builder and `migrate` (M2-21a, M2-23a, M2-24a)
 4. ~~**M2-09 / M2-10**~~ (smallest part) `#[derive(Model)]` metadata and `all`, `find_or_fail`, `create`
 5. ~~The blog's `PostRepository` on the database instead of in memory~~, with feature tests on a test database (QA-03, smallest part)
-6. **M5-01 / M5-02 / M5-08 / M5-10** (smallest part) `sabai new`, `sabai serve`, `sabai migrate`
+6. ~~**M5-01 / M5-02 / M5-08 / M5-10**~~ (smallest part) `sabai new`, `sabai serve`, `sabai migrate` (M5-01a, M5-06a, M5-08a to M5-08c)
 7. **M0-05b** Compile budgets in CI, measured on the skeleton
 
 After the skeleton: middleware (M1-29 to M1-33, which auth needs), then `authorize()` (M1-57), array rules (M1-51), and the rest of each milestone in order.
@@ -434,7 +434,7 @@ Built-in commands
 - [ ] **M5-08** `new <app>`, `serve`, `about`, `env`
   - [x] **M5-08a** `sabai new <name>` writes `templates/app` (embedded with `include_str!`, so it works offline): `Cargo.toml`, `.env` copied from `.env.example`, `config/`, `main.rs` on `Console`, `AppServiceProvider`, `routes/web.rs` with one closure route for `/`, like Laravel's `routes/web.php`; `--sabai-path <clone>` for a local Sabai; refuses an existing folder or a name Cargo cannot use
   - [x] **M5-08c** `build.rs` lists every file in `templates/app`, so a new template file needs no code; `dot-` names become `.` names and `.stub` is dropped (`templates/README.md`); the app's library is named `bootstrap` (`[lib] name`), so `main.rs` and tests read `bootstrap::app(config)` in every app and the template needs no crate-name placeholder
-  - [ ] **M5-08b** The template gets the database: `users` migration and `User` model like Laravel's, `.env.testing`, `docker-compose.yml` and one feature test
+  - [x] **M5-08b** The template gets the database like Laravel 11: SQLite in `database/database.sqlite` by default (MySQL lines in `.env.example`), the `users` migration, a `User` model that never serializes `password`, `.env.testing` and `ExampleTest` on SQLite in memory; `{{sabai}}` and `{{sabai-testing}}` name only where the crates come from
 - [ ] **M5-09** `make:controller`, `make:model -m`, `make:migration`, `make:job`, `make:command`, `make:policy`, `make:middleware`; Laravel's folders by default, nested names like `make:controller Store/PostController` (to `app/http/controllers/store/post_controller.rs`), and config to point each kind elsewhere (`make.models = "app/domain/models"`)
 - [ ] **M5-10** `migrate`, `migrate:rollback`, `migrate:fresh --seed`, `db:seed`
 - [ ] **M5-11** `queue:work`, `queue:failed`, `queue:retry`

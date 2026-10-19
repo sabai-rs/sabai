@@ -1,14 +1,36 @@
 //! `sabai new <name>`: a new app from `templates/app`, like `laravel new`.
 
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use clap::{Arg, ArgMatches, Command};
 
 /// Every file in `templates/app` and where it goes in the new app, listed by `build.rs`.
 const TEMPLATE: &[(&str, &str)] = include!(concat!(env!("OUT_DIR"), "/template.rs"));
 
-const SABAI_FROM_GITHUB: &str = r#"{ git = "https://github.com/sabai-rs/sabai" }"#;
+const SABAI_REPOSITORY: &str = "https://github.com/sabai-rs/sabai";
+
+/// Where the new app gets Sabai's crates from.
+enum Source {
+    GitHub,
+    Clone(PathBuf),
+}
+
+impl Source {
+    /// The inside of a dependency table for one of Sabai's crates: `git = "..."` or `path = "..."`.
+    fn locate(&self, krate: &str) -> String {
+        // `{:?}` quotes and escapes the way a TOML string needs.
+        match self {
+            Source::GitHub => format!("git = {SABAI_REPOSITORY:?}"),
+            Source::Clone(clone) => {
+                format!(
+                    "path = {:?}",
+                    clone.join("crates").join(krate).display().to_string()
+                )
+            }
+        }
+    }
+}
 
 pub fn command() -> Command {
     Command::new("new")
@@ -28,17 +50,17 @@ pub fn command() -> Command {
 
 pub fn run(matches: &ArgMatches) -> Result<(), String> {
     let name = matches.get_one::<String>("name").map_or("", String::as_str);
-    let sabai = match matches.get_one::<String>("sabai-path") {
-        Some(clone) => sabai_from_clone(Path::new(clone))?,
-        None => SABAI_FROM_GITHUB.to_owned(),
+    let source = match matches.get_one::<String>("sabai-path") {
+        Some(clone) => clone_source(Path::new(clone))?,
+        None => Source::GitHub,
     };
-    create(Path::new("."), name, &sabai)?;
-    println!("Created {name}. Next:\n\n  cd {name}\n  sabai serve\n");
+    create(Path::new("."), name, &source)?;
+    println!("Created {name}. Next:\n\n  cd {name}\n  sabai migrate\n  sabai serve\n");
     Ok(())
 }
 
 /// Writes the template into `parent/name`, which must not exist yet.
-fn create(parent: &Path, name: &str, sabai: &str) -> Result<(), String> {
+fn create(parent: &Path, name: &str, source: &Source) -> Result<(), String> {
     check_name(name)?;
     let folder = parent.join(name);
     if folder.exists() {
@@ -47,7 +69,7 @@ fn create(parent: &Path, name: &str, sabai: &str) -> Result<(), String> {
         ));
     }
     for (path, stub) in TEMPLATE {
-        let contents = fill(stub, name, sabai);
+        let contents = fill(stub, name, source);
         write_file(&folder.join(path), &contents)?;
         if *path == ".env.example" {
             write_file(&folder.join(".env"), &contents)?;
@@ -67,20 +89,24 @@ fn check_name(name: &str) -> Result<(), String> {
     ))
 }
 
-fn fill(stub: &str, name: &str, sabai: &str) -> String {
-    stub.replace("{{name}}", name).replace("{{sabai}}", sabai)
+fn fill(stub: &str, name: &str, source: &Source) -> String {
+    stub.replace("{{name}}", name)
+        .replace("{{sabai}}", &source.locate("sabai"))
+        .replace("{{sabai-testing}}", &source.locate("sabai-testing"))
 }
 
-fn sabai_from_clone(clone: &Path) -> Result<String, String> {
-    let facade = clone.join("crates/sabai");
-    let facade = facade.canonicalize().map_err(|_| {
+fn clone_source(clone: &Path) -> Result<Source, String> {
+    let not_a_clone = |_| {
         format!(
             "{} is not a Sabai clone: it has no crates/sabai",
             clone.display()
         )
-    })?;
-    // `{:?}` quotes and escapes the path the way a TOML string needs.
-    Ok(format!("{{ path = {:?} }}", facade.display().to_string()))
+    };
+    clone
+        .join("crates/sabai")
+        .canonicalize()
+        .map_err(not_a_clone)?;
+    Ok(Source::Clone(clone.canonicalize().map_err(not_a_clone)?))
 }
 
 fn write_file(path: &Path, contents: &str) -> Result<(), String> {
@@ -106,7 +132,7 @@ mod tests {
     fn a_new_app_gets_every_template_file_with_its_name_filled_in() {
         let parent = scratch("files");
 
-        create(&parent, "my-shop", SABAI_FROM_GITHUB).unwrap();
+        create(&parent, "my-shop", &Source::GitHub).unwrap();
 
         let app = parent.join("my-shop");
         for (path, _) in TEMPLATE {
@@ -120,7 +146,12 @@ mod tests {
         assert!(main.contains("bootstrap::config()"), "{main}");
         let manifest = fs::read_to_string(app.join("Cargo.toml")).unwrap();
         assert!(manifest.contains("name = \"my-shop\""), "{manifest}");
-        assert!(manifest.contains("sabai = { git = "), "{manifest}");
+        assert!(
+            manifest.contains(
+                r#"sabai = { git = "https://github.com/sabai-rs/sabai", features = ["orm"] }"#
+            ),
+            "{manifest}"
+        );
     }
 
     #[test]
@@ -143,7 +174,7 @@ mod tests {
         let parent = scratch("exists");
         fs::create_dir(parent.join("blog")).unwrap();
 
-        let error = create(&parent, "blog", SABAI_FROM_GITHUB).unwrap_err();
+        let error = create(&parent, "blog", &Source::GitHub).unwrap_err();
 
         assert!(error.starts_with("`blog` already exists"), "{error}");
     }
@@ -159,14 +190,17 @@ mod tests {
     }
 
     #[test]
-    fn a_clone_path_becomes_a_path_dependency() {
+    fn a_clone_gives_a_path_to_each_crate() {
         let clone = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
 
-        let sabai = sabai_from_clone(&clone).unwrap();
+        let source = clone_source(&clone).unwrap();
 
+        let sabai = source.locate("sabai");
+        let testing = source.locate("sabai-testing");
         assert!(
-            sabai.starts_with("{ path = \"/") && sabai.ends_with("crates/sabai\" }"),
+            sabai.starts_with("path = \"/") && sabai.ends_with("crates/sabai\""),
             "{sabai}"
         );
+        assert!(testing.ends_with("crates/sabai-testing\""), "{testing}");
     }
 }
