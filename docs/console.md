@@ -31,19 +31,41 @@ fn main() -> Result<()> {
 | `migrate` | runs the migrations that have not run yet | `php artisan migrate` |
 | `list` | shows the commands, yours and your packages' too; also `--help` | `php artisan list` |
 
-Run them through Cargo for now:
+Run them with the `sabai` command from anywhere inside your app's folder ([install it](/installation)):
 
 ```bash
-cargo run -p blog -- migrate
-cargo run -p blog            # serve
-cargo run -p blog -- list
+sabai migrate
+sabai serve
+sabai           # lists the commands
 ```
+
+`sabai` finds the nearest `Cargo.toml` that uses Sabai and runs `cargo run -q -- <command>` there, so the app is always built from the code on disk first. Without it, run `cargo run -- migrate` yourself.
+
+::: laravel
+`sabai` is `php artisan`. It has no commands of its own yet: every command, `serve` included, comes from your app and its packages.
+:::
 
 A mistyped command says what to do:
 
 ```text
-Error: there is no `migrat` command; run with `--help` to see the commands
+Error: there is no `migrat` command; did you mean `migrate`?
 ```
+
+Like `php artisan`, it suggests every command that is a small typo away or contains what you typed. With nothing close, it says to run `list`.
+
+## Running Commands on a Server
+
+A server or CI job needs neither `sabai` nor Cargo. Your app's binary is its own `artisan`:
+
+```bash
+cargo build --release
+./target/release/blog migrate
+./target/release/blog serve
+```
+
+::: laravel
+`./target/release/blog migrate` is `php artisan migrate --force` in a deploy script.
+:::
 
 ## Writing Commands
 
@@ -81,7 +103,7 @@ impl Provider for AppServiceProvider {
 ```
 
 ```bash
-cargo run -p blog -- inspire
+sabai inspire
 ```
 
 ::: laravel
@@ -101,4 +123,4 @@ App::builder(config)
 
 Its commands then show up in `list` and run like your own. Two commands can't share a name: the app fails to boot and names the clash. A command named after a built-in one, like `serve`, is refused too.
 
-The `sabai` command (`sabai migrate`, `sabai serve`, `sabai new`) is coming next.
+`sabai new` is coming next.

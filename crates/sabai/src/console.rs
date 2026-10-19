@@ -58,7 +58,9 @@ impl Console {
             return Ok(());
         }
         self.reject_duplicate_names()?;
-        let command = self.find(name).ok_or_else(|| command_not_found(name))?;
+        let command = self
+            .find(name)
+            .ok_or_else(|| self.command_not_found(name))?;
         command.handle(&self.app, args.get(1..).unwrap_or_default())
     }
 
@@ -95,6 +97,33 @@ impl Console {
         self.all().find(|command| command.name() == name)
     }
 
+    fn command_not_found(&self, name: &str) -> Error {
+        match name {
+            "serve" => console_error(
+                "`serve` has no routes; add them with `Console::new(app).routes(...)`",
+            ),
+            "migrate" => console_error(
+                "`migrate` has no migrations; add them with `.migrations(...)` (needs the `orm` feature)",
+            ),
+            _ => console_error(format!(
+                "there is no `{name}` command; {}",
+                self.did_you_mean(name)
+            )),
+        }
+    }
+
+    fn did_you_mean(&self, typed: &str) -> String {
+        let names = self.all().map(Command::name).chain(["list"]);
+        let similar: Vec<String> = names
+            .filter(|name| looks_like(typed, name))
+            .map(|name| format!("`{name}`"))
+            .collect();
+        if similar.is_empty() {
+            return String::from("run `list` to see them");
+        }
+        format!("did you mean {}?", similar.join(" or "))
+    }
+
     // A package's `serve` would never run, so say so instead of ignoring it.
     fn reject_duplicate_names(&self) -> Result<()> {
         let mut seen = HashSet::from(["list", "help"]);
@@ -112,18 +141,25 @@ fn described(command: &dyn Command) -> (&str, &str) {
     (command.name(), command.description())
 }
 
-fn command_not_found(name: &str) -> Error {
-    match name {
-        "serve" => {
-            console_error("`serve` has no routes; add them with `Console::new(app).routes(...)`")
+// Symfony Console's rule, which `php artisan` uses: a typo of up to a third of the name,
+// or a name that contains what was typed.
+fn looks_like(typed: &str, name: &str) -> bool {
+    name.contains(typed) || edit_distance(typed, name) * 3 <= typed.len()
+}
+
+/// How many single-character inserts, deletes or swaps turn `from` into `to` (Levenshtein).
+fn edit_distance(from: &str, to: &str) -> usize {
+    let to: Vec<char> = to.chars().collect();
+    let mut previous: Vec<usize> = (0..=to.len()).collect();
+    for (i, from_char) in from.chars().enumerate() {
+        let mut current = vec![i + 1];
+        for (j, to_char) in to.iter().enumerate() {
+            let swap = previous[j] + usize::from(from_char != *to_char);
+            current.push(swap.min(previous[j + 1] + 1).min(current[j] + 1));
         }
-        "migrate" => console_error(
-            "`migrate` has no migrations; add them with `.migrations(...)` (needs the `orm` feature)",
-        ),
-        _ => console_error(format!(
-            "there is no `{name}` command; run with `--help` to see the commands"
-        )),
+        previous = current;
     }
+    previous[to.len()]
 }
 
 fn console_error(problem: impl Into<String>) -> Error {
