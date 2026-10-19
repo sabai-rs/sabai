@@ -14,7 +14,7 @@ Sabai puts three things first, in this order:
 3. **Correctness and security.**
 
 ::: warning Early days
-Sabai is not on crates.io yet, and the API still changes. The [roadmap](https://github.com/sabai-rs/sabai/blob/main/docs/ROADMAP.md) shows what is done and what is next.
+Sabai is not on crates.io yet, and the API still changes. The [roadmap](https://github.com/sabai-rs/sabai/blob/main/ROADMAP.md) shows what is done and what is next.
 :::
 
 ## Coming From Laravel

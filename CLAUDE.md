@@ -2,7 +2,7 @@
 
 Laravel-inspired web framework for Rust. Tagline: "Rust, but sabai."
 Built from scratch (no code from the old oxalin project).
-Full roadmap and to-do list: `docs/ROADMAP.md`.
+Full roadmap and to-do list: `ROADMAP.md`.
 
 ## Priorities (in order)
 
@@ -66,9 +66,9 @@ Dependency direction only points down toward `sabai-core`. Crates at the bottom 
   ```
   Report build-time impact in the summary.
 - Use the feature in `examples/blog` before calling it done.
-- Work one ticket at a time by its ID from `docs/ROADMAP.md` (e.g. `M1-03`). If a ticket is too big for one small step, split it into `M1-03a`, `M1-03b` and say so.
+- Work one ticket at a time by its ID from `ROADMAP.md` (e.g. `M1-03`). If a ticket is too big for one small step, split it into `M1-03a`, `M1-03b` and say so.
 - Branch per ticket: `m1-03-named-routes`. Commit messages start with the ID: `feat(M1-03a): named routes and route()`.
-- Tick the ticket in `docs/ROADMAP.md` in the same commit that finishes it.
+- Tick the ticket in `ROADMAP.md` in the same commit that finishes it.
 
 ## Commands
 

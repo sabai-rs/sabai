@@ -9,7 +9,7 @@ export default defineConfig({
   base: '/sabai/',
   cleanUrls: true,
   lastUpdated: true,
-  srcExclude: ['ROADMAP.md', 'README.md'],
+  srcExclude: ['README.md'],
 
   head: [
     ['link', { rel: 'icon', type: 'image/svg+xml', href: '/sabai/logo.svg' }],
@@ -46,7 +46,7 @@ export default defineConfig({
 
     nav: [
       { text: 'Docs', link: '/introduction', activeMatch: '^/(?!$)' },
-      { text: 'Roadmap', link: 'https://github.com/sabai-rs/sabai/blob/main/docs/ROADMAP.md' },
+      { text: 'Roadmap', link: 'https://github.com/sabai-rs/sabai/blob/main/ROADMAP.md' },
     ],
 
     sidebar: [
