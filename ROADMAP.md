@@ -139,7 +139,7 @@ Workspace
 - [ ] **M0-05** CI: `cargo build --timings` and `cargo llvm-lines` on PRs, fail when over the compile budgets below
   - [x] **M0-05a** CI reports: fmt, clippy, tests (default and all features), MSRV check, `--timings` artifact, `llvm-lines` summary
   - [x] **M0-05b** Fail CI when a crate's LLVM lines go over its budget in `compile-budgets.toml` (measured plus about 10%). Build time stays a report only: GitHub's runners vary too much to fail on it
-  - [ ] **M0-05c** CI runs `sabai new`, then builds, tests and budgets the new app, so the template always compiles
+  - [x] **M0-05c** CI runs `sabai new` against the commit's own crates, then `sabai migrate`, fmt, clippy and tests in the new app, so the template always compiles. No budget of its own: the blog uses everything the new app does
 
 Core (sabai-core)
 

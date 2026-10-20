@@ -6,3 +6,4 @@
 - A name starting with `dot-` starts with `.` instead: `dot-gitignore` is written as `.gitignore`.
 - A name ending in `.stub` loses it: `Cargo.toml.stub` is written as `Cargo.toml`. This keeps Cargo from reading the template as a package.
 - `.env.example` is also copied to `.env`, like `laravel new`.
+- CI runs `sabai new` against the commit's own crates, then migrates, lints and tests the new app, so a template change that does not compile fails the pull request.
