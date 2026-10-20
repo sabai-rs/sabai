@@ -6,10 +6,13 @@ mod web;
 
 use sabai::http::Router;
 
+use crate::app::http::middleware::FrameGuard;
+
 /// All of the blog's routes.
 pub fn all() -> Router {
     let mut route = Router::new();
     web::routes(&mut route);
     route.prefix("/api").group(api::routes);
+    route.middleware(FrameGuard);
     route
 }

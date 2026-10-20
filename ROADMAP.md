@@ -191,7 +191,7 @@ Router: compile-time rules
 - [x] **M1-10** `group` runs the closure on a fresh `Router`, then calls the non-generic `mount_group()` (M1-02a); `merge` (M1-02c) must do the same
 - [x] **M1-11** `route.get(...)` boxes the handler, then calls the non-generic `push_route()`
   - [x] **M1-11b** Measured LLVM lines per route and kept the per-handler design: about 180 for a plain route and 450 with arguments. Sharing code per `(Args, R)` shape halves routes that share a shape but doubles routes that each return their own type, which is how Sabai apps are written (`Json<Post>`, `Json<Vec<Tag>>`). Boxing, `Arc::new` and `Router::get` alone cost about 100 per route, so the budget is 200 plain and 500 with arguments
-- [ ] **M1-12** Middleware stored as `Arc<dyn Middleware>`, never nested generic layers
+- [x] **M1-12** Middleware stored as `Arc<dyn Middleware>`, never nested generic layers (M1-29a): `Next` walks an `Arc<[Arc<dyn Middleware>]>` by position, so a chain of any length is one copy of code
 - [x] **M1-13** `impl Handler` macro capped at 8 arguments
 - [x] **M1-14** Rejected handler arguments are a `sabai::Error`, rendered by its one non-generic `into_response`
 
@@ -209,6 +209,8 @@ Controllers
 Middleware
 
 - [ ] **M1-29** `Middleware` trait: code before and after `next.run(req)`, plus terminable middleware that runs after the response is sent
+  - [x] **M1-29a** `Middleware` and `Next`; `route.middleware(...)` runs on every route of that router, the top one also on 404 and 405, a group's only on its routes; `assert_header`
+  - [ ] **M1-29b** Terminable middleware, run after the response is sent
 - [ ] **M1-30** `from_fn(fn)` for writing middleware as a plain async function
 - [ ] **M1-31** Middleware aliases and groups (`web`, `api`) with a priority order, like Laravel's HTTP kernel
 - [ ] **M1-32** Parameterised middleware: `throttle(60).per_minute()`, `auth("api")`, `can("update", "post")`

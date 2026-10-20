@@ -12,6 +12,7 @@ mod error;
 mod events;
 mod facade;
 mod log;
+mod middleware;
 #[cfg(feature = "orm")]
 mod model;
 mod request;

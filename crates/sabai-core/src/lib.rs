@@ -23,7 +23,7 @@ pub use container::Container;
 pub use current::spawn;
 pub use error::{Error, Result};
 pub use events::{Event, Listener};
-pub use http::{Method, StatusCode};
+pub use http::{Method, StatusCode, header};
 pub use request::Request;
 pub use response::{IntoResponse, Json, Response};
 pub use runtime::{block_on, runtime};

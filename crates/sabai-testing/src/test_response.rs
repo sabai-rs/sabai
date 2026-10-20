@@ -47,6 +47,16 @@ impl TestResponse {
         self
     }
 
+    /// Fails unless the header `name` is `expected`, like Laravel's `assertHeader`.
+    pub fn assert_header(&self, name: &str, expected: &str) -> &Self {
+        let actual = self.response.headers().get(name);
+        assert!(
+            actual.is_some_and(|value| value == expected),
+            "Expected header [{name}] to be [{expected}] but found {actual:?}."
+        );
+        self
+    }
+
     /// The body parsed as JSON.
     pub fn json(&self) -> Value {
         serde_json::from_slice(self.response.body().as_bytes())
