@@ -2,7 +2,7 @@
 //! in Laravel: `Rules::new().field("title", [required(), string(), max(255)])`.
 
 use sabai_core::{Error, Result};
-use serde_json::Value;
+use serde_json::{Map, Value};
 
 /// The rules of each field, checked in the order they were added.
 #[derive(Default)]
@@ -56,8 +56,8 @@ impl Rules {
         self
     }
 
-    /// Checks `input`, a JSON object, and fails with a `422` listing every message per field.
-    pub fn validate(&self, input: &Value) -> Result<()> {
+    /// Checks `input`, such as `request.all()`, and fails with a `422` listing every message per field.
+    pub fn validate(&self, input: &Map<String, Value>) -> Result<()> {
         let mut messages = Vec::new();
         for (name, rules) in &self.fields {
             check_field(name, input.get(name), rules, &mut messages);
@@ -147,7 +147,7 @@ mod tests {
     }
 
     fn errors(input: Value) -> Vec<(String, Vec<String>)> {
-        match login_rules().validate(&input) {
+        match login_rules().validate(input.as_object().unwrap()) {
             Ok(()) => Vec::new(),
             Err(error) => error.errors().to_vec(),
         }
@@ -197,8 +197,10 @@ mod tests {
             .field("age", [max(3)])
             .field("tags", [max(3)]);
 
-        let thai = rules.validate(&json!({"name": "ไทย", "age": 3, "tags": [1, 2, 3]}));
-        let over = rules.validate(&json!({"age": 4, "tags": [1, 2, 3, 4]}));
+        let thai = json!({"name": "ไทย", "age": 3, "tags": [1, 2, 3]});
+        let over = json!({"age": 4, "tags": [1, 2, 3, 4]});
+        let thai = rules.validate(thai.as_object().unwrap());
+        let over = rules.validate(over.as_object().unwrap());
 
         assert!(thai.is_ok());
         assert_eq!(

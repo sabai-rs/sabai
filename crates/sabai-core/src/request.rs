@@ -1,8 +1,13 @@
-use std::sync::Arc;
+mod input;
+
+use std::sync::{Arc, OnceLock};
 
 use http::{HeaderMap, Method, StatusCode, Uri};
+use serde_json::{Map, Value};
 
 use crate::{App, Body, Error, Result};
+
+use input::{Fields, InputError};
 
 /// An incoming HTTP request, with Laravel-style helpers on top of [`http::Request`].
 /// Cloning it is cheap, so a handler can take `request: Request` alongside other arguments.
@@ -17,6 +22,8 @@ struct RequestInner {
     http: http::Request<Body>,
     route_params: Vec<(String, String)>,
     app: Option<Arc<App>>,
+    // Read on first use, so a route that never reads input never parses the body.
+    input: OnceLock<Result<Fields, InputError>>,
 }
 
 impl Request {
@@ -48,6 +55,25 @@ impl Request {
     /// One header as text; `None` when it is missing or not valid UTF-8.
     pub fn header(&self, name: &str) -> Option<&str> {
         self.inner.http.headers().get(name)?.to_str().ok()
+    }
+
+    /// Every input field, like Laravel's `$request->all()`: the query string merged with the JSON
+    /// or form body, the body winning. The body is parsed once, on first use, and shared by clones.
+    pub fn all(&self) -> Result<&Map<String, Value>> {
+        let input = self.inner.input.get_or_init(|| input::read(self));
+        input.as_ref().map_err(Error::from)
+    }
+
+    /// One input field, like `$request->input('title')`; `None` when it is missing
+    /// or the body cannot be read.
+    pub fn input(&self, name: &str) -> Option<&Value> {
+        self.all().ok()?.get(name)
+    }
+
+    /// Whether the body is JSON by its `Content-Type`, like Laravel's `$request->isJson()`.
+    pub fn is_json(&self) -> bool {
+        let content_type = input::content_type(self);
+        content_type.ends_with("/json") || content_type.ends_with("+json")
     }
 
     /// A parameter from the matched route, like Laravel's `$request->route('id')`:
@@ -112,6 +138,7 @@ impl From<http::Request<Body>> for Request {
             http,
             route_params: Vec::new(),
             app: None,
+            input: OnceLock::new(),
         };
         Self {
             inner: Arc::new(inner),
@@ -166,6 +193,75 @@ mod tests {
         assert!(shared);
         assert_eq!(changed.param("id"), Some("7"));
         assert_eq!(original.param("id"), None);
+    }
+
+    fn sent(method: Method, uri: &str, content_type: &str, body: &'static str) -> Request {
+        let inner = http::Request::builder()
+            .method(method)
+            .uri(uri)
+            .header("Content-Type", content_type)
+            .body(Body::from(body))
+            .unwrap();
+        Request::from(inner)
+    }
+
+    #[test]
+    fn input_merges_the_query_string_with_the_body_and_the_body_wins() {
+        let json = r#"{"title": "From the body", "draft": true}"#;
+
+        let request = sent(
+            Method::POST,
+            "/posts?title=Query&page=2",
+            "application/json",
+            json,
+        );
+
+        assert_eq!(request.input("title"), Some(&Value::from("From the body")));
+        assert_eq!(request.input("draft"), Some(&Value::Bool(true)));
+        assert_eq!(request.input("page"), Some(&Value::from("2")));
+        assert_eq!(request.input("missing"), None);
+    }
+
+    #[test]
+    fn a_get_reads_only_the_query_string() {
+        let form = "application/x-www-form-urlencoded";
+
+        let request = sent(Method::GET, "/posts?page=2", form, "title=Ignored");
+
+        assert_eq!(request.all().unwrap().len(), 1);
+        assert_eq!(request.input("page"), Some(&Value::from("2")));
+    }
+
+    #[test]
+    fn a_body_that_cannot_be_read_is_an_error_from_all_and_none_from_input() {
+        let broken = sent(Method::POST, "/posts", "application/json", r#"{"title":"#);
+        let listed = sent(Method::POST, "/posts", "application/json", "[1, 2]");
+        let text = sent(Method::POST, "/posts", "text/plain", "title=Sabai");
+
+        assert_eq!(broken.all().unwrap_err().status(), StatusCode::BAD_REQUEST);
+        assert_eq!(broken.input("title"), None);
+        let unprocessable = StatusCode::UNPROCESSABLE_ENTITY;
+        assert_eq!(listed.all().unwrap_err().status(), unprocessable);
+        assert_eq!(text.all().unwrap_err().status(), unprocessable);
+    }
+
+    #[test]
+    fn the_body_is_parsed_once_and_shared_by_clones() {
+        let request = sent(Method::POST, "/posts", "application/json", r#"{"a": 1}"#);
+        let clone = request.clone();
+
+        request.all().unwrap();
+
+        assert!(clone.inner.input.get().is_some());
+    }
+
+    #[test]
+    fn is_json_reads_the_media_type_without_its_parameters() {
+        let json = |content_type| sent(Method::POST, "/", content_type, "").is_json();
+
+        assert!(json("application/json; charset=utf-8"));
+        assert!(json("application/vnd.api+json"));
+        assert!(!json("text/plain"));
     }
 
     #[test]

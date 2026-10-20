@@ -3,9 +3,12 @@
 # same pull request and say why, so every jump is reviewed.
 # Set at M0-05b (2026-10-20) to the measured size plus about 10%.
 
-sabai-core = 45000
-sabai-http = 71000
+# M1-39a moved input parsing (serde_json values, serde_urlencoded) from sabai-http into
+# sabai-core's Request: core 41k -> 53k, http 67k -> 58k, about +1.9k in total.
+sabai-core = 58000
+sabai-http = 63000
 sabai-orm = 85000
 
-# The walking-skeleton app, which uses every feature.
-blog = 19500
+# The walking-skeleton app, which uses every feature. Raised at M1-39a after two
+# middleware (about 200 lines each) and form input read through serde_urlencoded.
+blog = 21500
