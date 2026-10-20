@@ -42,10 +42,12 @@ fn tags(response: &Response) -> Vec<&str> {
 }
 
 #[test]
-fn middleware_runs_around_the_handler() {
+fn global_middleware_runs_around_the_handler() {
     let mut router = Router::new();
     router.get("/posts", index);
-    router.middleware(Tag("first")).middleware(Tag("second"));
+    router
+        .global_middleware(Tag("first"))
+        .global_middleware(Tag("second"));
 
     let response = send(router, "/posts");
 
@@ -58,16 +60,16 @@ fn middleware_runs_around_the_handler() {
 fn middleware_can_answer_without_running_the_handler() {
     let mut router = Router::new();
     router.get("/posts", index);
-    router.middleware(Deny);
+    router.global_middleware(Deny);
 
     assert_eq!(send(router, "/posts").status(), 403);
 }
 
 #[test]
-fn the_top_router_middleware_also_runs_on_404_and_405() {
+fn global_middleware_also_runs_on_404_and_405() {
     let mut router = Router::new();
     router.get("/posts", index);
-    router.middleware(Tag("global"));
+    router.global_middleware(Tag("global"));
 
     let response = send(router, "/missing");
 
@@ -75,22 +77,36 @@ fn the_top_router_middleware_also_runs_on_404_and_405() {
     assert_eq!(tags(&response), ["global"]);
 }
 
+/// Global, then the `/admin` group, then a group nested in it, then one route.
 fn site_with_admin_group() -> Router {
     let mut router = Router::new();
     router.get("/", index);
-    router.prefix("/admin").group(|route| {
-        route.get("/posts", index);
-        route.middleware(Tag("admin"));
-    });
-    router.middleware(Tag("global"));
+    router
+        .prefix("/admin")
+        .middleware(Tag("admin"))
+        .group(|route| {
+            route.get("/posts", index);
+            route.middleware(Tag("audit")).group(|route| {
+                route.get("/users", index).middleware(Tag("route"));
+            });
+        });
+    router.global_middleware(Tag("global"));
     router
 }
 
 #[test]
-fn group_middleware_runs_only_on_the_group_inside_the_outer_middleware() {
-    let inside = send(site_with_admin_group(), "/admin/posts");
+fn group_middleware_runs_only_on_its_routes() {
     let outside = send(site_with_admin_group(), "/");
+    let inside = send(site_with_admin_group(), "/admin/posts");
 
-    assert_eq!(tags(&inside), ["admin", "global"]);
     assert_eq!(tags(&outside), ["global"]);
+    assert_eq!(tags(&inside), ["admin", "global"]);
+}
+
+#[test]
+fn middleware_runs_outermost_first_global_then_groups_then_the_route() {
+    let response = send(site_with_admin_group(), "/admin/users");
+
+    // Read back to front: global saw the request first, the route's own middleware last.
+    assert_eq!(tags(&response), ["route", "audit", "admin", "global"]);
 }

@@ -40,24 +40,50 @@ async fn handle(&self, request: Request, next: Next) -> Response {
 `async fn handle(&self, request, next) -> Response` is `handle(Request $request, Closure $next): Response`, and `next.run(request)` is `$next($request)`. The blog keeps its middleware in `src/app/http/middleware/`, like `app/Http/Middleware`.
 :::
 
-## Registering Middleware
+## Global Middleware
 
-`route.middleware(...)` runs a middleware around every route of that router:
+`global_middleware(...)` runs on every request, `404` and `405` responses included. Add it where `src/lib.rs` returns your routes:
 
 ```rust
-pub fn all() -> Router {
-    let mut route = Router::new();
-    web::routes(&mut route);
-    route.prefix("/api").group(api::routes);
-    route.middleware(FrameGuard);
+pub fn routes() -> Router {
+    let mut route = routes::all();
+    route.global_middleware(FrameGuard);
     route
 }
 ```
 
-On the router your app's `routes()` returns, middleware also runs on `404` and `405` responses.
-
 ::: laravel
-That is a global middleware: `$middleware->append(FrameGuard::class)` in `bootstrap/app.php`.
+`src/lib.rs` is `bootstrap/app.php`: `routes()` is `withRouting` and `withMiddleware` together, and `global_middleware(FrameGuard)` is `$middleware->append(FrameGuard::class)`.
 :::
 
-Middleware runs in the order it was added: the first one sees the request first and the response last.
+## Assigning Middleware to Routes
+
+Add `.middleware(...)` to one route, or start a group with it:
+
+```rust
+route.get("/profile", profile).middleware(Auth);
+
+route.middleware(Auth).group(|route| {
+    route.get("/settings", settings);
+});
+
+route.prefix("/admin").middleware(Auth).middleware(CheckAdmin).group(|route| {
+    route.get("/posts", admin_posts);
+});
+```
+
+The blog keeps API answers out of caches this way: `route.prefix("/api").middleware(NoStore).group(api::routes)`.
+
+::: laravel
+```php
+Route::get('/profile', ProfileController::class)->middleware(Auth::class);
+
+Route::prefix('admin')->middleware([Auth::class, CheckAdmin::class])->group(function () {
+    Route::get('/posts', [AdminPostController::class, 'index']);
+});
+```
+:::
+
+## Order
+
+Middleware runs from the outside in: global first, then each group from the outermost, then the route's own, each in the order added. The first one sees the request first and the response last.

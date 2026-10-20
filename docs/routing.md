@@ -101,6 +101,8 @@ route.prefix("/api").group(api::routes);
 
 Groups can nest. `"api"`, `"/api"` and `"/api/"` all mean the same prefix.
 
+A group can also share [middleware](/middleware#assigning-middleware-to-routes): `route.prefix("/admin").middleware(Auth).group(...)`, or `route.middleware(Auth).group(...)` with no prefix.
+
 ::: laravel
 ```php
 Route::prefix('api')->group(base_path('routes/api.php'));

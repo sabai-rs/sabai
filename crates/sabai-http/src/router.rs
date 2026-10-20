@@ -16,7 +16,7 @@ use crate::route_urls::RouteUrls;
 #[derive(Default)]
 pub struct Router {
     routes: Vec<Route>,
-    middleware: Vec<BoxedMiddleware>,
+    global_middleware: Vec<BoxedMiddleware>,
 }
 
 /// One route, returned by [`Router::get`] and friends so it can be named: `.name("posts.show")`.
@@ -28,10 +28,12 @@ pub struct Route {
     middleware: Vec<BoxedMiddleware>,
 }
 
-/// Routes that share a prefix, started by [`Router::prefix`] like Laravel's `Route::prefix('api')`.
+/// Routes that share a prefix or middleware, started by [`Router::prefix`] or [`Router::middleware`]
+/// like Laravel's `Route::prefix('api')` and `Route::middleware('auth')`.
 pub struct RouteGroup<'a> {
     router: &'a mut Router,
     prefix: String,
+    middleware: Vec<BoxedMiddleware>,
 }
 
 /// Compiled routes, ready to dispatch requests.
@@ -95,22 +97,30 @@ impl Router {
         RouteGroup {
             router: self,
             prefix: prefix.to_owned(),
+            middleware: Vec::new(),
         }
     }
 
-    /// Runs `middleware` around every route of this router, in the order added. On the
-    /// router `routes()` returns, it also runs on 404 and 405 responses, like Laravel's global middleware.
-    pub fn middleware<M: Middleware>(&mut self, middleware: M) -> &mut Self {
-        self.push_middleware(Arc::new(middleware))
+    /// Starts a group whose routes all run `middleware`, like Laravel's `Route::middleware(...)`:
+    /// `route.middleware(Auth).group(|route| { route.get("/profile", profile); });`
+    pub fn middleware<M: Middleware>(&mut self, middleware: M) -> RouteGroup<'_> {
+        self.prefix("").middleware(middleware)
     }
 
-    fn push_middleware(&mut self, middleware: BoxedMiddleware) -> &mut Self {
-        self.middleware.push(middleware);
+    /// Runs `middleware` on every request, 404s and 405s included, like `$middleware->append(...)`
+    /// in Laravel's `bootstrap/app.php`. Call it on the router your app's `routes()` returns.
+    pub fn global_middleware<M: Middleware>(&mut self, middleware: M) -> &mut Self {
+        self.push_global_middleware(Arc::new(middleware))
+    }
+
+    fn push_global_middleware(&mut self, middleware: BoxedMiddleware) -> &mut Self {
+        self.global_middleware.push(middleware);
         self
     }
 
-    fn mount_group(&mut self, prefix: &str, group: Router) {
-        let middleware = group.middleware;
+    fn mount_group(&mut self, prefix: &str, mut middleware: Vec<BoxedMiddleware>, group: Router) {
+        // Global middleware set inside a group still runs, but only on the group's routes.
+        middleware.extend(group.global_middleware);
         let routes = group
             .routes
             .into_iter()
@@ -137,7 +147,7 @@ impl Router {
 
     /// Checks every route and builds the matcher; call once at boot.
     pub fn compile(self) -> Result<Routes> {
-        let middleware: Arc<[BoxedMiddleware]> = self.middleware.into();
+        let middleware: Arc<[BoxedMiddleware]> = self.global_middleware.into();
         let mut routes = Routes {
             matcher: matchit::Router::new(),
             endpoints: Vec::new(),
@@ -164,11 +174,22 @@ impl Router {
 }
 
 impl RouteGroup<'_> {
+    /// Runs `middleware` on the group's routes, after the middleware added before it.
+    pub fn middleware<M: Middleware>(self, middleware: M) -> Self {
+        self.push_middleware(Arc::new(middleware))
+    }
+
+    fn push_middleware(mut self, middleware: BoxedMiddleware) -> Self {
+        self.middleware.push(middleware);
+        self
+    }
+
     /// Adds the routes declared in `routes`, a closure or a function such as `api::routes`.
     pub fn group<F: FnOnce(&mut Router)>(self, routes: F) {
         let mut group = Router::new();
         routes(&mut group);
-        self.router.mount_group(&self.prefix, group);
+        self.router
+            .mount_group(&self.prefix, self.middleware, group);
     }
 }
 
@@ -176,6 +197,16 @@ impl Route {
     /// Names the route, like Laravel's `->name('posts.show')`, so URLs can be built from the name.
     pub fn name(&mut self, name: &str) -> &mut Self {
         self.name = Some(name.to_owned());
+        self
+    }
+
+    /// Runs `middleware` on this route only, after its groups' middleware, like Laravel's `->middleware(...)`.
+    pub fn middleware<M: Middleware>(&mut self, middleware: M) -> &mut Self {
+        self.push_middleware(Arc::new(middleware))
+    }
+
+    fn push_middleware(&mut self, middleware: BoxedMiddleware) -> &mut Self {
+        self.middleware.push(middleware);
         self
     }
 
