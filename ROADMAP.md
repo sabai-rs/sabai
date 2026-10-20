@@ -38,7 +38,7 @@ Compile-time rules that apply to every item below:
 4. ~~**M2-09 / M2-10**~~ (smallest part) `#[derive(Model)]` metadata and `all`, `find_or_fail`, `create`
 5. ~~The blog's `PostRepository` on the database instead of in memory~~, with feature tests on a test database (QA-03, smallest part)
 6. ~~**M5-01 / M5-02 / M5-08 / M5-10**~~ (smallest part) `sabai new`, `sabai serve`, `sabai migrate` (M5-01a, M5-06a, M5-08a to M5-08c)
-7. **M0-05b** Compile budgets in CI, measured on the skeleton
+7. ~~**M0-05b**~~ Compile budgets in CI, measured on the skeleton
 
 After the skeleton: middleware (M1-29 to M1-33, which auth needs), then `authorize()` (M1-57), array rules (M1-51), and the rest of each milestone in order.
 
@@ -138,7 +138,8 @@ Workspace
 - [x] **M0-04** Dev profile in `Cargo.toml`: `debug = "line-tables-only"`; no forced linker (ld-prime / rust-lld are already fast). `build-override opt-level = 3` was measured and dropped: +3 s clean build, no gain on rebuilds even with 200 serde derives; re-measured at M0-14 with minimal `syn`: still +1.8 s
 - [ ] **M0-05** CI: `cargo build --timings` and `cargo llvm-lines` on PRs, fail when over the compile budgets below
   - [x] **M0-05a** CI reports: fmt, clippy, tests (default and all features), MSRV check, `--timings` artifact, `llvm-lines` summary
-  - [ ] **M0-05b** Fail CI when over the compile budgets (needs the walking-skeleton app to measure)
+  - [x] **M0-05b** Fail CI when a crate's LLVM lines go over its budget in `compile-budgets.toml` (measured plus about 10%). Build time stays a report only: GitHub's runners vary too much to fail on it
+  - [ ] **M0-05c** CI runs `sabai new`, then builds, tests and budgets the new app, so the template always compiles
 
 Core (sabai-core)
 

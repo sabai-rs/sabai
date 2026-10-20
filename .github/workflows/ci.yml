@@ -87,12 +87,30 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-llvm-lines
-      - name: Report LLVM lines per crate
+      # Fails when a crate in compile-budgets.toml compiles to more LLVM lines than its budget.
+      - name: Check compile budgets
         run: |
-          for crate in sabai-core sabai-http sabai-orm sabai-auth sabai-queue; do
-            echo "### $crate" >> "$GITHUB_STEP_SUMMARY"
+          mkdir -p target/llvm-lines
+          over=""
+          echo "| Crate | LLVM lines | Budget |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| --- | ---: | ---: |" >> "$GITHUB_STEP_SUMMARY"
+          while read -r crate budget; do
+            cargo llvm-lines --quiet -p "$crate" --lib > "target/llvm-lines/$crate.txt"
+            lines=$(awk '/\(TOTAL\)/ { print $1 }' "target/llvm-lines/$crate.txt")
+            echo "| $crate | $lines | $budget |" | tee -a "$GITHUB_STEP_SUMMARY"
+            if (( lines > budget )); then
+              over+="error: $crate is $((lines - budget)) lines over its budget of $budget; shrink it, or raise the budget in compile-budgets.toml and say why\n"
+            fi
+          done < <(awk -F ' *= *' '/^[a-z]/ { print $1, $2 }' compile-budgets.toml)
+          printf "%b" "$over" >&2
+          [[ -z "$over" ]]
+      # Runs after a failed check too, so the summary shows which functions grew.
+      - name: Report the biggest functions per crate
+        if: always()
+        run: |
+          for report in target/llvm-lines/*.txt; do
+            echo "### $(basename "$report" .txt)" >> "$GITHUB_STEP_SUMMARY"
             echo '```' >> "$GITHUB_STEP_SUMMARY"
-            cargo llvm-lines -p "$crate" --lib > llvm-lines.txt
-            head -20 llvm-lines.txt >> "$GITHUB_STEP_SUMMARY"
+            head -20 "$report" >> "$GITHUB_STEP_SUMMARY"
             echo '```' >> "$GITHUB_STEP_SUMMARY"
           done
