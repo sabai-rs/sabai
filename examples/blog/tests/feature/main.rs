@@ -2,6 +2,7 @@
 //! modules of one test binary, because every file directly under `tests/` compiles on its own.
 
 mod api;
+mod middleware;
 
 use sabai::Config;
 use sabai_testing::TestApp;

@@ -1,12 +1,13 @@
 use std::collections::HashMap;
 use std::error::Error as StdError;
 use std::fmt::{self, Display};
-use std::future::ready;
+use std::sync::Arc;
 
 use sabai_core::contracts::BoxFuture;
-use sabai_core::{App, Error, IntoResponse, Method, Request, Response, Result, StatusCode};
+use sabai_core::{App, Error, Method, Request, Response, Result, StatusCode};
 
 use crate::handler::{BoxedHandler, Handler, boxed};
+use crate::middleware::{BoxedMiddleware, Middleware, Pipeline};
 use crate::route_urls::RouteUrls;
 
 /// Collects routes, one statement each like Laravel's `routes/web.php`:
@@ -15,6 +16,7 @@ use crate::route_urls::RouteUrls;
 #[derive(Default)]
 pub struct Router {
     routes: Vec<Route>,
+    middleware: Vec<BoxedMiddleware>,
 }
 
 /// One route, returned by [`Router::get`] and friends so it can be named: `.name("posts.show")`.
@@ -23,6 +25,7 @@ pub struct Route {
     path: String,
     handler: BoxedHandler,
     name: Option<String>,
+    middleware: Vec<BoxedMiddleware>,
 }
 
 /// Routes that share a prefix, started by [`Router::prefix`] like Laravel's `Route::prefix('api')`.
@@ -36,11 +39,14 @@ pub struct Routes {
     matcher: matchit::Router<usize>,
     endpoints: Vec<Endpoint>,
     urls: RouteUrls,
+    middleware: Arc<[BoxedMiddleware]>,
+    not_found: Pipeline,
+    method_not_allowed: Pipeline,
 }
 
 struct Endpoint {
     path: String,
-    methods: Vec<(Method, BoxedHandler)>,
+    methods: Vec<(Method, Pipeline)>,
 }
 
 impl Router {
@@ -92,8 +98,23 @@ impl Router {
         }
     }
 
+    /// Runs `middleware` around every route of this router, in the order added. On the
+    /// router `routes()` returns, it also runs on 404 and 405 responses, like Laravel's global middleware.
+    pub fn middleware<M: Middleware>(&mut self, middleware: M) -> &mut Self {
+        self.push_middleware(Arc::new(middleware))
+    }
+
+    fn push_middleware(&mut self, middleware: BoxedMiddleware) -> &mut Self {
+        self.middleware.push(middleware);
+        self
+    }
+
     fn mount_group(&mut self, prefix: &str, group: Router) {
-        let routes = group.routes.into_iter().map(|route| route.prefixed(prefix));
+        let middleware = group.middleware;
+        let routes = group
+            .routes
+            .into_iter()
+            .map(|route| route.prefixed(prefix).behind(&middleware));
         self.routes.extend(routes);
     }
 
@@ -109,16 +130,21 @@ impl Router {
             path: path.to_owned(),
             handler,
             name: None,
+            middleware: Vec::new(),
         });
         &mut self.routes[index]
     }
 
     /// Checks every route and builds the matcher; call once at boot.
     pub fn compile(self) -> Result<Routes> {
+        let middleware: Arc<[BoxedMiddleware]> = self.middleware.into();
         let mut routes = Routes {
             matcher: matchit::Router::new(),
             endpoints: Vec::new(),
             urls: RouteUrls::default(),
+            not_found: Pipeline::new(middleware.clone(), boxed(not_found)),
+            method_not_allowed: Pipeline::new(middleware.clone(), boxed(method_not_allowed)),
+            middleware,
         };
         let mut endpoint_by_path = HashMap::new();
         for route in self.routes {
@@ -164,6 +190,13 @@ impl Route {
         };
         Self { path, ..self }
     }
+
+    // A group's middleware runs before the middleware of groups nested inside it.
+    fn behind(mut self, group_middleware: &[BoxedMiddleware]) -> Self {
+        let mut middleware = group_middleware.to_vec();
+        middleware.append(&mut self.middleware);
+        Self { middleware, ..self }
+    }
 }
 
 impl Routes {
@@ -171,9 +204,9 @@ impl Routes {
     /// not bound fails here with the route's name instead of on a request. `serve` calls this.
     pub fn prepare(&self, app: &App) -> Result<()> {
         for endpoint in &self.endpoints {
-            for (method, handler) in &endpoint.methods {
+            for (method, pipeline) in &endpoint.methods {
                 let path = &endpoint.path;
-                handler.prepare(app).map_err(|error| {
+                pipeline.handler().prepare(app).map_err(|error| {
                     error.context(format!("route `{method} {path}` cannot start"))
                 })?;
             }
@@ -195,7 +228,7 @@ impl Routes {
     /// Runs the handler for `request`, or responds `404` or `405`.
     pub fn dispatch(&self, request: Request) -> BoxFuture<'static, Response> {
         let Ok(matched) = self.matcher.at(request.path()) else {
-            return respond(Error::not_found());
+            return self.not_found.clone().run(request);
         };
         let endpoint = &self.endpoints[*matched.value];
         let params: Vec<_> = matched
@@ -209,8 +242,8 @@ impl Routes {
             .iter()
             .find(|(method, _)| method == request.method())
         {
-            Some((_, handler)) => handler.call_erased(request),
-            None => respond(Error::from_status(StatusCode::METHOD_NOT_ALLOWED)),
+            Some((_, pipeline)) => pipeline.clone().run(request),
+            None => self.method_not_allowed.clone().run(request),
         }
     }
 
@@ -248,13 +281,20 @@ impl Routes {
                 "it is defined twice; remove one of them".into(),
             ));
         }
-        endpoint.methods.push((route.method, route.handler));
+        let mut middleware = self.middleware.to_vec();
+        middleware.extend(route.middleware);
+        let pipeline = Pipeline::new(middleware.into(), route.handler);
+        endpoint.methods.push((route.method, pipeline));
         Ok(())
     }
 }
 
-fn respond(error: Error) -> BoxFuture<'static, Response> {
-    Box::pin(ready(error.into_response()))
+async fn not_found() -> Error {
+    Error::not_found()
+}
+
+async fn method_not_allowed() -> Error {
+    Error::from_status(StatusCode::METHOD_NOT_ALLOWED)
 }
 
 #[derive(Debug)]

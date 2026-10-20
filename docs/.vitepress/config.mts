@@ -63,6 +63,7 @@ export default defineConfig({
         text: 'The basics',
         items: [
           { text: 'Routing', link: '/routing' },
+          { text: 'Middleware', link: '/middleware' },
           { text: 'Controllers', link: '/controllers' },
           { text: 'Requests', link: '/requests' },
           { text: 'Validation', link: '/validation' },
