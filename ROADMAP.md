@@ -237,6 +237,7 @@ Request & response
 - [ ] **M1-24** CSRF middleware for form routes
 - [ ] **M1-25** CORS, trust-proxy, rate-limit middleware
 - [ ] **M1-39** Request helpers: `input("name")` (query + body), `only`, `except`, `has`, `bearer_token()`, `ip()` behind trust-proxy, `wants_json()`, `route_is("posts.*")`
+  - [x] **M1-39a** The input bag: the query string merged with the JSON or form body, parsed once on first use; `input`, `all`, `is_json`; form requests and `Rules::validate` read it
 - [ ] **M1-40** `Extension<T>` for per-request data set by middleware
 - [ ] **M1-41** Raw body (`Bytes`) and streaming request body
 - [ ] **M1-42** Method spoofing (`_method=PUT`) for HTML forms

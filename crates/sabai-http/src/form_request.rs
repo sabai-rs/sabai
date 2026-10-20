@@ -1,11 +1,8 @@
 use std::future::ready;
 
-use http::header::CONTENT_TYPE;
 use sabai_core::contracts::BoxFuture;
 use sabai_core::{Error, Method, Request, Result, StatusCode};
 use serde::de::DeserializeOwned;
-use serde_json::error::Category;
-use serde_json::{Map, Value};
 
 use crate::{FromRequest, Rules};
 
@@ -39,76 +36,23 @@ impl<T: FormRequest> FromRequest for T {
 }
 
 fn parse_input<T: DeserializeOwned>(request: &Request, rules: &Rules) -> Result<T> {
-    match validated_input(request, rules)? {
-        Validated::Json(value) => T::deserialize(value).map_err(invalid_input),
-        // Read from the bytes so `draft=true` becomes a `bool`.
-        Validated::Form(bytes) => serde_urlencoded::from_bytes(bytes).map_err(invalid_input),
+    let fields = request.all()?;
+    rules.validate(fields)?;
+    if has_json_body(request) {
+        return T::deserialize(fields).map_err(invalid_input);
     }
-}
-
-enum Validated<'a> {
-    Json(Value),
-    Form(&'a [u8]),
-}
-
-fn validated_input<'a>(request: &'a Request, rules: &Rules) -> Result<Validated<'a>> {
-    match input_of(request)? {
-        Input::Json(bytes) => {
-            let value = serde_json::from_slice(bytes).map_err(json_error)?;
-            rules.validate(&value)?;
-            Ok(Validated::Json(value))
-        }
-        Input::Form(bytes) => {
-            rules.validate(&form_value(bytes)?)?;
-            Ok(Validated::Form(bytes))
-        }
-    }
-}
-
-fn form_value(bytes: &[u8]) -> Result<Value> {
-    let pairs: Vec<(String, String)> =
-        serde_urlencoded::from_bytes(bytes).map_err(invalid_input)?;
-    let fields: Map<String, Value> = pairs
-        .into_iter()
-        .map(|(name, value)| (name, Value::String(value)))
+    // Query and form values are text; reading them through serde_urlencoded turns `draft=true` into a `bool`.
+    let text: Vec<(&str, &str)> = fields
+        .iter()
+        .filter_map(|(name, value)| Some((name.as_str(), value.as_str()?)))
         .collect();
-    Ok(Value::Object(fields))
+    let encoded = serde_urlencoded::to_string(text).map_err(invalid_input)?;
+    serde_urlencoded::from_str(&encoded).map_err(invalid_input)
 }
 
-enum Input<'a> {
-    Json(&'a [u8]),
-    Form(&'a [u8]),
-}
-
-// A cross-site form can post `text/plain` without a preflight, so only a JSON type is parsed as JSON.
-fn input_of(request: &Request) -> Result<Input<'_>> {
-    if request.method() == Method::GET || request.method() == Method::HEAD {
-        let query = request.query_string().unwrap_or_default();
-        return Ok(Input::Form(query.as_bytes()));
-    }
-    let body = request.body().as_bytes();
-    let content_type = request.header(CONTENT_TYPE.as_str()).unwrap_or_default();
-    let essence = content_type.split(';').next().unwrap_or_default().trim();
-    match essence {
-        _ if essence.ends_with("/json") || essence.ends_with("+json") => Ok(Input::Json(body)),
-        "application/x-www-form-urlencoded" => Ok(Input::Form(body)),
-        "" if body.is_empty() => Ok(Input::Form(body)),
-        _ => Err(Error::new(
-            StatusCode::UNPROCESSABLE_ENTITY,
-            "Send the body as JSON (Content-Type: application/json) \
-             or as a form (Content-Type: application/x-www-form-urlencoded).",
-        )),
-    }
-}
-
-fn json_error(error: serde_json::Error) -> Error {
-    match error.classify() {
-        Category::Syntax | Category::Eof => Error::new(
-            StatusCode::BAD_REQUEST,
-            format!("The JSON body is malformed: {error}."),
-        ),
-        Category::Data | Category::Io => invalid_input(error),
-    }
+fn has_json_body(request: &Request) -> bool {
+    let reads_body = request.method() != Method::GET && request.method() != Method::HEAD;
+    reads_body && request.is_json()
 }
 
 fn invalid_input(error: impl std::fmt::Display) -> Error {
@@ -120,6 +64,7 @@ fn invalid_input(error: impl std::fmt::Display) -> Error {
 
 #[cfg(test)]
 mod tests {
+    use http::header::CONTENT_TYPE;
     use pollster::block_on;
     use sabai_core::Body;
     use serde::Deserialize;

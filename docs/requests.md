@@ -50,10 +50,10 @@ See [Validation](./validation) for the rules.
 | Request | Input |
 | --- | --- |
 | `GET`, `HEAD` | the query string: `?title=Sabai` |
-| `Content-Type: application/json` | the JSON body |
-| `Content-Type: application/x-www-form-urlencoded` | the form body |
+| `Content-Type: application/json` | the query string and the JSON body |
+| `Content-Type: application/x-www-form-urlencoded` | the query string and the form body |
 
-Any other `Content-Type` answers `422`. This blocks a cross-site form that sends JSON as `text/plain`. Broken JSON answers `400`.
+When the query string and the body have the same field, the body wins. Any other `Content-Type` answers `422`. This blocks a cross-site form that sends JSON as `text/plain`. Broken JSON answers `400`.
 
 ## The Request
 
@@ -72,6 +72,15 @@ pub async fn show(request: Request) -> String {
 | `request.query_string()` | `Some("page=2")` |
 | `request.header("accept")` | `Some("application/json")` |
 | `request.param("id")` | the route parameter as text |
+| `request.input("title")` | one input field as a JSON value: `Some(&json!("Sabai"))` |
+| `request.all()` | every input field, or the error if the body cannot be read |
+| `request.is_json()` | whether the `Content-Type` is JSON |
 | `request.body().as_bytes()` | the raw body |
+
+`input` and `all` read the same fields a form request does, from the table above. The body is parsed once, the first time anything asks, so a route that never reads input never parses it.
+
+::: laravel
+`request.input("title")` is `$request->input('title')`, `request.all()` is `$request->all()` and `request.is_json()` is `$request->isJson()`. Values from a query string or a form are always strings, as in Laravel.
+:::
 
 `Request` is cheap to clone, so you can take it next to other arguments.
