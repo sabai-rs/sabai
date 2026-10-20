@@ -7,13 +7,14 @@ pub mod routes;
 
 use std::sync::Arc;
 
+use sabai::http::Router;
 use sabai::orm::DatabaseServiceProvider;
 use sabai::{App, Config, Result};
 
+use crate::app::http::middleware::FrameGuard;
 use crate::app::providers::AppServiceProvider;
 
 pub use database::migrations::all as migrations;
-pub use routes::all as routes;
 
 /// Loads `config/` and `.env` from the blog's folder, so it works from any working directory.
 pub fn config() -> Result<Config> {
@@ -26,4 +27,12 @@ pub fn app(config: Config) -> Result<Arc<App>> {
         .provider(DatabaseServiceProvider)
         .provider(AppServiceProvider)
         .boot()
+}
+
+/// Every route, and the middleware that runs on every request, like `withRouting` and
+/// `withMiddleware` in Laravel's `bootstrap/app.php`.
+pub fn routes() -> Router {
+    let mut route = routes::all();
+    route.global_middleware(FrameGuard);
+    route
 }

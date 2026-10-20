@@ -92,6 +92,7 @@ let response = app.get_json(route("posts.show").with("id", 1));
 | `assert_not_found()` | `404` |
 | `assert_json_fragment(json!({...}))` | one object in the JSON has every key and value |
 | `assert_header("x-frame-options", "SAMEORIGIN")` | the header's value |
+| `assert_header_missing("cache-control")` | no such header |
 
 Each one returns the response, so you can chain them. `response.json()` and `response.text()` give the body.
 

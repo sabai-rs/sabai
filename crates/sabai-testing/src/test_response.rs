@@ -57,6 +57,16 @@ impl TestResponse {
         self
     }
 
+    /// Fails if the response has the header `name`, like Laravel's `assertHeaderMissing`.
+    pub fn assert_header_missing(&self, name: &str) -> &Self {
+        let actual = self.response.headers().get(name);
+        assert!(
+            actual.is_none(),
+            "Unexpected header [{name}] is present on response: {actual:?}."
+        );
+        self
+    }
+
     /// The body parsed as JSON.
     pub fn json(&self) -> Value {
         serde_json::from_slice(self.response.body().as_bytes())

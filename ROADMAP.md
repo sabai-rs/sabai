@@ -173,7 +173,7 @@ Router
   - [ ] **M1-01d** Graceful shutdown on Ctrl-C / SIGTERM: stop accepting, let in-flight requests finish (measure tokio `macros` / `signal` cost first)
 - [ ] **M1-02** Groups with prefix, group middleware, `merge`
   - [x] **M1-02a** Prefix groups like Laravel's `Route::prefix('api')->group(...)`: `route.prefix("/api").group(|route| ...)` or `.group(api::routes)`, nestable; the closure runs on a fresh `Router` and a non-generic `mount_group` adds the prefix
-  - [ ] **M1-02b** Group middleware, `route.prefix("/admin").middleware(auth).group(...)` (after M1-29)
+  - [x] **M1-02b** Group and route middleware, like Laravel: `route.prefix("/admin").middleware(Auth).group(...)`, `route.middleware(Auth).group(...)` and `route.get(...).middleware(Auth)`; global middleware is `route.global_middleware(...)` in `lib.rs`, like `withMiddleware` in `bootstrap/app.php`
   - [ ] **M1-02c** `route.merge(router)` for routes a package builds on its own
 - [ ] **M1-03** Named routes and `route("posts.show", ...)` URLs with percent-encoding, like Laravel's `route()` helper
   - [x] **M1-03a** `route.get(...).name("posts.show")` and `routes.route("posts.show", &[("id", 7)])`: values percent-encoded, unused params become the query string, a duplicate name stops boot

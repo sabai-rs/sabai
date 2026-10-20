@@ -28,10 +28,18 @@ async fn never_framed() -> Response {
 fn a_route_that_sets_its_own_frame_options_keeps_them() {
     let mut route = Router::new();
     route.get("/never-framed", never_framed);
-    route.middleware(FrameGuard);
+    route.global_middleware(FrameGuard);
     let config = Config::load_for(env!("CARGO_MANIFEST_DIR"), "testing").expect("the config loads");
 
     TestApp::new(bootstrap::app(config).expect("the blog boots"), route)
         .get_json("/never-framed")
         .assert_header("x-frame-options", "DENY");
+}
+
+#[test]
+fn api_answers_are_never_stored_but_pages_may_be() {
+    app()
+        .get_json("/api/health")
+        .assert_header("cache-control", "no-store");
+    app().get_json("/").assert_header_missing("cache-control");
 }
