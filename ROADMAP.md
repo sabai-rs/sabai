@@ -220,6 +220,7 @@ Middleware
 - [ ] **M1-36** Static files from `public/` with cache headers
 - [ ] **M1-37** Signed-URL check middleware
 - [ ] **M1-38** Trim strings and turn empty strings into `None`
+  - [x] **M1-38a** `TrimStrings` and `ConvertEmptyStringsToNull` in `sabai::http::middleware`, editing the input bag at any depth like Laravel's `TransformsRequest`; passwords are never trimmed; `request.with_input(...)`
 
 Request & response
 

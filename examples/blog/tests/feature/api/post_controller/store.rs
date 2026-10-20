@@ -17,6 +17,18 @@ fn store_creates_a_post() {
 }
 
 #[test]
+fn store_trims_spaces_around_the_title() {
+    let response = app().post_json(
+        route(ROUTE),
+        json!({"title": "  Sabai  ", "body": "Rust, but sabai"}),
+    );
+
+    response
+        .assert_status(201)
+        .assert_json_fragment(json!({"title": "Sabai"}));
+}
+
+#[test]
 fn store_requires_a_title_and_a_body() {
     let response = app().post_json(route(ROUTE), json!({}));
 

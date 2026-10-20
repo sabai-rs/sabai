@@ -70,6 +70,12 @@ impl Request {
         self.all().ok()?.get(name)
     }
 
+    /// Replaces the input, for middleware that cleans it, like Laravel's `TrimStrings`.
+    pub fn with_input(mut self, fields: Map<String, Value>) -> Self {
+        self.inner_mut().input = OnceLock::from(Ok(fields));
+        self
+    }
+
     /// Whether the body is JSON by its `Content-Type`, like Laravel's `$request->isJson()`.
     pub fn is_json(&self) -> bool {
         let content_type = input::content_type(self);
@@ -126,7 +132,8 @@ impl Request {
         }
     }
 
-    // Only the server and router call this, before any clone exists, so it never copies.
+    // Copies the request only if a clone exists; the server, router and input middleware call it
+    // before handlers take their clones, so it usually does not.
     fn inner_mut(&mut self) -> &mut RequestInner {
         Arc::make_mut(&mut self.inner)
     }
@@ -253,6 +260,21 @@ mod tests {
         request.all().unwrap();
 
         assert!(clone.inner.input.get().is_some());
+    }
+
+    #[test]
+    fn with_input_replaces_what_input_reads() {
+        let request = sent(
+            Method::POST,
+            "/posts",
+            "application/json",
+            r#"{"title": " a "}"#,
+        );
+        let cleaned = Map::from_iter([("title".to_owned(), Value::from("a"))]);
+
+        let request = request.with_input(cleaned);
+
+        assert_eq!(request.input("title"), Some(&Value::from("a")));
     }
 
     #[test]

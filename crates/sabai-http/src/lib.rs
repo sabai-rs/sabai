@@ -5,7 +5,7 @@ mod commands;
 mod controller;
 mod form_request;
 mod handler;
-mod middleware;
+pub mod middleware;
 mod param;
 mod route_urls;
 mod router;

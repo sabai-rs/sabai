@@ -1,6 +1,8 @@
 use pollster::block_on;
+use sabai::http::middleware::{ConvertEmptyStringsToNull, TrimStrings};
 use sabai::http::{Middleware, Next, Router};
-use sabai::{Body, Error, IntoResponse, Method, Request, Response};
+use sabai::{Body, Error, IntoResponse, Json, Method, Request, Response, Result};
+use serde_json::{Value, json};
 
 async fn index() -> &'static str {
     "All posts"
@@ -109,4 +111,62 @@ fn middleware_runs_outermost_first_global_then_groups_then_the_route() {
 
     // Read back to front: global saw the request first, the route's own middleware last.
     assert_eq!(tags(&response), ["route", "audit", "admin", "global"]);
+}
+
+async fn echo(request: Request) -> Result<Json<Value>> {
+    Ok(Json(Value::Object(request.all()?.clone())))
+}
+
+fn post_json(router: Router, body: &'static str) -> Response {
+    let request = http::Request::builder()
+        .method(Method::POST)
+        .uri("/echo")
+        .header("content-type", "application/json")
+        .body(Body::from(body))
+        .unwrap();
+    block_on(router.compile().unwrap().dispatch(Request::from(request)))
+}
+
+fn cleaning_router() -> Router {
+    let mut router = Router::new();
+    router.post("/echo", echo);
+    router
+        .global_middleware(TrimStrings)
+        .global_middleware(ConvertEmptyStringsToNull);
+    router
+}
+
+fn json_of(response: Response) -> Value {
+    serde_json::from_slice(response.body().as_bytes()).unwrap()
+}
+
+#[test]
+fn input_strings_are_trimmed_at_any_depth_except_passwords() {
+    let body = r#"{"title": "  Sabai  ", "tags": [" rust "], "user": {"name": " Sang ", "password": " secret "}, "password": " p "}"#;
+
+    let input = json_of(post_json(cleaning_router(), body));
+
+    assert_eq!(
+        input,
+        json!({"title": "Sabai", "tags": ["rust"], "user": {"name": "Sang", "password": " secret "}, "password": " p "})
+    );
+}
+
+#[test]
+fn blank_strings_become_null_after_trimming() {
+    let body = r#"{"subtitle": "", "summary": "   ", "count": 0}"#;
+
+    let input = json_of(post_json(cleaning_router(), body));
+
+    assert_eq!(
+        input,
+        json!({"subtitle": null, "summary": null, "count": 0})
+    );
+}
+
+#[test]
+fn input_that_cannot_be_read_reaches_the_handler_unchanged() {
+    let response = post_json(cleaning_router(), r#"{"title": "#);
+
+    assert_eq!(response.status(), 400);
 }
