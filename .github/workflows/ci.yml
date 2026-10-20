@@ -54,6 +54,31 @@ jobs:
       - name: Test with all features
         run: cargo t
 
+  # Builds and tests a `sabai new` app against this commit's crates, so a broken template fails here.
+  template:
+    runs-on: ubuntu-latest
+    env:
+      # The new app shares the workspace's target folder, so rust-cache covers its dependencies too.
+      CARGO_TARGET_DIR: ${{ github.workspace }}/target
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build -p sabai-cli
+      - name: Create an app with sabai new
+        working-directory: ${{ runner.temp }}
+        run: |
+          "$CARGO_TARGET_DIR/debug/sabai" new demo --sabai-path "$GITHUB_WORKSPACE"
+      - name: Migrate, lint and test the app
+        working-directory: ${{ runner.temp }}/demo
+        run: |
+          "$CARGO_TARGET_DIR/debug/sabai" migrate
+          cargo fmt --check
+          cargo clippy --all-targets -- -D warnings
+          cargo test
+
   msrv:
     runs-on: ubuntu-latest
     steps:
