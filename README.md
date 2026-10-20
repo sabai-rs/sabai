@@ -141,6 +141,7 @@ Thank you for considering contributing to Sabai! Work follows the [roadmap](ROAD
 - Commit messages start with the ticket: `feat(M1-03a): named routes ...`.
 - Use the feature in `examples/blog` before calling it done.
 - Report the build-time impact (`cargo build --timings`, `cargo llvm-lines`) of changes to public APIs or macros.
+- CI fails when a crate goes over its LLVM-lines budget in `compile-budgets.toml`. The total is the `(TOTAL)` line of `cargo llvm-lines -p <crate> --lib`. Raising a budget is fine when the growth is worth it: change the number in the same pull request and say why.
 
 Before opening a pull request:
 

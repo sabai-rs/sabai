@@ -1,0 +1,11 @@
+# LLVM lines each crate may compile to (`cargo llvm-lines -p <crate> --lib`).
+# CI fails when one goes over. If the growth is worth it, raise the number in the
+# same pull request and say why, so every jump is reviewed.
+# Set at M0-05b (2026-10-20) to the measured size plus about 10%.
+
+sabai-core = 45000
+sabai-http = 71000
+sabai-orm = 85000
+
+# The walking-skeleton app, which uses every feature.
+blog = 19500
