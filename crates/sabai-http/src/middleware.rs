@@ -1,3 +1,9 @@
+//! Middleware, and the ones Sabai ships, like Laravel's `Illuminate\Http\Middleware`.
+
+mod convert_empty_strings_to_null;
+mod transforms_request;
+mod trim_strings;
+
 use std::future::Future;
 use std::sync::Arc;
 
@@ -5,6 +11,9 @@ use sabai_core::contracts::BoxFuture;
 use sabai_core::{Request, Response};
 
 use crate::handler::BoxedHandler;
+
+pub use convert_empty_strings_to_null::ConvertEmptyStringsToNull;
+pub use trim_strings::TrimStrings;
 
 /// Code that runs around a request, like a Laravel middleware's `handle($request, $next)`.
 /// Call `next.run(request).await` to go on, or return a response without calling it to stop there.

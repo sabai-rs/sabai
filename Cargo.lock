@@ -1024,6 +1024,7 @@ dependencies = [
  "sabai-orm",
  "sabai-queue",
  "serde",
+ "serde_json",
  "tokio",
 ]
 
