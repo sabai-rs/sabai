@@ -3,6 +3,7 @@
 mod convert_empty_strings_to_null;
 mod frame_guard;
 mod global_middleware;
+mod trace_requests;
 mod transforms_request;
 mod trim_strings;
 
@@ -17,6 +18,7 @@ use crate::handler::BoxedHandler;
 pub use convert_empty_strings_to_null::ConvertEmptyStringsToNull;
 pub use frame_guard::FrameGuard;
 pub use global_middleware::GlobalMiddleware;
+pub use trace_requests::TraceRequests;
 pub use trim_strings::TrimStrings;
 
 /// Code that runs around a request, like a Laravel middleware's `handle($request, $next)`.

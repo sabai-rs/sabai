@@ -8,7 +8,7 @@ use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{Layer, Registry};
 
-pub use tracing::{debug, error, info, trace, warn};
+pub use tracing::{Instrument, debug, error, info, info_span, trace, warn};
 
 use crate::Result;
 

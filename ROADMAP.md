@@ -215,7 +215,7 @@ Middleware
 - [ ] **M1-31** Middleware aliases and groups (`web`, `api`) with a priority order, like Laravel's HTTP kernel
   - [x] **M1-31a** Default global middleware (`TrimStrings`, `ConvertEmptyStringsToNull`) in every app; `route.global_middleware(|middleware| ...)` with `append` and `remove::<T>()`, like `withMiddleware`; `FrameGuard` ships in `sabai::http::middleware`
 - [ ] **M1-32** Parameterised middleware: `throttle(60).per_minute()`, `auth("api")`, `can("update", "post")`
-- [ ] **M1-33** Request ID and access log: a tracing span per request with `X-Request-Id` (reuse the incoming value only if it is short and `[A-Za-z0-9._-]`, to block log injection; otherwise generate one), echoed in the response
+- [x] **M1-33** Request ID and access log (`TraceRequests`, the first default; `TestApp::with_header`): a tracing span per request with `X-Request-Id` (reuse the incoming value only if it is short and `[A-Za-z0-9._-]`, to block log injection; otherwise generate one), echoed in the response
 - [ ] **M1-34** Timeout and compression (gzip, br)
 - [ ] **M1-35** Security headers: HSTS, CSP, X-Frame-Options, Referrer-Policy
 - [ ] **M1-36** Static files from `public/` with cache headers

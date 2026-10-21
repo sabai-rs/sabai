@@ -7,17 +7,17 @@ Middleware runs code around a request: before the handler, after it, or instead 
 A middleware is a type that implements `Middleware`. `next.run(request).await` runs the rest of the app and gives back its response:
 
 ```rust
-use sabai::header::{HeaderValue, X_FRAME_OPTIONS};
+use sabai::header::{CACHE_CONTROL, HeaderValue};
 use sabai::http::{Middleware, Next};
 use sabai::{Request, Response};
 
-pub struct FrameGuard;
+pub struct NoStore;
 
-impl Middleware for FrameGuard {
+impl Middleware for NoStore {
     async fn handle(&self, request: Request, next: Next) -> Response {
         let mut response = next.run(request).await;
-        let same_origin = HeaderValue::from_static("SAMEORIGIN");
-        response.headers_mut().insert(X_FRAME_OPTIONS, same_origin);
+        let no_store = HeaderValue::from_static("no-store");
+        response.headers_mut().insert(CACHE_CONTROL, no_store);
         response
     }
 }
@@ -46,6 +46,7 @@ Global middleware runs on every request, `404` and `405` responses included. Eve
 
 | Default | Does |
 | --- | --- |
+| `TraceRequests` | gives each request an ID and one log line; see below |
 | `TrimStrings` | trims spaces around input strings ([more](/requests#input-trimming-and-normalization)) |
 | `ConvertEmptyStringsToNull` | turns `""` input into `null` |
 
@@ -73,6 +74,27 @@ pub fn routes() -> Router {
     $middleware->remove(ConvertEmptyStringsToNull::class);
 })
 ```
+:::
+
+### Request IDs and the Access Log
+
+`TraceRequests` runs first, so it covers everything else. Each request gets one log line:
+
+```text
+INFO request{id=e2290dd85e458108}: sabai_http::middleware::trace_requests: GET /posts 200 78.3µs
+```
+
+Every log your code writes while handling the request carries the same ID:
+
+```rust
+log::warn!("post {id} has no tags");
+// WARN request{id=e2290dd85e458108}: bootstrap::app::services::post_service: post 7 has no tags
+```
+
+The response sends the ID back as `X-Request-Id`, so a client can quote it in a bug report. When a load balancer already sent an `X-Request-Id`, Sabai keeps it so logs line up across services, but only if it is at most 64 letters, digits, `.`, `_` or `-`; anything else could forge log lines and is replaced.
+
+::: laravel
+Laravel ships no such middleware: the line per request comes from `php artisan serve` in development and from nginx in production, and a request ID is something you add yourself with `Context`. A Sabai app is its own server, with no nginx log behind it, and it handles many requests at once, so their log lines interleave; `TraceRequests` gives you the line and the ID to tell them apart. Remove it like any default: `middleware.remove::<TraceRequests>()`.
 :::
 
 ### Middleware Sabai Ships

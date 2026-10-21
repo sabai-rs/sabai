@@ -6,7 +6,9 @@
 # M1-39a moved input parsing (serde_json values, serde_urlencoded) from sabai-http into
 # sabai-core's Request: core 41k -> 53k, http 67k -> 58k, about +1.9k in total.
 sabai-core = 58000
-sabai-http = 63000
+# M1-31a and M1-33 compiled the default middleware into sabai-http, so apps don't each
+# compile them; TraceRequests' tracing span is most of the 58k -> 62.6k.
+sabai-http = 69000
 sabai-orm = 85000
 
 # The walking-skeleton app, which uses every feature. Raised at M1-39a after two

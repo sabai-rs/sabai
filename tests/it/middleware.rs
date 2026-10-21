@@ -215,3 +215,32 @@ fn frame_guard_allows_only_the_same_origin_unless_the_route_says_otherwise() {
     assert_eq!(frame_options("/posts"), "SAMEORIGIN");
     assert_eq!(frame_options("/never-framed"), "DENY");
 }
+
+fn request_id(incoming: Option<&str>) -> String {
+    let mut router = Router::new();
+    router.get("/posts", index);
+    let mut request = http::Request::builder().uri("/posts");
+    if let Some(id) = incoming {
+        request = request.header("x-request-id", id);
+    }
+    let request = Request::from(request.body(Body::empty()).unwrap());
+    let response = block_on(router.compile().unwrap().dispatch(request));
+    response.headers()["x-request-id"]
+        .to_str()
+        .unwrap()
+        .to_owned()
+}
+
+#[test]
+fn by_default_every_response_carries_a_request_id() {
+    let id = request_id(None);
+
+    assert_eq!(id.len(), 16, "{id}");
+    assert_ne!(id, request_id(None));
+}
+
+#[test]
+fn a_plain_incoming_request_id_is_kept_and_any_other_is_replaced() {
+    assert_eq!(request_id(Some("lb-7f3a.1")), "lb-7f3a.1");
+    assert_ne!(request_id(Some("x\" forged=1")), "x\" forged=1");
+}
