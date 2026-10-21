@@ -13,6 +13,7 @@ use std::sync::Arc;
 use sabai_core::contracts::BoxFuture;
 use sabai_core::{Request, Response};
 
+use crate::catch_panic::catch_panic;
 use crate::handler::BoxedHandler;
 
 pub use convert_empty_strings_to_null::ConvertEmptyStringsToNull;
@@ -80,7 +81,7 @@ impl Next {
     /// Passes `request` to the next middleware, or to the handler after the last one.
     pub fn run(self, request: Request) -> BoxFuture<'static, Response> {
         let Some(middleware) = self.pipeline.middleware.get(self.position).cloned() else {
-            return self.pipeline.handler.call_erased(request);
+            return catch_panic(self.pipeline.handler.call_erased(request));
         };
         let next = Next {
             position: self.position + 1,

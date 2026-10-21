@@ -55,4 +55,17 @@ ERROR could not connect to the database: pool timed out while waiting for an ope
 
 `4xx` errors are not logged. They are the client's mistake.
 
+## Panics
+
+A handler or middleware that panics, for example on `unwrap()` of a `None`, answers `500 {"message":"Server Error"}` and logs the panic with the request's ID. Other requests are not affected:
+
+```text
+ERROR request{id=e2290dd85e458108}: the request panicked: called `Option::unwrap()` on a `None` value
+INFO  request{id=e2290dd85e458108}: GET /posts/7 500 1.2ms
+```
+
+::: laravel
+Like an uncaught exception, which Laravel's handler turns into a `500`. Prefer returning an `Error`: a panic is a bug, and its message is only in the log.
+:::
+
 Coming next: the file and line of each error, Laravel's debug JSON when `APP_DEBUG=true`, and Sentry.

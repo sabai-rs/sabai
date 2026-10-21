@@ -181,6 +181,8 @@ Router
   - [ ] **M1-03c** Group name prefixes, `prefix("/admin").name("admin.")`, and absolute URLs from `app.url`
 - [ ] **M1-04** Per-route and per-group body limits
 - [ ] **M1-05** Auto `HEAD`, `405` with `Allow` header, panic catching
+  - [x] **M1-05a** A panic in a handler or middleware answers a logged `500` instead of an empty reply: caught around the handler, so middleware and the access log still see the `500`, and around the whole request as a safety net
+  - [ ] **M1-05b** `405` with an `Allow` header, and `HEAD` answered by the `GET` route without a body
 - [ ] **M1-06** Route table for `route:list`
 - [x] **M1-07** Route-level middleware: `.get(...).middleware(x)` (M1-02b)
 - [ ] **M1-08** Fallback route (custom 404)
