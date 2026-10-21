@@ -18,6 +18,7 @@ pub struct TestApp {
     app: Arc<App>,
     routes: Routes,
     runtime: Runtime,
+    headers: Vec<(String, String)>,
 }
 
 impl TestApp {
@@ -33,6 +34,7 @@ impl TestApp {
             app,
             routes,
             runtime,
+            headers: Vec::new(),
         }
     }
 
@@ -50,6 +52,12 @@ impl TestApp {
         self
     }
 
+    /// Sends `name: value` with every request this app makes, like Laravel's `$this->withHeader(...)`.
+    pub fn with_header(mut self, name: &str, value: &str) -> Self {
+        self.headers.push((name.to_owned(), value.to_owned()));
+        self
+    }
+
     /// Sends `GET` as a JSON client, like Laravel's `$this->getJson(route(...))`.
     pub fn get_json(&self, uri: impl ToUri) -> TestResponse {
         self.send_json(Method::GET, uri.to_uri(&self.routes), Body::empty())
@@ -62,13 +70,15 @@ impl TestApp {
     }
 
     fn send_json(&self, method: Method, uri: String, body: Body) -> TestResponse {
-        let request = http::Request::builder()
+        let mut request = http::Request::builder()
             .method(method)
             .uri(uri)
             .header(ACCEPT, "application/json")
-            .header(CONTENT_TYPE, "application/json")
-            .body(body)
-            .expect("the test request is valid");
+            .header(CONTENT_TYPE, "application/json");
+        for (name, value) in &self.headers {
+            request = request.header(name, value);
+        }
+        let request = request.body(body).expect("the test request is valid");
         let request = Request::from(request).with_app(self.app.clone());
         let dispatch = self.routes.dispatch(request);
         TestResponse::new(self.runtime.block_on(self.app.scope(dispatch)))

@@ -94,6 +94,12 @@ let response = app.get_json(route("posts.show").with("id", 1));
 | `assert_header("x-frame-options", "SAMEORIGIN")` | the header's value |
 | `assert_header_missing("cache-control")` | no such header |
 
+To send a header, add `with_header` before the request, like Laravel's `withHeader`:
+
+```rust
+app().with_header("x-request-id", "lb-7f3a").get_json("/api/health");
+```
+
 Each one returns the response, so you can chain them. `response.json()` and `response.text()` give the body.
 
 A failed assertion shows the body:

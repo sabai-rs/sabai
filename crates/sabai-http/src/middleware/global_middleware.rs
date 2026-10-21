@@ -1,7 +1,7 @@
 use std::any::TypeId;
 use std::sync::Arc;
 
-use super::{BoxedMiddleware, ConvertEmptyStringsToNull, Middleware, TrimStrings};
+use super::{BoxedMiddleware, ConvertEmptyStringsToNull, Middleware, TraceRequests, TrimStrings};
 
 /// Changes to the middleware every request runs, given to [`Router::global_middleware`](crate::Router::global_middleware)
 /// like the `$middleware` Laravel's `withMiddleware` gets. Sabai's defaults run unless removed.
@@ -46,9 +46,11 @@ impl GlobalMiddleware {
     }
 }
 
-// Laravel's default global middleware that Sabai has so far, in Laravel's order.
+// Laravel's default global middleware that Sabai has so far, in Laravel's order, inside
+// TraceRequests, which comes first so its span and log line cover everything else.
 fn defaults() -> Vec<(TypeId, BoxedMiddleware)> {
     vec![
+        (TypeId::of::<TraceRequests>(), Arc::new(TraceRequests)),
         (TypeId::of::<TrimStrings>(), Arc::new(TrimStrings)),
         (
             TypeId::of::<ConvertEmptyStringsToNull>(),
