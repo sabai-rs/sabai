@@ -1,6 +1,7 @@
 //! Router, handlers and their arguments, middleware, validation and sessions for Sabai.
 
 mod api_resource;
+mod catch_panic;
 mod commands;
 mod controller;
 mod form_request;

@@ -12,6 +12,7 @@ use hyper_util::rt::TokioIo;
 use sabai_core::{App, Body, Error, IntoResponse, Request, Response, Result, StatusCode, log};
 use tokio::net::TcpListener;
 
+use crate::catch_panic::catch_panic;
 use crate::{Router, Routes};
 
 // Bodies are buffered before the handler runs, so this caps memory per request.
@@ -77,7 +78,8 @@ async fn handle(
 ) -> Result<Response, Infallible> {
     let response = match read_body(request).await {
         Ok(request) => {
-            let dispatch = site.routes.dispatch(request.with_app(site.app.clone()));
+            // Handlers are caught inside the middleware already; this catches a middleware that panics.
+            let dispatch = catch_panic(site.routes.dispatch(request.with_app(site.app.clone())));
             site.app.scope(dispatch).await
         }
         Err(error) => error.into_response(),
@@ -124,12 +126,28 @@ mod tests {
         }
     }
 
+    async fn broken() -> &'static str {
+        panic!("the handler has a bug")
+    }
+
+    struct BrokenMiddleware;
+
+    impl crate::Middleware for BrokenMiddleware {
+        async fn handle(&self, _request: Request, _next: crate::Next) -> Response {
+            panic!("the middleware has a bug")
+        }
+    }
+
     fn running_server() -> std::net::SocketAddr {
         let listener = StdTcpListener::bind("127.0.0.1:0").unwrap();
         let address = listener.local_addr().unwrap();
         let mut router = Router::new();
         router.get("/", hello);
         router.get("/current", current_app);
+        router.get("/broken", broken);
+        router
+            .get("/broken-middleware", hello)
+            .middleware(BrokenMiddleware);
         let site = Site {
             app: App::builder(Config::default()).boot().unwrap(),
             routes: router.compile().unwrap(),
@@ -201,5 +219,39 @@ mod tests {
             response.starts_with("HTTP/1.1 413 Payload Too Large"),
             "{response}"
         );
+    }
+
+    #[test]
+    fn a_handler_that_panics_answers_500_and_the_server_keeps_serving() {
+        let address = running_server();
+
+        let response = send(
+            address,
+            "GET /broken HTTP/1.1\r\nHost: test\r\nConnection: close\r\n\r\n",
+            b"",
+        );
+        let next = send(
+            address,
+            "GET / HTTP/1.1\r\nHost: test\r\nConnection: close\r\n\r\n",
+            b"",
+        );
+
+        assert!(response.starts_with("HTTP/1.1 500"), "{response:?}");
+        assert!(
+            response.ends_with(r#"{"message":"Server Error"}"#),
+            "{response}"
+        );
+        assert!(next.starts_with("HTTP/1.1 200 OK"), "{next}");
+    }
+
+    #[test]
+    fn a_middleware_that_panics_answers_500_too() {
+        let response = send(
+            running_server(),
+            "GET /broken-middleware HTTP/1.1\r\nHost: test\r\nConnection: close\r\n\r\n",
+            b"",
+        );
+
+        assert!(response.starts_with("HTTP/1.1 500"), "{response:?}");
     }
 }
