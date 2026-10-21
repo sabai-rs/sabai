@@ -204,7 +204,7 @@ Controllers
   - [x] **M1-18a** `FromApp` and `app.make::<T>()`; `serve` prepares every route's arguments before listening, so a `Service<T>` that is not bound stops startup and names the route
   - [x] **M1-18b** `Controller` trait and `app.singleton::<T>()`: a controller is made once when `serve` starts and shared by every request
   - [x] **M1-18c** The blog's `PostController` -> `PostService` -> `dyn PostRepository`, with an in-memory repository until the ORM (M2)
-  - [x] **M1-18d** Actions without `self` need nothing (`pub async fn index() -> ...` calling `Post::all()`), so `FromApp` and `Controller` are only for constructor injection; the README shows that first, and a missing `FromApp` says both ways out (`#[diagnostic::on_unimplemented]`)
+  - [x] **M1-18d** Actions without `self` need nothing (`pub async fn index() -> ...` calling `Post::all()`), so `FromApp` and `Controller` are only for constructor injection; the Controllers docs show that first, and a missing `FromApp` says both ways out (`#[diagnostic::on_unimplemented]`)
 
 Middleware
 
