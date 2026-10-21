@@ -1,10 +1,12 @@
 use std::collections::HashMap;
 use std::error::Error as StdError;
 use std::fmt::{self, Display};
+use std::future::ready;
 use std::sync::Arc;
 
+use http::header::{ALLOW, HeaderValue};
 use sabai_core::contracts::BoxFuture;
-use sabai_core::{App, Error, Method, Request, Response, Result, StatusCode};
+use sabai_core::{App, Error, IntoResponse, Method, Request, Response, Result, StatusCode};
 
 use crate::handler::{BoxedHandler, Handler, boxed};
 use crate::middleware::{BoxedMiddleware, GlobalMiddleware, Middleware, Pipeline};
@@ -43,7 +45,6 @@ pub struct Routes {
     urls: RouteUrls,
     middleware: Arc<[BoxedMiddleware]>,
     not_found: Pipeline,
-    method_not_allowed: Pipeline,
 }
 
 struct Endpoint {
@@ -154,7 +155,6 @@ impl Router {
             endpoints: Vec::new(),
             urls: RouteUrls::default(),
             not_found: Pipeline::new(middleware.clone(), boxed(not_found)),
-            method_not_allowed: Pipeline::new(middleware.clone(), boxed(method_not_allowed)),
             middleware,
         };
         let mut endpoint_by_path = HashMap::new();
@@ -269,14 +269,17 @@ impl Routes {
             .map(|(name, value)| (name.to_owned(), value.to_owned()))
             .collect();
         let request = request.with_route_params(params);
-        match endpoint
-            .methods
-            .iter()
-            .find(|(method, _)| method == request.method())
-        {
-            Some((_, pipeline)) => pipeline.clone().run(request),
-            None => self.method_not_allowed.clone().run(request),
+        match endpoint.pipeline(request.method()) {
+            Some(pipeline) => pipeline.clone().run(request),
+            None => self.other_method(endpoint, request),
         }
+    }
+
+    // Built per request: 405s and OPTIONS are rare, and the global middleware still runs on them.
+    fn other_method(&self, endpoint: &Endpoint, request: Request) -> BoxFuture<'static, Response> {
+        let allowed = endpoint.allowed_methods();
+        let handler = boxed(move |request: Request| ready(answer_other_method(&allowed, &request)));
+        Pipeline::new(self.middleware.clone(), handler).run(request)
     }
 
     fn add_endpoint(&mut self, route: &Route) -> Result<usize> {
@@ -325,8 +328,61 @@ async fn not_found() -> Error {
     Error::not_found()
 }
 
-async fn method_not_allowed() -> Error {
-    Error::from_status(StatusCode::METHOD_NOT_ALLOWED)
+impl Endpoint {
+    /// The route for `method`; a `HEAD` without its own route runs the `GET` one, like Laravel.
+    fn pipeline(&self, method: &Method) -> Option<&Pipeline> {
+        let find = |wanted: &Method| {
+            let route = self.methods.iter().find(|(method, _)| method == wanted);
+            route.map(|(_, pipeline)| pipeline)
+        };
+        find(method).or_else(|| match *method {
+            Method::HEAD => find(&Method::GET),
+            _ => None,
+        })
+    }
+
+    /// Every method the path answers, in the order routes were added, with `HEAD` after `GET`.
+    fn allowed_methods(&self) -> Vec<Method> {
+        let has_own_head = self
+            .methods
+            .iter()
+            .any(|(method, _)| *method == Method::HEAD);
+        let mut allowed = Vec::new();
+        for (method, _) in &self.methods {
+            allowed.push(method.clone());
+            if *method == Method::GET && !has_own_head {
+                allowed.push(Method::HEAD);
+            }
+        }
+        allowed
+    }
+}
+
+// Like Laravel: `OPTIONS` answers `200` listing the methods (`GET,HEAD`, no spaces), and any
+// other method answers `405` naming them in the message and in `Allow` (`GET, HEAD`).
+fn answer_other_method(allowed: &[Method], request: &Request) -> Response {
+    let names: Vec<&str> = allowed.iter().map(Method::as_str).collect();
+    if request.method() == Method::OPTIONS {
+        return with_allow(().into_response(), &names.join(","));
+    }
+    let path = match request.path().trim_matches('/') {
+        "" => "/",
+        path => path,
+    };
+    let message = format!(
+        "The {} method is not supported for route {path}. Supported methods: {}.",
+        request.method(),
+        names.join(", ")
+    );
+    let response = Error::new(StatusCode::METHOD_NOT_ALLOWED, message).into_response();
+    with_allow(response, &names.join(", "))
+}
+
+fn with_allow(mut response: Response, methods: &str) -> Response {
+    if let Ok(methods) = HeaderValue::from_str(methods) {
+        response.headers_mut().insert(ALLOW, methods);
+    }
+    response
 }
 
 #[derive(Debug)]
