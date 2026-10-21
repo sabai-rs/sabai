@@ -254,4 +254,17 @@ mod tests {
 
         assert!(response.starts_with("HTTP/1.1 500"), "{response:?}");
     }
+
+    #[test]
+    fn head_sends_the_get_headers_and_length_without_the_body() {
+        let response = send(
+            running_server(),
+            "HEAD / HTTP/1.1\r\nHost: test\r\nConnection: close\r\n\r\n",
+            b"",
+        );
+
+        assert!(response.starts_with("HTTP/1.1 200 OK"), "{response}");
+        assert!(response.contains("content-length: 12\r\n"), "{response}");
+        assert!(response.ends_with("\r\n\r\n"), "{response:?}");
+    }
 }

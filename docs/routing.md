@@ -34,7 +34,22 @@ route.patch(path, handler);
 route.delete(path, handler);
 ```
 
-An unknown path answers `404`. A known path with the wrong method answers `405`. Both are JSON.
+Every `get` route also answers `HEAD`, with the same headers and no body.
+
+An unknown path answers `404`. A known path with the wrong method answers `405`, naming the methods it takes in the message and in the `Allow` header:
+
+```text
+HTTP/1.1 405 Method Not Allowed
+allow: GET, HEAD, DELETE
+
+{"message":"The POST method is not supported for route posts/7. Supported methods: GET, HEAD, DELETE."}
+```
+
+An `OPTIONS` request to a known path answers `200` with `allow: GET,HEAD,DELETE` and no body.
+
+::: laravel
+The same as Laravel: `Route::get` registers `GET` and `HEAD`, a wrong method throws `MethodNotAllowedHttpException` with that message, and `OPTIONS` is answered for you.
+:::
 
 ## Route Parameters
 

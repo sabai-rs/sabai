@@ -89,6 +89,10 @@ fn send(routes: &Routes, method: Method, path: &str) -> Response {
     block_on(routes.dispatch(Request::from(request)))
 }
 
+fn body_text(response: Response) -> String {
+    String::from_utf8(response.body().as_bytes().to_vec()).unwrap()
+}
+
 #[test]
 fn a_matching_route_runs_its_handler() {
     let response = send(&routes(), Method::GET, "/posts");
@@ -120,11 +124,35 @@ fn an_unknown_path_is_a_json_404() {
 }
 
 #[test]
-fn a_known_path_with_the_wrong_method_is_a_405() {
+fn a_known_path_with_the_wrong_method_is_a_405_naming_the_methods_it_takes() {
+    let mut router = Router::new();
+    router.get("/posts/{id}", show);
+    router.delete("/posts/{id}", show);
+
+    let response = send(&router.compile().unwrap(), Method::POST, "/posts/7");
+
+    assert_eq!(response.status(), StatusCode::METHOD_NOT_ALLOWED);
+    assert_eq!(response.headers()["allow"], "GET, HEAD, DELETE");
     assert_eq!(
-        send(&routes(), Method::POST, "/posts").status(),
-        StatusCode::METHOD_NOT_ALLOWED
+        body_text(response),
+        r#"{"message":"The POST method is not supported for route posts/7. Supported methods: GET, HEAD, DELETE."}"#
     );
+}
+
+#[test]
+fn options_answers_200_with_the_methods_like_laravel() {
+    let response = send(&routes(), Method::OPTIONS, "/posts");
+
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(response.headers()["allow"], "GET,HEAD");
+    assert!(response.body().as_bytes().is_empty());
+}
+
+#[test]
+fn head_runs_the_get_route() {
+    let response = send(&routes(), Method::HEAD, "/posts");
+
+    assert_eq!(response.status(), StatusCode::OK);
 }
 
 #[test]
