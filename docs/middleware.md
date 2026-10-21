@@ -42,19 +42,46 @@ async fn handle(&self, request: Request, next: Next) -> Response {
 
 ## Global Middleware
 
-`global_middleware(...)` runs on every request, `404` and `405` responses included. Add it where `src/lib.rs` returns your routes:
+Global middleware runs on every request, `404` and `405` responses included. Every app runs Sabai's defaults without asking:
+
+| Default | Does |
+| --- | --- |
+| `TrimStrings` | trims spaces around input strings ([more](/requests#input-trimming-and-normalization)) |
+| `ConvertEmptyStringsToNull` | turns `""` input into `null` |
+
+Change the list where `src/lib.rs` returns your routes. `append` runs a middleware after the defaults, and `remove` stops one:
 
 ```rust
+use sabai::http::middleware::{ConvertEmptyStringsToNull, FrameGuard};
+
 pub fn routes() -> Router {
     let mut route = routes::all();
-    route.global_middleware(FrameGuard);
+    route.global_middleware(|middleware| {
+        middleware.append(FrameGuard);
+        middleware.remove::<ConvertEmptyStringsToNull>();
+    });
     route
 }
 ```
 
 ::: laravel
-`src/lib.rs` is `bootstrap/app.php`: `routes()` is `withRouting` and `withMiddleware` together, and `global_middleware(FrameGuard)` is `$middleware->append(FrameGuard::class)`.
+`src/lib.rs` is `bootstrap/app.php`: `routes()` is `withRouting` and `withMiddleware` together.
+
+```php
+->withMiddleware(function (Middleware $middleware) {
+    $middleware->append(FrameGuard::class);
+    $middleware->remove(ConvertEmptyStringsToNull::class);
+})
+```
 :::
+
+### Middleware Sabai Ships
+
+| Middleware | Does |
+| --- | --- |
+| `FrameGuard` | sends `X-Frame-Options: SAMEORIGIN` unless the route set its own, against clickjacking |
+
+They live in `sabai::http::middleware`, like `Illuminate\Http\Middleware`.
 
 ## Assigning Middleware to Routes
 
