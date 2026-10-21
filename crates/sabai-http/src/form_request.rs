@@ -1,7 +1,9 @@
+mod input_deserializer;
+
 use std::future::ready;
 
 use sabai_core::contracts::BoxFuture;
-use sabai_core::{Error, Method, Request, Result, StatusCode};
+use sabai_core::{Error, Request, Result, StatusCode};
 use serde::de::DeserializeOwned;
 
 use crate::{FromRequest, Rules};
@@ -38,21 +40,7 @@ impl<T: FormRequest> FromRequest for T {
 fn parse_input<T: DeserializeOwned>(request: &Request, rules: &Rules) -> Result<T> {
     let fields = request.all()?;
     rules.validate(fields)?;
-    if has_json_body(request) {
-        return T::deserialize(fields).map_err(invalid_input);
-    }
-    // Query and form values are text; reading them through serde_urlencoded turns `draft=true` into a `bool`.
-    let text: Vec<(&str, &str)> = fields
-        .iter()
-        .filter_map(|(name, value)| Some((name.as_str(), value.as_str()?)))
-        .collect();
-    let encoded = serde_urlencoded::to_string(text).map_err(invalid_input)?;
-    serde_urlencoded::from_str(&encoded).map_err(invalid_input)
-}
-
-fn has_json_body(request: &Request) -> bool {
-    let reads_body = request.method() != Method::GET && request.method() != Method::HEAD;
-    reads_body && request.is_json()
+    input_deserializer::from_fields(fields).map_err(invalid_input)
 }
 
 fn invalid_input(error: impl std::fmt::Display) -> Error {
@@ -66,7 +54,7 @@ fn invalid_input(error: impl std::fmt::Display) -> Error {
 mod tests {
     use http::header::CONTENT_TYPE;
     use pollster::block_on;
-    use sabai_core::Body;
+    use sabai_core::{Body, Method};
     use serde::Deserialize;
 
     use super::*;

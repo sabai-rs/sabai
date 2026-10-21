@@ -40,7 +40,7 @@ Compile-time rules that apply to every item below:
 6. ~~**M5-01 / M5-02 / M5-08 / M5-10**~~ (smallest part) `sabai new`, `sabai serve`, `sabai migrate` (M5-01a, M5-06a, M5-08a to M5-08c)
 7. ~~**M0-05b**~~ Compile budgets in CI, measured on the skeleton
 
-After the skeleton: middleware (M1-29 to M1-33, which auth needs), then `authorize()` (M1-57), array rules (M1-51), and the rest of each milestone in order.
+After the skeleton: middleware (M1-29a, M1-02b, M1-31a, M1-33, done), then array rules (M1-51), and the rest of each milestone in order. `authorize()` (M1-57) waits for `Auth<User>` (M3-05), so the blog can use it for a real ownership check.
 
 ## Folder structure
 
@@ -210,11 +210,12 @@ Middleware
 
 - [ ] **M1-29** `Middleware` trait: code before and after `next.run(req)`, plus terminable middleware that runs after the response is sent
   - [x] **M1-29a** `Middleware` and `Next`; `route.middleware(...)` runs on every route of that router, the top one also on 404 and 405, a group's only on its routes; `assert_header`
-  - [ ] **M1-29b** Terminable middleware, run after the response is sent
-- [ ] **M1-30** `from_fn(fn)` for writing middleware as a plain async function
-- [ ] **M1-31** Middleware aliases and groups (`web`, `api`) with a priority order, like Laravel's HTTP kernel
+  - [ ] **M1-29b** Terminable middleware, run after the response is sent (no current need; add when a feature such as sessions or queued work wants it)
+- [ ] **M1-30** `from_fn(fn)` for writing middleware as a plain async function (low priority: `async fn handle` is already short)
+- [ ] **M1-31** Middleware groups (`web`, `api`) with a priority order, like Laravel's HTTP kernel. String aliases (`'auth'`) are not needed: in Rust the type is the alias
   - [x] **M1-31a** Default global middleware (`TrimStrings`, `ConvertEmptyStringsToNull`) in every app; `route.global_middleware(|middleware| ...)` with `append` and `remove::<T>()`, like `withMiddleware`; `FrameGuard` ships in `sabai::http::middleware`
-- [ ] **M1-32** Parameterised middleware: `throttle(60).per_minute()`, `auth("api")`, `can("update", "post")`
+  - [ ] **M1-31b** The `web` and `api` groups with their defaults, once there is something to put in `web` (cookies, sessions, CSRF: M1-22 to M1-24)
+- [x] **M1-32** Parameterised middleware: a middleware is a struct, so its parameters are fields, `route.middleware(Throttle::per_minute(60))`, with no string parsing like `'throttle:60,1'`. The middleware themselves come with their features: throttle (M7-13), `auth("api")` (M3-06), `can(...)` (M3)
 - [x] **M1-33** Request ID and access log (`TraceRequests`, the first default; `TestApp::with_header`): a tracing span per request with `X-Request-Id` (reuse the incoming value only if it is short and `[A-Za-z0-9._-]`, to block log injection; otherwise generate one), echoed in the response
 - [ ] **M1-34** Timeout and compression (gzip, br)
 - [ ] **M1-35** Security headers: HSTS, CSP, X-Frame-Options, Referrer-Policy
@@ -263,14 +264,15 @@ Validation
   - [x] **M1-28a** `Error::with_messages(&[("email", "...")])`: a `422` with `{"message": "... (and 1 more error)", "errors": {"email": ["..."]}}`, fields in the order given, like Laravel's `ValidationException::withMessages`
   - [x] **M1-28b** Typed rules in `sabai::http::rules`: `Rules::new().field("title", [required(), string(), max(255)])` and `rules.validate(&input)`; `required` (stops the field, like Laravel), `sometimes`, `string`, `max` (characters, number or items), Laravel's English messages with `device_uuid` read as "device uuid"
   - [x] **M1-28c** `FormRequest::rules()` runs on the raw input (JSON as sent, form fields as strings) before the struct is built, so a missing or wrong-typed field is a field error, not a serde sentence; parsing and validating are not generic, only the final deserialize is; the blog's `StorePostRequest` has rules and feature tests
+  - [x] **M1-28d** One deserializer per form request, not two: JSON and form input both go through sabai-http's `InputDeserializer`, which parses text where the struct asks for a `bool`, a number or a unit enum, like serde_urlencoded did. A route with a form request fell from about 4k to 2.5k LLVM lines in the app; sabai-http no longer depends on serde_urlencoded
 - [ ] **M1-50** Apps swap the error renderer for their own shape, such as `{"errors": [{"ref": "email", "type": "validation", "desc": [...]}]}`; Laravel's default `{"message", "errors": {"email": [...]}}` is done (M1-28a)
-- [ ] **M1-51** Nested and array fields: `items.*.qty`
+- [x] **M1-51** Nested and array fields: `items.*.qty`, `author.name`, and the `array()` rule; errors are named by position (`posts.1.title`) like Laravel; the blog imports posts with `POST /api/posts/import`
 - [ ] **M1-52** Conditional rules: `nullable`, `sometimes`, `required_if`, `required_with`, `bail`
 - [ ] **M1-53** More rules: `regex`, `url`, `uuid`, `date`, `before`/`after`, `numeric`, `integer`, `between`, `same`, `exists`, `enum`
 - [ ] **M1-54** File rules: `file`, `image`, `mimes`, max size (with M7-04)
 - [ ] **M1-55** Custom rules: `impl Rule` (sync) and `impl AsyncRule` for DB checks
 - [ ] **M1-56** Custom messages and attribute names, Thai and English (with M7-23)
-- [ ] **M1-57** `authorize()` on request structs, like Laravel FormRequest: 403 before validation runs
+- [ ] **M1-57** `authorize()` on request structs, like Laravel FormRequest: 403 before validation runs. After M3-05, and `async` from the start because real checks read the database
 - [ ] **M1-58** Web forms: failed validation redirects back with errors and old input; APIs get 422
 - [ ] **M1-59** `Validator::make(data, rules)` for dynamic rules without a derive
 

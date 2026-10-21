@@ -10,13 +10,14 @@ pub struct Rules {
     fields: Vec<(String, Vec<Rule>)>,
 }
 
-/// One rule, made by [`required`], [`sometimes`], [`string`] or [`max`].
+/// One rule, made by [`required`], [`sometimes`], [`string`], [`array`] or [`max`].
 pub struct Rule(Check);
 
 enum Check {
     Required,
     Sometimes,
     String,
+    Array,
     Max(u64),
 }
 
@@ -35,6 +36,11 @@ pub fn string() -> Rule {
     Rule(Check::String)
 }
 
+/// The field must be a list; check its items with a `*` field such as `posts.*.title`.
+pub fn array() -> Rule {
+    Rule(Check::Array)
+}
+
 /// At most `limit` characters for a string, `limit` for a number, `limit` items for a list.
 pub fn max(limit: u64) -> Rule {
     Rule(Check::Max(limit))
@@ -46,7 +52,8 @@ impl Rules {
         Self::default()
     }
 
-    /// Adds the rules of one field: `.field("title", [required(), string()])`.
+    /// Adds the rules of one field: `.field("title", [required(), string()])`. A name reaches into
+    /// objects with `.` and into every item of a list with `*`: `posts.*.title`.
     pub fn field(self, name: &str, rules: impl IntoIterator<Item = Rule>) -> Self {
         self.push_field(name, rules.into_iter().collect())
     }
@@ -59,8 +66,10 @@ impl Rules {
     /// Checks `input`, such as `request.all()`, and fails with a `422` listing every message per field.
     pub fn validate(&self, input: &Map<String, Value>) -> Result<()> {
         let mut messages = Vec::new();
-        for (name, rules) in &self.fields {
-            check_field(name, input.get(name), rules, &mut messages);
+        for (pattern, rules) in &self.fields {
+            for (name, value) in matching_fields(pattern, input) {
+                check_field(&name, value, rules, &mut messages);
+            }
         }
         if messages.is_empty() {
             return Ok(());
@@ -104,6 +113,8 @@ fn failure(check: &Check, attribute: &str, value: &Value) -> Option<String> {
     match (check, value) {
         (Check::String, Value::String(_)) => None,
         (Check::String, _) => Some(format!("The {attribute} field must be a string.")),
+        (Check::Array, Value::Array(_)) => None,
+        (Check::Array, _) => Some(format!("The {attribute} field must be an array.")),
         (Check::Max(limit), Value::String(text)) if text.chars().count() as u64 > *limit => Some(
             format!("The {attribute} field must not be greater than {limit} characters."),
         ),
@@ -119,6 +130,46 @@ fn failure(check: &Check, attribute: &str, value: &Value) -> Option<String> {
         )),
         _ => None,
     }
+}
+
+/// Every field `pattern` names in `input`, by its full name, like Laravel: `posts.*.title`
+/// gives `posts.0.title`, `posts.1.title`, ... A `*` over anything but a list names nothing.
+fn matching_fields<'a>(
+    pattern: &str,
+    input: &'a Map<String, Value>,
+) -> Vec<(String, Option<&'a Value>)> {
+    let mut found = Vec::new();
+    let segments: Vec<&str> = pattern.split('.').collect();
+    let Some((first, rest)) = segments.split_first() else {
+        return found;
+    };
+    walk(rest, (*first).to_owned(), input.get(*first), &mut found);
+    found
+}
+
+fn walk<'a>(
+    segments: &[&str],
+    name: String,
+    value: Option<&'a Value>,
+    found: &mut Vec<(String, Option<&'a Value>)>,
+) {
+    let Some((segment, rest)) = segments.split_first() else {
+        found.push((name, value));
+        return;
+    };
+    if *segment == "*" {
+        if let Some(Value::Array(items)) = value {
+            for (index, item) in items.iter().enumerate() {
+                walk(rest, format!("{name}.{index}"), Some(item), found);
+            }
+        }
+        return;
+    }
+    let child = match value {
+        Some(Value::Object(fields)) => fields.get(*segment),
+        _ => None,
+    };
+    walk(rest, format!("{name}.{segment}"), child, found);
 }
 
 fn is_blank(value: Option<&Value>) -> bool {
@@ -209,6 +260,56 @@ mod tests {
                 field("age", "The age field must not be greater than 3."),
                 field("tags", "The tags field must not have more than 3 items."),
             ]
+        );
+    }
+
+    fn import_errors(input: Value) -> Vec<(String, Vec<String>)> {
+        let rules = Rules::new()
+            .field("posts", [required(), array(), max(2)])
+            .field("posts.*.title", [required(), string(), max(5)])
+            .field("author.name", [required()]);
+        match rules.validate(input.as_object().unwrap()) {
+            Ok(()) => Vec::new(),
+            Err(error) => error.errors().to_vec(),
+        }
+    }
+
+    #[test]
+    fn a_star_checks_every_item_and_names_the_one_that_failed() {
+        let input = json!({
+            "posts": [{"title": "Sabai"}, {"title": "Too long"}],
+            "author": {"name": "Sang"},
+        });
+
+        assert_eq!(
+            import_errors(input),
+            vec![field(
+                "posts.1.title",
+                "The posts.1.title field must not be greater than 5 characters."
+            )]
+        );
+    }
+
+    #[test]
+    fn a_missing_nested_field_is_required_by_its_full_name() {
+        let input = json!({"posts": [{"body": "no title"}], "author": {}});
+
+        assert_eq!(
+            import_errors(input),
+            vec![
+                field("posts.0.title", "The posts.0.title field is required."),
+                field("author.name", "The author.name field is required."),
+            ]
+        );
+    }
+
+    #[test]
+    fn a_star_over_something_that_is_not_a_list_checks_nothing_and_array_says_so() {
+        let input = json!({"posts": "no", "author": {"name": "Sang"}});
+
+        assert_eq!(
+            import_errors(input),
+            vec![field("posts", "The posts field must be an array.")]
         );
     }
 }

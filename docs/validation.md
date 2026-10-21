@@ -35,9 +35,45 @@ Rules are Rust functions, so a typo does not compile and your editor suggests th
 | `required()` | the field is there and not empty: not `null`, `""`, `[]` or `{}` |
 | `sometimes()` | always; the field may be left out |
 | `string()` | the value is a string |
+| `array()` | the value is a list |
 | `max(n)` | a string has at most `n` characters, a number is at most `n`, a list has at most `n` items |
 
 More rules are coming: `email`, `min`, `in`, `numeric`, `nullable` and the rest of Laravel's list.
+
+## Nested and Array Fields
+
+A field name reaches into an object with `.` and into every item of a list with `*`. The blog imports several posts at once this way:
+
+```rust
+Rules::new()
+    .field("posts", [required(), array(), max(50)])
+    .field("posts.*.title", [required(), string(), max(255)])
+    .field("posts.*.body", [required(), string()])
+```
+
+Each item is checked on its own, and an error names the item by its position, so the client knows which one to fix:
+
+```json
+{
+    "message": "The posts.1.title field is required.",
+    "errors": {
+        "posts.1.title": ["The posts.1.title field is required."]
+    }
+}
+```
+
+A `*` over something that is not a list checks nothing, so pair it with `array()` on the list itself. The struct holds the items as a `Vec`:
+
+```rust
+#[derive(Deserialize)]
+pub struct ImportPostsRequest {
+    pub posts: Vec<StorePostRequest>,
+}
+```
+
+::: laravel
+The same as Laravel's `'posts.*.title' => ['required', 'string', 'max:255']`, with the same error keys.
+:::
 
 ## How Rules Run
 

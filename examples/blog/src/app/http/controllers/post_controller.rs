@@ -3,7 +3,7 @@ use std::sync::Arc;
 use sabai::http::{Controller, Param};
 use sabai::{App, FromApp, Json, Result, StatusCode};
 
-use crate::app::http::requests::StorePostRequest;
+use crate::app::http::requests::{ImportPostsRequest, StorePostRequest};
 use crate::app::models::Post;
 use crate::app::services::PostService;
 
@@ -34,6 +34,16 @@ impl PostController {
         Ok((
             StatusCode::CREATED,
             Json(self.post_service.create(request).await?),
+        ))
+    }
+
+    pub async fn import(
+        self: Arc<Self>,
+        request: ImportPostsRequest,
+    ) -> Result<(StatusCode, Json<Vec<Post>>)> {
+        Ok((
+            StatusCode::CREATED,
+            Json(self.post_service.import(request).await?),
         ))
     }
 
