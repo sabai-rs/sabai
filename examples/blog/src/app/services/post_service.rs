@@ -1,6 +1,6 @@
 use sabai::{App, FromApp, Result};
 
-use crate::app::http::requests::StorePostRequest;
+use crate::app::http::requests::{ImportPostsRequest, StorePostRequest};
 use crate::app::models::Post;
 use crate::app::repositories::{PostRepository, PostViewRepository};
 
@@ -28,6 +28,15 @@ impl PostService {
         self.post_repository
             .create(request.title, request.body)
             .await
+    }
+
+    /// Creates every post in order.
+    pub async fn import(&self, request: ImportPostsRequest) -> Result<Vec<Post>> {
+        let mut posts = Vec::with_capacity(request.posts.len());
+        for post in request.posts {
+            posts.push(self.create(post).await?);
+        }
+        Ok(posts)
     }
 
     /// The post, counting this read in the report database.

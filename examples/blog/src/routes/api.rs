@@ -11,6 +11,9 @@ use crate::app::http::controllers::{PostController, StatsController};
 
 pub fn routes(route: &mut Router) {
     route.get("/health", health).name("health");
+    route
+        .post("/posts/import", PostController::import)
+        .name("posts.import");
     route.api_resource("posts", |posts| {
         posts.index(PostController::index);
         posts.store(PostController::store);

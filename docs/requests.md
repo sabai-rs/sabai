@@ -55,6 +55,8 @@ See [Validation](./validation) for the rules.
 
 When the query string and the body have the same field, the body wins. Any other `Content-Type` answers `422`. This blocks a cross-site form that sends JSON as `text/plain`. Broken JSON answers `400`.
 
+Query strings and forms only carry text, so text fills a typed field when it can: `draft=true` or `draft=1` fills `draft: bool`, `page=2` fills `page: u32`, and `status=published` fills a unit enum variant. JSON text does the same, like Laravel, which does not tell the two apart. Text that does not fit answers `422`.
+
 ## The Request
 
 Take `Request` to read anything else:
