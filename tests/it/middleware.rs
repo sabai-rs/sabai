@@ -1,5 +1,6 @@
 use pollster::block_on;
-use sabai::http::middleware::{ConvertEmptyStringsToNull, TrimStrings};
+use sabai::header::{HeaderValue, X_FRAME_OPTIONS};
+use sabai::http::middleware::{ConvertEmptyStringsToNull, FrameGuard};
 use sabai::http::{Middleware, Next, Router};
 use sabai::{Body, Error, IntoResponse, Json, Method, Request, Response, Result};
 use serde_json::{Value, json};
@@ -47,9 +48,9 @@ fn tags(response: &Response) -> Vec<&str> {
 fn global_middleware_runs_around_the_handler() {
     let mut router = Router::new();
     router.get("/posts", index);
-    router
-        .global_middleware(Tag("first"))
-        .global_middleware(Tag("second"));
+    router.global_middleware(|middleware| {
+        middleware.append(Tag("first")).append(Tag("second"));
+    });
 
     let response = send(router, "/posts");
 
@@ -62,7 +63,9 @@ fn global_middleware_runs_around_the_handler() {
 fn middleware_can_answer_without_running_the_handler() {
     let mut router = Router::new();
     router.get("/posts", index);
-    router.global_middleware(Deny);
+    router.global_middleware(|middleware| {
+        middleware.append(Deny);
+    });
 
     assert_eq!(send(router, "/posts").status(), 403);
 }
@@ -71,7 +74,9 @@ fn middleware_can_answer_without_running_the_handler() {
 fn global_middleware_also_runs_on_404_and_405() {
     let mut router = Router::new();
     router.get("/posts", index);
-    router.global_middleware(Tag("global"));
+    router.global_middleware(|middleware| {
+        middleware.append(Tag("global"));
+    });
 
     let response = send(router, "/missing");
 
@@ -92,7 +97,9 @@ fn site_with_admin_group() -> Router {
                 route.get("/users", index).middleware(Tag("route"));
             });
         });
-    router.global_middleware(Tag("global"));
+    router.global_middleware(|middleware| {
+        middleware.append(Tag("global"));
+    });
     router
 }
 
@@ -127,12 +134,9 @@ fn post_json(router: Router, body: &'static str) -> Response {
     block_on(router.compile().unwrap().dispatch(Request::from(request)))
 }
 
-fn cleaning_router() -> Router {
+fn echo_router() -> Router {
     let mut router = Router::new();
     router.post("/echo", echo);
-    router
-        .global_middleware(TrimStrings)
-        .global_middleware(ConvertEmptyStringsToNull);
     router
 }
 
@@ -141,10 +145,10 @@ fn json_of(response: Response) -> Value {
 }
 
 #[test]
-fn input_strings_are_trimmed_at_any_depth_except_passwords() {
+fn by_default_input_strings_are_trimmed_at_any_depth_except_passwords() {
     let body = r#"{"title": "  Sabai  ", "tags": [" rust "], "user": {"name": " Sang ", "password": " secret "}, "password": " p "}"#;
 
-    let input = json_of(post_json(cleaning_router(), body));
+    let input = json_of(post_json(echo_router(), body));
 
     assert_eq!(
         input,
@@ -153,10 +157,10 @@ fn input_strings_are_trimmed_at_any_depth_except_passwords() {
 }
 
 #[test]
-fn blank_strings_become_null_after_trimming() {
+fn by_default_blank_strings_become_null_after_trimming() {
     let body = r#"{"subtitle": "", "summary": "   ", "count": 0}"#;
 
-    let input = json_of(post_json(cleaning_router(), body));
+    let input = json_of(post_json(echo_router(), body));
 
     assert_eq!(
         input,
@@ -166,7 +170,48 @@ fn blank_strings_become_null_after_trimming() {
 
 #[test]
 fn input_that_cannot_be_read_reaches_the_handler_unchanged() {
-    let response = post_json(cleaning_router(), r#"{"title": "#);
+    let response = post_json(echo_router(), r#"{"title": "#);
 
     assert_eq!(response.status(), 400);
+}
+
+#[test]
+fn a_removed_default_no_longer_runs() {
+    let mut router = echo_router();
+    router.global_middleware(|middleware| {
+        middleware.remove::<ConvertEmptyStringsToNull>();
+    });
+
+    let input = json_of(post_json(router, r#"{"subtitle": "  "}"#));
+
+    assert_eq!(input, json!({"subtitle": ""}));
+}
+
+async fn never_framed() -> Response {
+    let mut response = "Never framed".into_response();
+    let deny = HeaderValue::from_static("DENY");
+    response.headers_mut().insert(X_FRAME_OPTIONS, deny);
+    response
+}
+
+#[test]
+fn frame_guard_allows_only_the_same_origin_unless_the_route_says_otherwise() {
+    let mut router = Router::new();
+    router.get("/posts", index);
+    router.get("/never-framed", never_framed);
+    router.global_middleware(|middleware| {
+        middleware.append(FrameGuard);
+    });
+    let routes = router.compile().unwrap();
+    let frame_options = |path| {
+        let request = http::Request::builder()
+            .uri(path)
+            .body(Body::empty())
+            .unwrap();
+        let response = block_on(routes.dispatch(Request::from(request)));
+        response.headers()[X_FRAME_OPTIONS].clone()
+    };
+
+    assert_eq!(frame_options("/posts"), "SAMEORIGIN");
+    assert_eq!(frame_options("/never-framed"), "DENY");
 }

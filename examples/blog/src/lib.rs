@@ -8,11 +8,10 @@ pub mod routes;
 use std::sync::Arc;
 
 use sabai::http::Router;
-use sabai::http::middleware::{ConvertEmptyStringsToNull, TrimStrings};
+use sabai::http::middleware::FrameGuard;
 use sabai::orm::DatabaseServiceProvider;
 use sabai::{App, Config, Result};
 
-use crate::app::http::middleware::FrameGuard;
 use crate::app::providers::AppServiceProvider;
 
 pub use database::migrations::all as migrations;
@@ -34,9 +33,8 @@ pub fn app(config: Config) -> Result<Arc<App>> {
 /// `withMiddleware` in Laravel's `bootstrap/app.php`.
 pub fn routes() -> Router {
     let mut route = routes::all();
-    route
-        .global_middleware(TrimStrings)
-        .global_middleware(ConvertEmptyStringsToNull)
-        .global_middleware(FrameGuard);
+    route.global_middleware(|middleware| {
+        middleware.append(FrameGuard);
+    });
     route
 }

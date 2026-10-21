@@ -87,25 +87,25 @@ pub async fn show(request: Request) -> String {
 
 ## Input Trimming and Normalization
 
-Two middleware clean the input before any handler reads it:
+Two default middleware clean the input before any handler reads it:
 
 | Middleware | Does |
 | --- | --- |
 | `TrimStrings` | trims spaces around every string, at any depth, except `password`, `password_confirmation` and `current_password` |
 | `ConvertEmptyStringsToNull` | turns `""` into `null`, so a blank optional field arrives as `None` |
 
-Run them on every request in `src/lib.rs`, trimming first, so `"   "` becomes `null`:
+Every app runs them, trimming first, so `"   "` becomes `null`. To keep blank strings, remove the second in `src/lib.rs`:
 
 ```rust
-use sabai::http::middleware::{ConvertEmptyStringsToNull, TrimStrings};
+use sabai::http::middleware::ConvertEmptyStringsToNull;
 
-route
-    .global_middleware(TrimStrings)
-    .global_middleware(ConvertEmptyStringsToNull);
+route.global_middleware(|middleware| {
+    middleware.remove::<ConvertEmptyStringsToNull>();
+});
 ```
 
 They change what `request.input`, `request.all` and form requests see; `request.body()` stays as it was sent.
 
 ::: laravel
-Both are Laravel's global middleware of the same names. In Laravel they are on by default; in Sabai they will be once default middleware lands (M1-31a).
+Both are Laravel's default global middleware of the same names, and `remove::<...>()` is `$middleware->remove(...)`.
 :::

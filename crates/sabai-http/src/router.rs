@@ -7,7 +7,7 @@ use sabai_core::contracts::BoxFuture;
 use sabai_core::{App, Error, Method, Request, Response, Result, StatusCode};
 
 use crate::handler::{BoxedHandler, Handler, boxed};
-use crate::middleware::{BoxedMiddleware, Middleware, Pipeline};
+use crate::middleware::{BoxedMiddleware, GlobalMiddleware, Middleware, Pipeline};
 use crate::route_urls::RouteUrls;
 
 /// Collects routes, one statement each like Laravel's `routes/web.php`:
@@ -16,7 +16,7 @@ use crate::route_urls::RouteUrls;
 #[derive(Default)]
 pub struct Router {
     routes: Vec<Route>,
-    global_middleware: Vec<BoxedMiddleware>,
+    global_middleware: GlobalMiddleware,
 }
 
 /// One route, returned by [`Router::get`] and friends so it can be named: `.name("posts.show")`.
@@ -107,20 +107,21 @@ impl Router {
         self.prefix("").middleware(middleware)
     }
 
-    /// Runs `middleware` on every request, 404s and 405s included, like `$middleware->append(...)`
-    /// in Laravel's `bootstrap/app.php`. Call it on the router your app's `routes()` returns.
-    pub fn global_middleware<M: Middleware>(&mut self, middleware: M) -> &mut Self {
-        self.push_global_middleware(Arc::new(middleware))
-    }
-
-    fn push_global_middleware(&mut self, middleware: BoxedMiddleware) -> &mut Self {
-        self.global_middleware.push(middleware);
+    /// Changes the middleware every request runs, 404s and 405s included, like `withMiddleware`
+    /// in Laravel's `bootstrap/app.php`. Sabai's defaults, `TrimStrings` and
+    /// `ConvertEmptyStringsToNull`, run unless removed:
+    /// `route.global_middleware(|middleware| { middleware.append(FrameGuard); });`
+    pub fn global_middleware<F: FnOnce(&mut GlobalMiddleware)>(
+        &mut self,
+        configure: F,
+    ) -> &mut Self {
+        configure(&mut self.global_middleware);
         self
     }
 
     fn mount_group(&mut self, prefix: &str, mut middleware: Vec<BoxedMiddleware>, group: Router) {
-        // Global middleware set inside a group still runs, but only on the group's routes.
-        middleware.extend(group.global_middleware);
+        // Global middleware appended inside a group still runs, but only on the group's routes.
+        middleware.extend(group.global_middleware.into_appended());
         let routes = group
             .routes
             .into_iter()
@@ -147,7 +148,7 @@ impl Router {
 
     /// Checks every route and builds the matcher; call once at boot.
     pub fn compile(self) -> Result<Routes> {
-        let middleware: Arc<[BoxedMiddleware]> = self.global_middleware.into();
+        let middleware: Arc<[BoxedMiddleware]> = self.global_middleware.into_stack().into();
         let mut routes = Routes {
             matcher: matchit::Router::new(),
             endpoints: Vec::new(),

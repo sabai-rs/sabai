@@ -213,6 +213,7 @@ Middleware
   - [ ] **M1-29b** Terminable middleware, run after the response is sent
 - [ ] **M1-30** `from_fn(fn)` for writing middleware as a plain async function
 - [ ] **M1-31** Middleware aliases and groups (`web`, `api`) with a priority order, like Laravel's HTTP kernel
+  - [x] **M1-31a** Default global middleware (`TrimStrings`, `ConvertEmptyStringsToNull`) in every app; `route.global_middleware(|middleware| ...)` with `append` and `remove::<T>()`, like `withMiddleware`; `FrameGuard` ships in `sabai::http::middleware`
 - [ ] **M1-32** Parameterised middleware: `throttle(60).per_minute()`, `auth("api")`, `can("update", "post")`
 - [ ] **M1-33** Request ID and access log: a tracing span per request with `X-Request-Id` (reuse the incoming value only if it is short and `[A-Za-z0-9._-]`, to block log injection; otherwise generate one), echoed in the response
 - [ ] **M1-34** Timeout and compression (gzip, br)
