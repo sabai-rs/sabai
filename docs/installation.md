@@ -5,6 +5,16 @@
 - Rust 1.88 or newer. Run `rustup update`.
 - Docker, only if you want MySQL. Tests use SQLite and need nothing.
 
+## Install the `sabai` Command
+
+`sabai` creates apps and runs their commands, like `laravel new` and `php artisan`:
+
+```bash
+cargo install --git https://github.com/sabai-rs/sabai sabai-cli
+```
+
+Working on Sabai itself? Install it from your clone instead, so it uses your changes: `cargo install --path crates/sabai-cli`.
+
 ## Run the Example Blog
 
 The blog in the repository uses every feature of Sabai. Clone it first:
@@ -12,12 +22,6 @@ The blog in the repository uses every feature of Sabai. Clone it first:
 ```bash
 git clone https://github.com/sabai-rs/sabai
 cd sabai
-```
-
-Install the `sabai` command from the clone. It runs your app's commands, like `php artisan`:
-
-```bash
-cargo install --path crates/sabai-cli
 ```
 
 The blog uses two databases: `blog` for posts and `report` for post views.
