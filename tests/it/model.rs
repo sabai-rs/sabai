@@ -73,7 +73,7 @@ const CREATE_POSTS: &str =
     "create table posts (id integer primary key, title varchar not null, body text)";
 
 #[test]
-fn the_derive_names_the_table_like_laravel_and_lists_the_fields() {
+fn the_derive_names_the_table_in_plural_snake_case_and_lists_the_fields() {
     assert_eq!(Post::TABLE, "posts");
     assert_eq!(Post::COLUMNS, ["id", "title", "body"]);
 }

@@ -140,7 +140,7 @@ fn a_known_path_with_the_wrong_method_is_a_405_naming_the_methods_it_takes() {
 }
 
 #[test]
-fn options_answers_200_with_the_methods_like_laravel() {
+fn options_answers_200_listing_the_methods() {
     let response = send(&routes(), Method::OPTIONS, "/posts");
 
     assert_eq!(response.status(), StatusCode::OK);
@@ -334,7 +334,7 @@ async fn method_and_path(request: Request) -> String {
 }
 
 #[test]
-fn an_api_resource_routes_each_action_with_laravels_paths_and_names() {
+fn an_api_resource_routes_each_action_with_its_paths_and_names() {
     let mut router = Router::new();
     router.prefix("/api").group(|route| {
         route.api_resource("posts", |posts| {

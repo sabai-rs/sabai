@@ -108,7 +108,7 @@ mod tests {
     }
 
     #[test]
-    fn by_default_passwords_hash_like_laravel_with_bcrypt_and_12_rounds() {
+    fn by_default_passwords_hash_with_bcrypt_and_12_rounds() {
         let hashed = make("secret").unwrap();
 
         assert!(hashed.starts_with("$2y$12$"), "{hashed}");

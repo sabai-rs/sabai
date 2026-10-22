@@ -123,7 +123,7 @@ mod tests {
     }
 
     #[test]
-    fn mysql_gets_laravels_create_table() {
+    fn mysql_gets_unsigned_ids_and_lengths_in_create_table() {
         assert_eq!(
             create_posts().to_sql(Driver::MySql),
             [
@@ -172,7 +172,7 @@ mod tests {
     }
 
     #[test]
-    fn mysql_adds_a_unique_index_after_the_table_like_laravel() {
+    fn mysql_adds_a_unique_index_after_the_table() {
         assert_eq!(
             create_users().to_sql(Driver::MySql),
             [
@@ -185,7 +185,7 @@ mod tests {
     }
 
     #[test]
-    fn sqlite_adds_a_unique_index_after_the_table_like_laravel() {
+    fn sqlite_adds_a_unique_index_after_the_table() {
         assert_eq!(
             create_users().to_sql(Driver::Sqlite),
             [

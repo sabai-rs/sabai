@@ -19,7 +19,7 @@ pub(crate) fn expand(input: &DeriveInput) -> Result<TokenStream> {
     if !columns.iter().any(|column| column == "id") {
         return Err(Error::new_spanned(
             name,
-            "`Model` needs an `id: u64` field for the primary key, like Laravel's `$table->id()`",
+            "`Model` needs an `id: u64` field for the primary key, the column `table.id()` makes in a migration",
         ));
     }
     Ok(quote! {
@@ -116,7 +116,7 @@ mod tests {
     use crate::snake_case;
 
     #[test]
-    fn struct_names_become_laravels_table_names() {
+    fn struct_names_become_plural_snake_case_table_names() {
         let table = |name: &str| plural(&snake_case(name));
 
         assert_eq!(table("Post"), "posts");
