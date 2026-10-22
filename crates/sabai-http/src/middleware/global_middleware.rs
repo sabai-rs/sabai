@@ -46,8 +46,7 @@ impl GlobalMiddleware {
     }
 }
 
-// Laravel's default global middleware that Sabai has so far, in Laravel's order, inside
-// TraceRequests, which comes first so its span and log line cover everything else.
+// Laravel's defaults in Laravel's order, after TraceRequests so its log line covers them.
 fn defaults() -> Vec<(TypeId, BoxedMiddleware)> {
     vec![
         (TypeId::of::<TraceRequests>(), Arc::new(TraceRequests)),

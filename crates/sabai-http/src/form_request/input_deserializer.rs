@@ -101,7 +101,6 @@ impl<'de> Deserializer<'de> for InputDeserializer<'de> {
         visitor.visit_newtype_struct(self)
     }
 
-    // Text names a unit variant, so `"published"` fills `status: Status`.
     fn deserialize_enum<V: Visitor<'de>>(
         self,
         _name: &'static str,

@@ -220,6 +220,8 @@ Middleware
 - [x] **M1-32** Parameterised middleware: a middleware is a struct, so its parameters are fields, `route.middleware(Throttle::per_minute(60))`, with no string parsing like `'throttle:60,1'`. The middleware themselves come with their features: throttle (M7-13), `auth("api")` (M3-06), `can(...)` (M3)
 - [x] **M1-33** Request ID and access log (`TraceRequests`, the first default; `TestApp::with_header`): a tracing span per request with `X-Request-Id` (reuse the incoming value only if it is short and `[A-Za-z0-9._-]`, to block log injection; otherwise generate one), echoed in the response
 - [ ] **M1-34** Timeout and compression (gzip, br)
+  - [x] **M1-34a** Slow clients (slowloris): hyper's 30 s header timeout was silently off without a timer, so `serve` gives it a `TokioTimer`; reading the body is limited to 30 s (`408`). Tests against a real server send half a request. The body size and both times come from `config/app.toml` (`APP_MAX_BODY_KB`, `APP_HEADER_TIMEOUT`, `APP_BODY_TIMEOUT`); `0` stops the app
+  - [ ] **M1-34b** A timeout for handlers, and compression
 - [ ] **M1-35** Security headers: HSTS, CSP, X-Frame-Options, Referrer-Policy
 - [ ] **M1-36** Static files from `public/` with cache headers
 - [ ] **M1-37** Signed-URL check middleware

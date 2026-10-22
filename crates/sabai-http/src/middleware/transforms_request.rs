@@ -9,8 +9,7 @@ pub(super) type Transform = fn(&str, &mut Value);
 
 /// Runs `transform` on every string in the input, nested ones included, then goes on,
 /// like Laravel's `TransformsRequest`. Input that cannot be read is left for the handler to reject.
-// A plain `fn` pointer and a future boxed here, so every input middleware and every app share
-// this one copy instead of compiling the body into each.
+// A `fn` pointer and a future boxed here, so the body compiles once, not per middleware or app.
 pub(super) fn transform_input(
     request: Request,
     next: Next,
