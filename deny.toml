@@ -1,0 +1,17 @@
+# Checks every dependency against the RustSec advisory database: `cargo deny check`.
+# An advisory that does not apply goes in `ignore` with its reason, so every exception is reviewed.
+
+[graph]
+all-features = true
+
+[advisories]
+ignore = [
+    # The Marvin Attack leaks an RSA private key through timing. sqlx-mysql only encrypts the
+    # login password with the server's public key and never holds a private key. No fixed rsa
+    # release exists yet; remove this once one does.
+    { id = "RUSTSEC-2023-0071", reason = "sqlx-mysql uses only RsaPublicKey, which the attack does not reach" },
+]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"

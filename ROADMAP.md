@@ -161,6 +161,7 @@ Macros (sabai-macros)
 - [x] **M0-15** `proc-macro-crate` lookup so macros work via facade or sub-crates: `::sabai`, a renamed `sabai`, `::sabai_core`, or `crate` inside `sabai-core`
 - [x] **M0-16** `sabai-macros` on syn 3, the version `serde_derive` uses, so apps compile syn once instead of twice (~1s of a clean build)
 - [x] **M0-17** The blog laid out like a Laravel app: `src/app/http/{controllers,requests}`, `src/app/{models,providers,services,repositories}`, `src/routes/{web,api}.rs`; the framework never reads folders, so apps may arrange modules their own way
+- [x] **M0-18** `cargo deny` checks dependencies against RustSec on every pull request and weekly (`.github/workflows/security.yml`), and allows crates.io only. RUSTSEC-2023-0071 (rsa, Marvin Attack) is ignored with its reason: sqlx-mysql only uses the server's public key
 
 ## M1: HTTP layer & controllers
 
@@ -296,6 +297,7 @@ Connection
 - [ ] **M2-01** Pool on top of `sqlx`: MySQL first (what most of our Laravel apps run), SQLite for tests, then Postgres
   - [x] **M2-01a** `Database` from `config/database.toml` (Laravel's `default` + `connections`), bound by `DatabaseServiceProvider`; `sqlx::Any` so `DB_CONNECTION` picks MySQL or SQLite at runtime; the pool starts on first use (sqlx needs tokio, which starts after boot); `:memory:` keeps one connection; a down database fails in 5 seconds with a hint; `docker-compose.yml` runs MySQL for dev; the blog's `/api/health` pings it
   - [x] **M2-01b** One tokio runtime per process (`sabai::runtime()`, `sabai::block_on`), used by `serve` and `migrate`, so a pool opened by one command still works in the next; before, `migrate` then a query lost an in-memory SQLite database and timed out on MySQL
+  - [ ] **M2-01c** TLS to MySQL (`DB_SSL_MODE` like Laravel's `sslmode`, `require` outside local), and docs that say why: without TLS, sqlx fetches the server's RSA key over the plain connection, so someone in the middle can swap the key and read the password (found by M0-18's review of RUSTSEC-2023-0071)
 - [ ] **M2-02** Multiple named connections from config
 - [ ] **M2-03** Transactions: `db.transaction(|tx| async { ... })`
 
