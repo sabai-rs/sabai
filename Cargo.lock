@@ -1204,6 +1204,7 @@ dependencies = [
  "argon2",
  "bcrypt",
  "sabai-core",
+ "sabai-orm",
  "tokio",
 ]
 

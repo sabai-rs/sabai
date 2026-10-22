@@ -1,3 +1,4 @@
+use sabai::auth::Authenticatable;
 use sabai::orm::Model;
 use serde::Serialize;
 
@@ -9,4 +10,14 @@ pub struct User {
     pub email: String,
     #[serde(skip_serializing)]
     pub password: String,
+}
+
+impl Authenticatable for User {
+    fn password(&self) -> &str {
+        &self.password
+    }
+
+    fn set_password(&mut self, hashed: String) {
+        self.password = hashed;
+    }
 }

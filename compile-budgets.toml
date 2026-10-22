@@ -14,11 +14,12 @@ sabai-http = 81000
 sabai-orm = 85000
 # M3-03a: tokio's spawn_blocking for `Hash::make` and `Hash::check`, the semaphore that runs one
 # hash per core at most, and bcrypt read from config/hashing.toml. Argon2id is behind a feature.
-sabai-auth = 14800
+# Raised at M3-01 for `Authenticatable::attempt`, its rehash on login and the unused-hash check.
+sabai-auth = 17000
 
 # The walking-skeleton app, which uses every feature. Raised at M1-39a after two
 # middleware (about 200 lines each) and form input read through serde_urlencoded, and at
 # M1-51 after `POST /api/posts/import`: 4k lines for one FormRequest route, 2.5k after
 # M1-28d gave form requests one deserializer instead of two. Raised at M3-03b for
-# `POST /api/register` and the `User` model with `auth`.
-blog = 29500
+# `POST /api/register` and the `User` model with `auth`, and at M3-01 for `POST /api/login`.
+blog = 33000

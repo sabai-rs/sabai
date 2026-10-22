@@ -1,4 +1,5 @@
 driver = "${HASH_DRIVER:-bcrypt}"
+rehash_on_login = true
 
 [bcrypt]
 rounds = "${BCRYPT_ROUNDS:-12}"
