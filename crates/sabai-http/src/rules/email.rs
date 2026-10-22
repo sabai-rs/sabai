@@ -21,18 +21,18 @@ mod tests {
     #[test]
     fn emails_need_one_at_sign_no_spaces_and_a_plain_domain() {
         let valid = [
-            "sang@example.com",
+            "test@example.com",
             "a.b+tag@sub.example.co.th",
             "root@localhost",
         ];
         let invalid = [
             "plain",
             "@example.com",
-            "sang@",
-            "sang@exa mple.com",
+            "test@",
+            "test@exa mple.com",
             "a@b@c.com",
-            "sang@-bad.com",
-            "sang@example..com",
+            "test@-bad.com",
+            "test@example..com",
         ];
 
         for email in valid {

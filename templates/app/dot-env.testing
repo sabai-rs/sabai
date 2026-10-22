@@ -2,3 +2,4 @@ APP_ENV=testing
 DB_CONNECTION=sqlite
 DB_DATABASE=:memory:
 LOG_LEVEL=warn
+BCRYPT_ROUNDS=4

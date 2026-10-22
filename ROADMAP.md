@@ -362,9 +362,9 @@ Core
 
 - [ ] **M3-01** `trait Authenticatable` (id, password hash) implemented by the `User` model
 - [ ] **M3-02** `trait UserProvider` with an ORM-backed default
-- [ ] **M3-03** Password hashing with Argon2id, `Hash::make` / `Hash::check`, rehash on login
+- [x] **M3-03** Password hashing with Argon2id, `Hash::make` / `Hash::check`, rehash on login
   - [x] **M3-03a** `sabai::auth::Hash` (feature `auth`) like Laravel's: `config/hashing.toml` with `config/hashing.php`'s keys and defaults (bcrypt, 12 rounds, `verify`; or `argon2id`, 64 MiB, t=4, behind the `argon2` feature so bcrypt apps do not compile its nine crates); `$2y$` hashes that a PHP-made hash checks against; passwords over bcrypt's 72 bytes refused; `make` and `check` `async` on a blocking thread, at most one per CPU core; bcrypt and argon2 optimized in the dev profile
-  - [ ] **M3-03b** The blog and the template hash passwords: creating a user, `config/hashing.toml`, and the `[profile.dev.package...]` lines in the app's `Cargo.toml`
+  - [x] **M3-03b** The blog's `POST /api/register` like Laravel Breeze's `RegisteredUserController@store`: Breeze's rules, `Hash::make`, and a taken email answered by the unique index through `sabai::orm::is_unique_violation` (SQLite and MySQL); `TestApp::run` reads the database in tests; `sabai new` apps get `auth`, `config/hashing.toml`, `BCRYPT_ROUNDS=4` in `.env.testing` and `blowfish` optimized in development; bcrypt's `limit` (Laravel's key) defaults to 72 bytes instead of Laravel's silent cut, `limit = 0` restores it, and the new `max_bytes(72)` rule puts the error on the `password` field
 - [ ] **M3-04** Guards as `Arc<dyn Guard>`: `session` and `token`, picked per route group
 - [ ] **M3-05** Handler arguments: `Auth<User>` (required, else 401/redirect) and `OptionalAuth<User>`
 - [ ] **M3-06** Middleware: `auth`, `auth("api")`, `guest`

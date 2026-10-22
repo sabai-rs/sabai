@@ -1,6 +1,6 @@
 # Hashing
 
-`Hash` stores passwords like Laravel: bcrypt with 12 rounds by default, or Argon2id. Turn on the `auth` feature:
+`Hash` stores passwords like Laravel: bcrypt with 12 rounds by default, or Argon2id. Apps from `sabai new` have it already, with `config/hashing.toml`; otherwise turn on the `auth` feature:
 
 ```toml
 sabai = { version = "...", features = ["orm", "auth"] }
@@ -24,6 +24,7 @@ driver = "${HASH_DRIVER:-bcrypt}"     # or "argon2id"
 [bcrypt]
 rounds = "${BCRYPT_ROUNDS:-12}"
 verify = true
+limit = 72                            # bytes; 0 for no limit
 
 [argon]
 memory = 65536                        # KiB
@@ -44,7 +45,11 @@ let hashed = Hash::make(&request.password).await?;
 
 The result is `$2y$12$...` with bcrypt, the format PHP's `password_hash` writes, so Laravel checks it and Sabai checks Laravel's. Hashing the same password twice gives two different strings.
 
-bcrypt reads only the first 72 bytes of a password. Instead of cutting a longer one short, `make` answers `422 The password must not be longer than 72 bytes.`
+bcrypt reads only the first 72 bytes of a password, so two long passwords that start the same would hash the same. Instead of cutting a longer one short, `make` answers `422 The password must not be longer than 72 bytes.` A Thai letter is three bytes, so that is 24 Thai letters. Check it in the request first with the [`max_bytes(72)`](/validation) rule, so the error lands on the `password` field.
+
+::: laravel
+Laravel has the same `limit` key, but off by default: PHP's `password_hash` cuts a longer password short without saying so. Set `limit = 0` for that behaviour.
+:::
 
 ## Checking a Password
 

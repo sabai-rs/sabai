@@ -10,7 +10,7 @@ publish = false
 name = "bootstrap"
 
 [dependencies]
-sabai = { {{sabai}}, features = ["orm"] }
+sabai = { {{sabai}}, features = ["orm", "auth"] }
 serde = { version = "1", features = ["derive"] }
 
 [dev-dependencies]
@@ -18,3 +18,8 @@ sabai-testing = { {{sabai-testing}}, features = ["orm"] }
 
 # Keeps the app its own workspace, even inside another project's folder.
 [workspace]
+
+# Password hashing is slow on purpose, and unoptimized ten times slower, so `sabai serve` and
+# tests stay fast in development. Add `argon2` here too with the `argon2` feature.
+[profile.dev.package.blowfish]
+opt-level = 3

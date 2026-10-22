@@ -41,6 +41,7 @@ Rules are Rust functions, so a typo does not compile and your editor suggests th
 | `confirmed()` | the value equals `{field}_confirmation`, such as `password_confirmation` |
 | `min(n)` | a string has at least `n` characters, a number is at least `n`, a list has at least `n` items |
 | `max(n)` | a string has at most `n` characters, a number is at most `n`, a list has at most `n` items |
+| `max_bytes(n)` | a string has at most `n` bytes; a Thai letter is three |
 
 Laravel Breeze's registration rules read the same way:
 
@@ -48,8 +49,10 @@ Laravel Breeze's registration rules read the same way:
 Rules::new()
     .field("name", [required(), string(), max(255)])
     .field("email", [required(), string(), lowercase(), email(), max(255)])
-    .field("password", [required(), confirmed(), min(8)])
+    .field("password", [required(), confirmed(), min(8), max_bytes(72)])
 ```
+
+`max_bytes(72)` keeps a password within what [bcrypt](/hashing) reads.
 
 More rules are coming: `in`, `numeric`, `nullable`, `unique` and the rest of Laravel's list.
 
