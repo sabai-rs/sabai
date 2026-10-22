@@ -146,13 +146,13 @@ fn json_of(response: Response) -> Value {
 
 #[test]
 fn by_default_input_strings_are_trimmed_at_any_depth_except_passwords() {
-    let body = r#"{"title": "  Sabai  ", "tags": [" rust "], "user": {"name": " Sang ", "password": " secret "}, "password": " p "}"#;
+    let body = r#"{"title": "  Sabai  ", "tags": [" rust "], "user": {"name": " Test User ", "password": " secret "}, "password": " p "}"#;
 
     let input = json_of(post_json(echo_router(), body));
 
     assert_eq!(
         input,
-        json!({"title": "Sabai", "tags": ["rust"], "user": {"name": "Sang", "password": " secret "}, "password": " p "})
+        json!({"title": "Sabai", "tags": ["rust"], "user": {"name": "Test User", "password": " secret "}, "password": " p "})
     );
 }
 

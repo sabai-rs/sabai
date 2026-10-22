@@ -1,18 +1,22 @@
-use bcrypt::{BcryptError, Version};
+use bcrypt::Version;
 use sabai_core::{Error, Result, StatusCode};
 
 use super::HashError;
 
-// bcrypt reads only the first 72 bytes, so a longer password is refused rather than cut short.
-pub(super) fn make(password: &str, rounds: u32) -> Result<String> {
-    match bcrypt::non_truncating_hash_with_result(password, rounds) {
-        Ok(hashed) => Ok(hashed.format_for_version(Version::TwoY)),
-        Err(BcryptError::Truncation(_)) => Err(Error::new(
+/// bcrypt reads only a password's first 72 bytes, so by default a longer one is refused instead of
+/// cut short; `limit = 0` cuts it short like Laravel's default.
+pub(super) const DEFAULT_LIMIT: usize = 72;
+
+pub(super) fn make(password: &str, rounds: u32, limit: usize) -> Result<String> {
+    if limit > 0 && password.len() > limit {
+        return Err(Error::new(
             StatusCode::UNPROCESSABLE_ENTITY,
-            "The password must not be longer than 72 bytes.",
-        )),
-        Err(error) => Err(Error::internal(HashError(error.to_string()))),
+            format!("The password must not be longer than {limit} bytes."),
+        ));
     }
+    let hashed = bcrypt::hash_with_result(password, rounds)
+        .map_err(|error| Error::internal(HashError(error.to_string())))?;
+    Ok(hashed.format_for_version(Version::TwoY))
 }
 
 // Like PHP's `password_verify`, which also reads 72 bytes, so every Laravel hash checks the same.

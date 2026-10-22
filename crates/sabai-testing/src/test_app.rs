@@ -58,6 +58,12 @@ impl TestApp {
         self
     }
 
+    /// Runs `future` with this app as the current one, like calling Eloquent in a Laravel test:
+    /// `let user = app.run(User::find_or_fail(1))?;`
+    pub fn run<T>(&self, future: impl Future<Output = T>) -> T {
+        self.runtime.block_on(self.app.scope(future))
+    }
+
     /// Sends `GET` as a JSON client, like Laravel's `$this->getJson(route(...))`.
     pub fn get_json(&self, uri: impl ToUri) -> TestResponse {
         self.send_json(Method::GET, uri.to_uri(&self.routes), Body::empty())

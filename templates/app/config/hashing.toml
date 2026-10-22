@@ -1,0 +1,13 @@
+driver = "${HASH_DRIVER:-bcrypt}"
+
+[bcrypt]
+rounds = "${BCRYPT_ROUNDS:-12}"
+verify = true
+# bcrypt reads 72 bytes; a longer password is refused. 0 cuts it short like Laravel.
+limit = 72
+
+[argon]
+memory = "${HASH_ARGON_MEMORY:-65536}"
+time = "${HASH_ARGON_TIME:-4}"
+threads = "${HASH_ARGON_THREADS:-1}"
+verify = true

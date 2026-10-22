@@ -14,6 +14,7 @@ pub(super) enum Check {
     Confirmed,
     Min(u64),
     Max(u64),
+    MaxBytes(u64),
 }
 
 pub(super) fn check_field(
@@ -83,6 +84,9 @@ fn failure(check: &Check, attribute: &str, value: &Value) -> Option<String> {
                 "The {attribute} field must not be greater than {limit}."
             ))
         }
+        (Check::MaxBytes(limit), Value::String(text)) if text.len() as u64 > *limit => Some(
+            format!("The {attribute} field must not be greater than {limit} bytes."),
+        ),
         (Check::Max(limit), Value::Array(items)) if items.len() as u64 > *limit => Some(format!(
             "The {attribute} field must not have more than {limit} items."
         )),

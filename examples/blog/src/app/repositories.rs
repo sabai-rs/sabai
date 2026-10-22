@@ -2,6 +2,8 @@
 
 mod post_repository;
 mod post_view_repository;
+mod user_repository;
 
 pub use post_repository::PostRepository;
 pub use post_view_repository::PostViewRepository;
+pub use user_repository::UserRepository;

@@ -13,6 +13,7 @@ pub(super) struct Settings {
 enum Driver {
     Bcrypt {
         rounds: u32,
+        limit: usize,
     },
     Argon2id {
         memory: u32,
@@ -30,7 +31,10 @@ enum Algorithm {
 impl Default for Settings {
     fn default() -> Self {
         Self {
-            driver: Driver::Bcrypt { rounds: 12 },
+            driver: Driver::Bcrypt {
+                rounds: 12,
+                limit: bcrypt::DEFAULT_LIMIT,
+            },
             verify: true,
         }
     }
@@ -51,6 +55,7 @@ impl Settings {
             "bcrypt" => (
                 Driver::Bcrypt {
                     rounds: config.get_or("hashing.bcrypt.rounds", 12)?,
+                    limit: config.get_or("hashing.bcrypt.limit", bcrypt::DEFAULT_LIMIT)?,
                 },
                 "hashing.bcrypt.verify",
             ),
@@ -73,7 +78,7 @@ impl Settings {
 
     pub(super) fn make(self, password: &str) -> Result<String> {
         match self.driver {
-            Driver::Bcrypt { rounds } => bcrypt::make(password, rounds),
+            Driver::Bcrypt { rounds, limit } => bcrypt::make(password, rounds, limit),
             Driver::Argon2id {
                 memory,
                 time,
@@ -100,7 +105,7 @@ impl Settings {
 
     pub(super) fn needs_rehash(self, hashed: &str) -> bool {
         match self.driver {
-            Driver::Bcrypt { rounds } => {
+            Driver::Bcrypt { rounds, .. } => {
                 Algorithm::of(hashed) != Some(Algorithm::Bcrypt)
                     || bcrypt::cost(hashed) != Some(rounds)
             }
@@ -236,5 +241,18 @@ mod tests {
             error.to_string(),
             "Argon2id needs the `argon2` feature: sabai = { ..., features = [\"auth\", \"argon2\"] }"
         );
+    }
+
+    #[test]
+    fn bcrypt_refuses_more_than_its_limit_and_limit_0_cuts_short_like_laravel() {
+        let long = "a".repeat(80);
+        let like_laravel = settings("[bcrypt]\nlimit = 0\nrounds = 4\n").unwrap();
+
+        let refused = Settings::default().make(&long).unwrap_err();
+        let hashed = like_laravel.make(&long).unwrap();
+
+        assert_eq!(refused.status(), 422);
+        assert!(matches(&long, &hashed));
+        assert!(matches(&"a".repeat(72), &hashed), "bcrypt reads 72 bytes");
     }
 }

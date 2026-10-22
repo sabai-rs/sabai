@@ -12,7 +12,9 @@ use serde_json::{Map, Value};
 use checks::{Check, check_field};
 use fields::matching_fields;
 
-pub use catalog::{array, confirmed, email, lowercase, max, min, required, sometimes, string};
+pub use catalog::{
+    array, confirmed, email, lowercase, max, max_bytes, min, required, sometimes, string,
+};
 
 /// The rules of each field, checked in the order they were added.
 #[derive(Default)]
@@ -84,8 +86,8 @@ mod tests {
 
     #[test]
     fn valid_input_passes_and_an_optional_field_may_be_left_out() {
-        assert!(errors(json!({"username": "sang"})).is_empty());
-        assert!(errors(json!({"username": "sang", "device_uuid": "abc"})).is_empty());
+        assert!(errors(json!({"username": "test"})).is_empty());
+        assert!(errors(json!({"username": "test", "device_uuid": "abc"})).is_empty());
     }
 
     #[test]
@@ -100,14 +102,14 @@ mod tests {
     #[test]
     fn a_wrong_type_or_a_long_value_says_what_is_wrong_with_spaces_in_the_name() {
         assert_eq!(
-            errors(json!({"username": "sang", "device_uuid": 7})),
+            errors(json!({"username": "test", "device_uuid": 7})),
             vec![field(
                 "device_uuid",
                 "The device uuid field must be a string."
             )]
         );
         assert_eq!(
-            errors(json!({"username": "sangsakarin"})),
+            errors(json!({"username": "testuser123"})),
             vec![field(
                 "username",
                 "The username field must not be greater than 10 characters."
@@ -152,7 +154,7 @@ mod tests {
     fn a_star_checks_every_item_and_names_the_one_that_failed() {
         let input = json!({
             "posts": [{"title": "Sabai"}, {"title": "Too long"}],
-            "author": {"name": "Sang"},
+            "author": {"name": "Test User"},
         });
 
         assert_eq!(
@@ -179,7 +181,7 @@ mod tests {
 
     #[test]
     fn a_star_over_something_that_is_not_a_list_checks_nothing_and_array_says_so() {
-        let input = json!({"posts": "no", "author": {"name": "Sang"}});
+        let input = json!({"posts": "no", "author": {"name": "Test User"}});
 
         assert_eq!(
             import_errors(input),
@@ -205,8 +207,8 @@ mod tests {
     #[test]
     fn a_valid_registration_passes() {
         let input = json!({
-            "name": "Sang",
-            "email": "sang@example.com",
+            "name": "Test User",
+            "email": "test@example.com",
             "password": "correct horse",
             "password_confirmation": "correct horse",
         });
@@ -217,8 +219,8 @@ mod tests {
     #[test]
     fn a_bad_registration_gets_laravels_messages() {
         let input = json!({
-            "name": "Sang",
-            "email": "Sang@Example",
+            "name": "Test User",
+            "email": "Test@Example",
             "password": "short",
             "password_confirmation": "shorter",
         });
@@ -241,7 +243,7 @@ mod tests {
     #[test]
     fn a_missing_confirmation_does_not_match() {
         let input =
-            json!({"name": "Sang", "email": "sang@example.com", "password": "correct horse"});
+            json!({"name": "Test User", "email": "test@example.com", "password": "correct horse"});
 
         assert_eq!(
             registration_errors(input),
@@ -288,6 +290,24 @@ mod tests {
                 field("age", "The age field must be at least 18."),
                 field("tags", "The tags field must have at least 2 items."),
             ]
+        );
+    }
+
+    #[test]
+    fn max_bytes_counts_bytes_so_a_thai_password_fits_in_fewer_letters() {
+        let rules = Rules::new().field("password", [max_bytes(72)]);
+        let fits = json!({"password": "ก".repeat(24)});
+        let too_long = json!({"password": "ก".repeat(25)});
+
+        let error = rules.validate(too_long.as_object().unwrap()).unwrap_err();
+
+        assert!(rules.validate(fits.as_object().unwrap()).is_ok());
+        assert_eq!(
+            error.errors(),
+            [field(
+                "password",
+                "The password field must not be greater than 72 bytes."
+            )]
         );
     }
 }

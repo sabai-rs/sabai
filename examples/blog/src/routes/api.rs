@@ -7,10 +7,13 @@ use sabai::contracts::Clock;
 use sabai::http::{Router, Service};
 use sabai::orm::Database;
 
-use crate::app::http::controllers::{PostController, StatsController};
+use crate::app::http::controllers::{PostController, RegisteredUserController, StatsController};
 
 pub fn routes(route: &mut Router) {
     route.get("/health", health).name("health");
+    route
+        .post("/register", RegisteredUserController::store)
+        .name("register");
     route
         .post("/posts/import", PostController::import)
         .name("posts.import");

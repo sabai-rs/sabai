@@ -79,6 +79,23 @@ post.title = "Sabai 2".into();
 post.save().await?;
 ```
 
+### A Taken Unique Value
+
+When a unique index refuses a row, such as a second user with the same email, `is_unique_violation` tells you, so you can answer like Laravel's `unique` rule:
+
+```rust
+use sabai::orm::is_unique_violation;
+
+match user.save().await {
+    Err(error) if is_unique_violation(&error) => {
+        Err(Error::with_messages(&[("email", "The email has already been taken.")]))
+    }
+    saved => saved.map(|()| user),
+}
+```
+
+The database checks while it saves, so two requests at once cannot both take the same email, which a check before saving could miss.
+
 ## Field Types
 
 | Rust | Column |

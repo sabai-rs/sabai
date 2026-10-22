@@ -82,6 +82,15 @@ app.post_json(route("posts.store"), json!({"title": "Sabai", "body": "b"}));
 let response = app.get_json(route("posts.show").with("id", 1));
 ```
 
+To read the database the way the app does, like calling Eloquent in a Laravel test, pass a future to `app.run`:
+
+```rust
+let user = app.run(User::find_or_fail(1))?;
+assert!(app.run(Hash::check("correct horse", &user.password)));
+```
+
+`.env.testing` sets `BCRYPT_ROUNDS=4`, like Laravel's `phpunit.xml`, so tests that hash passwords stay fast.
+
 ## Assertions
 
 | Method | Checks |

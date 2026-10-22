@@ -10,6 +10,7 @@ mod model;
 mod provider;
 mod row;
 mod schema;
+mod unique;
 mod value;
 
 pub use commands::{MigrateCommand, migrate};
@@ -22,4 +23,5 @@ pub use row::{FromColumn, Row};
 pub use sabai_core::Result;
 pub use sabai_macros::Model;
 pub use schema::{Blueprint, Column, Driver, Schema};
+pub use unique::is_unique_violation;
 pub use value::{SqlValue, ToColumn};

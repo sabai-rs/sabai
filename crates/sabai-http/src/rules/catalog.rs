@@ -46,3 +46,9 @@ pub fn min(limit: u64) -> Rule {
 pub fn max(limit: u64) -> Rule {
     Rule(Check::Max(limit))
 }
+
+/// At most `limit` bytes for a string, where `max` counts characters: a Thai letter is three.
+/// `max_bytes(72)` keeps a password within what bcrypt reads.
+pub fn max_bytes(limit: u64) -> Rule {
+    Rule(Check::MaxBytes(limit))
+}

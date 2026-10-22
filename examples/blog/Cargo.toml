@@ -13,7 +13,7 @@ publish = false
 name = "bootstrap"
 
 [dependencies]
-sabai = { workspace = true, features = ["orm"] }
+sabai = { workspace = true, features = ["orm", "auth"] }
 serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
