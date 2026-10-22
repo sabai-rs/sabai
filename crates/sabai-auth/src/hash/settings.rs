@@ -187,7 +187,7 @@ mod tests {
 
     #[cfg(feature = "argon2")]
     #[test]
-    fn laravels_keys_pick_the_driver_and_its_costs() {
+    fn the_config_picks_the_driver_and_its_costs() {
         let argon2id = argon2id();
 
         let hashed = argon2id.make("secret").unwrap();
@@ -244,12 +244,12 @@ mod tests {
     }
 
     #[test]
-    fn bcrypt_refuses_more_than_its_limit_and_limit_0_cuts_short_like_laravel() {
+    fn bcrypt_refuses_more_than_its_limit_and_limit_0_cuts_short() {
         let long = "a".repeat(80);
-        let like_laravel = settings("[bcrypt]\nlimit = 0\nrounds = 4\n").unwrap();
+        let no_limit = settings("[bcrypt]\nlimit = 0\nrounds = 4\n").unwrap();
 
         let refused = Settings::default().make(&long).unwrap_err();
-        let hashed = like_laravel.make(&long).unwrap();
+        let hashed = no_limit.make(&long).unwrap();
 
         assert_eq!(refused.status(), 422);
         assert!(matches(&long, &hashed));

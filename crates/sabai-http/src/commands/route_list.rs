@@ -267,7 +267,7 @@ mod tests {
     }
 
     #[test]
-    fn routes_are_listed_by_path_like_laravel() {
+    fn routes_are_listed_by_path_with_dots_to_the_width() {
         let lines = table(&blog_rows(), 80, Paint(false));
 
         assert_eq!(
@@ -292,7 +292,7 @@ mod tests {
     }
 
     #[test]
-    fn colors_follow_laravel_get_blue_post_yellow_parameters_yellow() {
+    fn colors_mark_get_blue_post_yellow_and_parameters_yellow() {
         let lines = table(&blog_rows(), 80, Paint(true));
 
         assert!(
@@ -305,7 +305,7 @@ mod tests {
     }
 
     #[test]
-    fn handlers_are_named_the_way_laravel_names_actions() {
+    fn handlers_are_named_by_controller_and_method() {
         let method = "bootstrap::app::http::controllers::post_controller::PostController::index";
 
         assert_eq!(

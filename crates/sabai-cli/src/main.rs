@@ -28,7 +28,7 @@ fn main() -> ExitCode {
 fn cli() -> Command {
     Command::new("sabai")
         .version(env!("CARGO_PKG_VERSION"))
-        .about("Creates Sabai apps and runs their commands, like `laravel new` and `php artisan`")
+        .about("Creates Sabai apps and runs their commands")
         .after_help(
             "Other commands run in your app: `sabai migrate` is `cargo run -q -- migrate`, and `sabai` alone lists them.",
         )

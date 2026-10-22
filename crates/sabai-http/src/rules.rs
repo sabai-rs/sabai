@@ -217,7 +217,7 @@ mod tests {
     }
 
     #[test]
-    fn a_bad_registration_gets_laravels_messages() {
+    fn a_bad_registration_gets_a_message_for_each_broken_rule() {
         let input = json!({
             "name": "Test User",
             "email": "Test@Example",

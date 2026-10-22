@@ -48,7 +48,7 @@ fn store_refuses_an_email_that_is_already_taken() {
 }
 
 #[test]
-fn store_gets_laravels_messages_for_a_weak_or_unconfirmed_password() {
+fn store_explains_a_weak_or_unconfirmed_password() {
     let response = app().post_json(
         route(ROUTE),
         json!({"name": "Test User", "email": "test@example.com", "password": "short"}),
