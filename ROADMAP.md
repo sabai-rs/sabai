@@ -186,7 +186,7 @@ Router
   - [x] **M1-05b** `405` with an `Allow` header and Laravel's message, `HEAD` answered by the `GET` route (hyper drops the body and keeps `Content-Length`), and `OPTIONS` answered `200` with `Allow`, like Laravel
 - [x] **M1-06** `sabai route:list` in Laravel's layout: methods colored, `GET|HEAD`, dots to the terminal's width, `name › PostController@index`, sorted by path, `Showing [n] routes`; handler names come from `type_name` at registration
 - [x] **M1-07** Route-level middleware: `.get(...).middleware(x)` (M1-02b)
-- [ ] **M1-08** Fallback route (custom 404)
+- [ ] **M1-08** Fallback route (custom 404), after views (M1-21): an API's 404 is already Laravel's `{"message":"Not Found"}`, so it is for HTML pages
 - [ ] **M1-09** Route model binding: `{post}` resolves to `Post` (after M2)
 
 Router: compile-time rules
@@ -362,6 +362,8 @@ Core
 - [ ] **M3-01** `trait Authenticatable` (id, password hash) implemented by the `User` model
 - [ ] **M3-02** `trait UserProvider` with an ORM-backed default
 - [ ] **M3-03** Password hashing with Argon2id, `Hash::make` / `Hash::check`, rehash on login
+  - [x] **M3-03a** `sabai::auth::Hash` (feature `auth`) like Laravel's: `config/hashing.toml` with `config/hashing.php`'s keys and defaults (bcrypt, 12 rounds, `verify`; or `argon2id`, 64 MiB, t=4, behind the `argon2` feature so bcrypt apps do not compile its nine crates); `$2y$` hashes that a PHP-made hash checks against; passwords over bcrypt's 72 bytes refused; `make` and `check` `async` on a blocking thread, at most one per CPU core; bcrypt and argon2 optimized in the dev profile
+  - [ ] **M3-03b** The blog and the template hash passwords: creating a user, `config/hashing.toml`, and the `[profile.dev.package...]` lines in the app's `Cargo.toml`
 - [ ] **M3-04** Guards as `Arc<dyn Guard>`: `session` and `token`, picked per route group
 - [ ] **M3-05** Handler arguments: `Auth<User>` (required, else 401/redirect) and `OptionalAuth<User>`
 - [ ] **M3-06** Middleware: `auth`, `auth("api")`, `guest`

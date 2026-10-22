@@ -12,6 +12,9 @@ sabai-core = 58000
 # iterator code they use); replacing `sort_by` with ordered insertion saved 2.9k of it.
 sabai-http = 81000
 sabai-orm = 85000
+# M3-03a: tokio's spawn_blocking for `Hash::make` and `Hash::check`, the semaphore that runs one
+# hash per core at most, and bcrypt read from config/hashing.toml. Argon2id is behind a feature.
+sabai-auth = 14800
 
 # The walking-skeleton app, which uses every feature. Raised at M1-39a after two
 # middleware (about 200 lines each) and form input read through serde_urlencoded, and at

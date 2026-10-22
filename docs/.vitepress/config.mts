@@ -80,6 +80,10 @@ export default defineConfig({
         ],
       },
       {
+        text: 'Security',
+        items: [{ text: 'Hashing', link: '/hashing' }],
+      },
+      {
         text: 'Testing',
         items: [{ text: 'HTTP tests', link: '/http-tests' }],
       },

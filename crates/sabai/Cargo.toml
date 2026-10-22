@@ -12,8 +12,9 @@ autotests = false
 default = []
 orm = ["dep:sabai-orm"]
 auth = ["orm", "dep:sabai-auth"]
+argon2 = ["auth", "sabai-auth/argon2"]
 queue = ["dep:sabai-queue"]
-full = ["orm", "auth", "queue"]
+full = ["orm", "auth", "argon2", "queue"]
 
 [dependencies]
 sabai-core.workspace = true
