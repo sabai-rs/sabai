@@ -7,5 +7,14 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[features]
+argon2 = ["dep:argon2"]
+
+[dependencies]
+argon2 = { workspace = true, optional = true }
+bcrypt.workspace = true
+sabai-core.workspace = true
+tokio.workspace = true
+
 [lints]
 workspace = true
