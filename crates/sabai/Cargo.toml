@@ -1,6 +1,6 @@
 [package]
 name = "sabai"
-description = "Laravel-inspired web framework for Rust"
+description = "A batteries-included web framework for Rust, built for developer experience and fast compiles"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
