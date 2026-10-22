@@ -8,7 +8,9 @@
 sabai-core = 58000
 # M1-31a and M1-33 compiled the default middleware into sabai-http, so apps don't each
 # compile them; TraceRequests' tracing span is most of the 58k -> 62.6k.
-sabai-http = 69000
+# M1-06 added `route:list` (+7k: its layout, `stty` for the terminal width, and the Vec and
+# iterator code they use); replacing `sort_by` with ordered insertion saved 2.9k of it.
+sabai-http = 81000
 sabai-orm = 85000
 
 # The walking-skeleton app, which uses every feature. Raised at M1-39a after two

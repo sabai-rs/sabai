@@ -30,6 +30,14 @@ pub struct Route {
     middleware: Vec<BoxedMiddleware>,
 }
 
+/// One route as `route:list` shows it.
+pub(crate) struct RouteRow {
+    pub(crate) method: Method,
+    pub(crate) path: String,
+    pub(crate) name: Option<String>,
+    pub(crate) action: &'static str,
+}
+
 /// Routes that share a prefix or middleware, started by [`Router::prefix`] or [`Router::middleware`]
 /// like Laravel's `Route::prefix('api')` and `Route::middleware('auth')`.
 pub struct RouteGroup<'a> {
@@ -145,6 +153,17 @@ impl Router {
             middleware: Vec::new(),
         });
         &mut self.routes[index]
+    }
+
+    /// Every route as `route:list` shows it, in the order added.
+    pub(crate) fn describe(&self) -> Vec<RouteRow> {
+        let row = |route: &Route| RouteRow {
+            method: route.method.clone(),
+            path: route.path.clone(),
+            name: route.name.clone(),
+            action: route.handler.action(),
+        };
+        self.routes.iter().map(row).collect()
     }
 
     /// Checks every route and builds the matcher; call once at boot.

@@ -184,7 +184,7 @@ Router
 - [x] **M1-05** Auto `HEAD`, `405` with `Allow` header, panic catching
   - [x] **M1-05a** A panic in a handler or middleware answers a logged `500` instead of an empty reply: caught around the handler, so middleware and the access log still see the `500`, and around the whole request as a safety net
   - [x] **M1-05b** `405` with an `Allow` header and Laravel's message, `HEAD` answered by the `GET` route (hyper drops the body and keeps `Content-Length`), and `OPTIONS` answered `200` with `Allow`, like Laravel
-- [ ] **M1-06** Route table for `route:list`
+- [x] **M1-06** `sabai route:list` in Laravel's layout: methods colored, `GET|HEAD`, dots to the terminal's width, `name › PostController@index`, sorted by path, `Showing [n] routes`; handler names come from `type_name` at registration
 - [x] **M1-07** Route-level middleware: `.get(...).middleware(x)` (M1-02b)
 - [ ] **M1-08** Fallback route (custom 404)
 - [ ] **M1-09** Route model binding: `{post}` resolves to `Post` (after M2)

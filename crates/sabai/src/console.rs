@@ -4,7 +4,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use sabai_core::{App, Command, Error, Result, StatusCode};
-use sabai_http::{Router, ServeCommand};
+use sabai_http::{RouteListCommand, Router, ServeCommand};
 
 /// Runs the command named on the command line. `main` builds it once:
 ///
@@ -30,7 +30,9 @@ impl Console {
 
     /// The routes `serve` answers.
     pub fn routes(self, routes: Router) -> Self {
+        let route_list = RouteListCommand::new(&routes);
         self.with(Box::new(ServeCommand::new(routes)))
+            .with(Box::new(route_list))
     }
 
     /// The migrations `migrate` runs.
