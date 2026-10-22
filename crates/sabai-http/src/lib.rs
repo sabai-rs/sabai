@@ -15,7 +15,7 @@ mod server;
 mod service;
 
 pub use api_resource::ApiResource;
-pub use commands::ServeCommand;
+pub use commands::{RouteListCommand, ServeCommand};
 pub use controller::Controller;
 pub use form_request::FormRequest;
 pub use handler::{FromRequest, Handler};

@@ -154,6 +154,21 @@ Route::apiResource('posts', PostController::class)->only(['index', 'store', 'sho
 ```
 :::
 
+## Listing Routes
+
+`sabai route:list` shows every route, sorted by path, like `php artisan route:list`:
+
+```text
+  GET|HEAD       / ...................................................... home › routes::web::home
+  GET|HEAD       api/posts .................................... posts.index › PostController@index
+  POST           api/posts .................................... posts.store › PostController@store
+  GET|HEAD       api/posts/{id} ................................. posts.show › PostController@show
+
+                                                                                Showing [4] routes
+```
+
+A controller action shows as `PostController@index`, a function by its path in the app, and a closure by its route name only, as Laravel shows them. Lines fit the terminal's width, and colors appear only in a terminal; set `NO_COLOR` to turn them off.
+
 ## Startup Checks
 
 Sabai checks every route before it starts listening. These stop the app with a message that names the route:

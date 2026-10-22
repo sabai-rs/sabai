@@ -28,6 +28,7 @@ fn main() -> Result<()> {
 | Command | Does | Laravel |
 | --- | --- | --- |
 | `serve` | serves the app on `app.host:app.port`; the default | `php artisan serve` |
+| `route:list` | lists every route with its name and handler | `php artisan route:list` |
 | `migrate` | runs the migrations that have not run yet | `php artisan migrate` |
 | `list` | shows the commands, yours and your packages' too; also `--help` | `php artisan list` |
 

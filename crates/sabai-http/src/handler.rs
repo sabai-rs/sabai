@@ -98,6 +98,8 @@ fn respond_with<R: IntoResponse + 'static>(
 pub(crate) trait ErasedHandler: Send + Sync {
     fn call_erased(&self, request: Request) -> BoxFuture<'static, Response>;
     fn prepare(&self, app: &App) -> Result<()>;
+    /// The handler's Rust path, such as `bootstrap::app::http::controllers::post_controller::PostController::index`.
+    fn action(&self) -> &'static str;
 }
 
 pub(crate) type BoxedHandler = Arc<dyn ErasedHandler>;
@@ -115,6 +117,10 @@ impl<H: Handler<Args>, Args: 'static> ErasedHandler for Erased<H, Args> {
 
     fn prepare(&self, app: &App) -> Result<()> {
         H::prepare(app)
+    }
+
+    fn action(&self) -> &'static str {
+        std::any::type_name::<H>()
     }
 }
 
