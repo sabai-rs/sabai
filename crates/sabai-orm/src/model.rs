@@ -3,9 +3,9 @@ use std::sync::Arc;
 use sabai_core::contracts::BoxFuture;
 use sabai_core::{App, Error, Result, StatusCode};
 use sqlx::any::{AnyArguments, AnyRow};
-use sqlx::query::Query;
+use sqlx::query::Query as SqlQuery;
 
-use crate::{Database, DatabaseManager, Driver, Row, SqlValue};
+use crate::{Database, DatabaseManager, Driver, Query, Row, SqlValue, ToColumn};
 
 /// A table row as a struct, like an Eloquent model. Write `#[derive(Model)]`, not this impl.
 pub trait Model: Sized + Send + 'static {
@@ -32,14 +32,18 @@ pub trait Model: Sized + Send + 'static {
 
     /// Every row of the table, like Laravel's `Post::all()`.
     fn all() -> BoxFuture<'static, Result<Vec<Self>>> {
-        let rows = select(Self::CONNECTION, Self::TABLE, Self::COLUMNS, None);
-        Box::pin(async move { rows.await?.iter().map(Self::from_row).collect() })
+        Query::new().get()
+    }
+
+    /// Rows where `column` equals `value`, like Laravel's `User::where('email', $email)`: add more
+    /// with `.where_eq(...)`, then call `.first()` or `.get()`.
+    fn where_eq(column: &str, value: impl ToColumn) -> Query<Self> {
+        Query::new().where_eq(column, value)
     }
 
     /// The row with this primary key, or `None`, like Laravel's `Post::find($id)`.
     fn find(id: u64) -> BoxFuture<'static, Result<Option<Self>>> {
-        let rows = select(Self::CONNECTION, Self::TABLE, Self::COLUMNS, Some(id));
-        Box::pin(async move { rows.await?.first().map(Self::from_row).transpose() })
+        Self::where_eq("id", id).first()
     }
 
     /// The row with this primary key, or a `404`, like Laravel's `Post::findOrFail($id)`.
@@ -63,21 +67,35 @@ pub trait Model: Sized + Send + 'static {
     }
 }
 
-fn select(
+pub(crate) fn select(
     connection: Option<&'static str>,
     table: &'static str,
     columns: &'static [&'static str],
-    id: Option<u64>,
+    equals: Vec<(String, SqlValue)>,
+    limit: Option<u64>,
 ) -> BoxFuture<'static, Result<Vec<Row>>> {
     Box::pin(async move {
         let database = database(connection)?;
         let driver = database.driver();
-        let columns: Vec<_> = columns.iter().map(|column| driver.quote(column)).collect();
-        let mut sql = format!("select {} from {}", columns.join(", "), driver.quote(table));
+        let names: Vec<_> = columns.iter().map(|column| driver.quote(column)).collect();
+        let mut sql = format!("select {} from {}", names.join(", "), driver.quote(table));
+        let mut conditions = Vec::new();
         let mut values = Vec::new();
-        if let Some(id) = id {
-            sql.push_str(&format!(" where {} = ? limit 1", driver.quote("id")));
-            values.push(SqlValue::Integer(i64::try_from(id)?));
+        for (column, value) in equals {
+            // `= NULL` matches nothing in SQL, so `None` asks for `is null`, like Laravel.
+            match value {
+                SqlValue::Null => conditions.push(format!("{} is null", driver.quote(&column))),
+                value => {
+                    conditions.push(format!("{} = ?", driver.quote(&column)));
+                    values.push(value);
+                }
+            }
+        }
+        if !conditions.is_empty() {
+            sql.push_str(&format!(" where {}", conditions.join(" and ")));
+        }
+        if let Some(limit) = limit {
+            sql.push_str(&format!(" limit {limit}"));
         }
         let rows: Vec<AnyRow> = bind_all(sqlx::query(&sql), values)
             .fetch_all(database.pool())
@@ -165,9 +183,9 @@ fn update(
 }
 
 fn bind_all<'q>(
-    mut query: Query<'q, sqlx::Any, AnyArguments<'q>>,
+    mut query: SqlQuery<'q, sqlx::Any, AnyArguments<'q>>,
     values: Vec<SqlValue>,
-) -> Query<'q, sqlx::Any, AnyArguments<'q>> {
+) -> SqlQuery<'q, sqlx::Any, AnyArguments<'q>> {
     for value in values {
         query = match value {
             SqlValue::Null => query.bind(None::<i64>),

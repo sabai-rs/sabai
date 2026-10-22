@@ -54,3 +54,16 @@ impl<T: ToColumn> ToColumn for Option<T> {
         }
     }
 }
+
+impl ToColumn for str {
+    fn to_column(&self) -> Result<SqlValue> {
+        Ok(SqlValue::Text(self.to_owned()))
+    }
+}
+
+// So `where_eq("email", "a@b.c")` and `where_eq("email", &request.email)` work without `.to_owned()`.
+impl<T: ToColumn + ?Sized> ToColumn for &T {
+    fn to_column(&self) -> Result<SqlValue> {
+        (**self).to_column()
+    }
+}

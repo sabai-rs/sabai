@@ -305,6 +305,7 @@ Connection
 Query builder
 
 - [ ] **M2-04** `select`, `where`, `or_where`, `where_in`, `where_null`, `order_by`, `limit`, `offset`
+  - [x] **M2-04a** `Model::where_eq(column, value)`, chained for `and`, then `first()` or `get()`; `None` is `is null`; values are bound and columns must be the model's own, so neither can inject SQL; `find` runs through it. A server error's own message now stays in the log: the client gets `Server Error`. The blog checks a taken email before spending a hash
 - [ ] **M2-05** `join`, `group_by`, `having`, raw expressions with bindings
 - [ ] **M2-06** `insert`, `update`, `delete`, `upsert`
 - [ ] **M2-07** Aggregates: `count`, `sum`, `max`, `exists`
