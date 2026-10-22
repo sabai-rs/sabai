@@ -11,6 +11,10 @@ Thank you for considering contributing to Sabai! Work follows the [roadmap](ROAD
 
 CI fails when a crate goes over its LLVM-lines budget in [`compile-budgets.toml`](compile-budgets.toml). The total is the `(TOTAL)` line of `cargo llvm-lines -p <crate> --lib`. Raising a budget is fine when the growth is worth it: change the number in the same pull request and say why.
 
+## Dependencies
+
+A weekly job checks every dependency against the [RustSec advisory database](https://rustsec.org) with [`cargo deny`](https://github.com/EmbarkStudios/cargo-deny), and so does every pull request. Run it yourself with `cargo install cargo-deny` and `cargo deny check advisories sources`. An advisory that does not apply goes in `ignore` in [`deny.toml`](deny.toml) with its reason.
+
 ## Before Opening a Pull Request
 
 ```bash
