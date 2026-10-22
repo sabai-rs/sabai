@@ -274,6 +274,7 @@ Validation
 - [x] **M1-51** Nested and array fields: `items.*.qty`, `author.name`, and the `array()` rule; errors are named by position (`posts.1.title`) like Laravel; the blog imports posts with `POST /api/posts/import`
 - [ ] **M1-52** Conditional rules: `nullable`, `sometimes`, `required_if`, `required_with`, `bail`
 - [ ] **M1-53** More rules: `regex`, `url`, `uuid`, `date`, `before`/`after`, `numeric`, `integer`, `between`, `same`, `exists`, `enum`
+  - [x] **M1-53a** The rules registration needs, with Laravel's messages: `email`, `lowercase`, `confirmed` (also for nested fields: `users.0.password_confirmation`) and `min`; rule names take list indexes, `posts.0.title`
 - [ ] **M1-54** File rules: `file`, `image`, `mimes`, max size (with M7-04)
 - [ ] **M1-55** Custom rules: `impl Rule` (sync) and `impl AsyncRule` for DB checks
 - [ ] **M1-56** Custom messages and attribute names, Thai and English (with M7-23)
