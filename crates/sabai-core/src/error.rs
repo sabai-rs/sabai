@@ -167,6 +167,20 @@ impl IntoResponse for Error {
     }
 }
 
+impl Error {
+    // A server error's message is for the log, never the client: it may name tables, columns or
+    // config. The client learns only that something failed, like Laravel's "Server Error".
+    fn public_message(&self) -> &str {
+        match self.status {
+            StatusCode::INTERNAL_SERVER_ERROR => "Server Error",
+            status if status.is_server_error() => {
+                status.canonical_reason().unwrap_or("Server Error")
+            }
+            _ => &self.message,
+        }
+    }
+}
+
 impl FieldErrors {
     fn push(&mut self, field: &str, message: &str) {
         match self.0.iter_mut().find(|(name, _)| name == field) {
@@ -192,7 +206,7 @@ impl FieldErrors {
 impl Serialize for Error {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut body = serializer.serialize_map(None)?;
-        body.serialize_entry("message", &self.message)?;
+        body.serialize_entry("message", self.public_message())?;
         if !self.errors.0.is_empty() {
             body.serialize_entry("errors", &FieldsInOrder(&self.errors.0))?;
         }
@@ -287,6 +301,25 @@ mod tests {
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
         assert_eq!(response.headers()["content-type"], "application/json");
         assert_eq!(response.body().as_bytes(), br#"{"message":"Not Found"}"#);
+    }
+
+    #[test]
+    fn a_server_errors_own_message_is_logged_but_never_sent() {
+        let error = Error::new(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "`users` has no column `emial`",
+        );
+        let unavailable = Error::new(StatusCode::SERVICE_UNAVAILABLE, "down for the migration");
+
+        assert_eq!(error.to_string(), "`users` has no column `emial`");
+        assert_eq!(
+            error.into_response().body().as_bytes(),
+            br#"{"message":"Server Error"}"#
+        );
+        assert_eq!(
+            unavailable.into_response().body().as_bytes(),
+            br#"{"message":"Service Unavailable"}"#
+        );
     }
 
     #[test]

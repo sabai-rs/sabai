@@ -28,6 +28,10 @@ impl RegisteredUserController {
         self: Arc<Self>,
         request: RegisterRequest,
     ) -> Result<(StatusCode, Json<User>)> {
+        // Checking first answers a taken email without spending a hash; the index still settles a race.
+        self.user_repository
+            .ensure_email_is_free(&request.email)
+            .await?;
         let password = Hash::make(&request.password).await?;
         let user = self
             .user_repository

@@ -302,3 +302,63 @@ fn a_query_after_migrate_in_the_same_process_reuses_the_pool() {
 
     assert_eq!(posts.unwrap(), []);
 }
+
+const THREE_POSTS: &str = "insert into posts (id, title, body) values \
+    (1, 'Sabai', 'a'), (2, 'Sabai', null), (3, 'Other', 'a')";
+
+fn post(id: u64, title: &str, body: Option<&str>) -> Post {
+    Post {
+        id,
+        title: title.into(),
+        body: body.map(Into::into),
+    }
+}
+
+#[test]
+fn where_eq_finds_rows_by_a_column_and_first_takes_one() {
+    let (first, missing) = run(&app("where-first"), &[CREATE_POSTS, THREE_POSTS], async {
+        let first = Post::where_eq("title", "Sabai").first().await;
+        let missing = Post::where_eq("title", "Nope").first().await;
+        (first, missing)
+    });
+
+    assert_eq!(first.unwrap(), Some(post(1, "Sabai", Some("a"))));
+    assert_eq!(missing.unwrap(), None);
+}
+
+#[test]
+fn chained_where_eqs_all_have_to_match() {
+    let posts = run(
+        &app("where-and"),
+        &[CREATE_POSTS, THREE_POSTS],
+        Post::where_eq("title", "Sabai").where_eq("body", "a").get(),
+    );
+
+    assert_eq!(posts.unwrap(), [post(1, "Sabai", Some("a"))]);
+}
+
+#[test]
+fn where_eq_none_finds_null_columns() {
+    let posts = run(
+        &app("where-null"),
+        &[CREATE_POSTS, THREE_POSTS],
+        Post::where_eq("body", None::<String>).get(),
+    );
+
+    assert_eq!(posts.unwrap(), [post(2, "Sabai", None)]);
+}
+
+#[test]
+fn a_column_the_model_does_not_have_never_reaches_the_sql() {
+    let error = run(
+        &app("where-unknown"),
+        &[CREATE_POSTS],
+        Post::where_eq("title = '' or 1=1 --", "x").get(),
+    )
+    .unwrap_err();
+
+    assert_eq!(
+        error.to_string(),
+        "`posts` has no column `title = '' or 1=1 --`; its columns are id, title, body"
+    );
+}

@@ -13,6 +13,14 @@ impl FromApp for UserRepository {
 }
 
 impl UserRepository {
+    /// Fails with the `422` of a taken email when a user already has `email`.
+    pub async fn ensure_email_is_free(&self, email: &str) -> Result<()> {
+        match User::where_eq("email", email).first().await? {
+            Some(_) => Err(email_taken()),
+            None => Ok(()),
+        }
+    }
+
     /// Saves a new user. The unique index on `email` answers a taken email the way Laravel's
     /// `unique:users` rule does, without the race between checking and saving.
     pub async fn create(
@@ -28,11 +36,12 @@ impl UserRepository {
             password: hashed_password,
         };
         match user.save().await {
-            Err(error) if is_unique_violation(&error) => Err(Error::with_messages(&[(
-                "email",
-                "The email has already been taken.",
-            )])),
+            Err(error) if is_unique_violation(&error) => Err(email_taken()),
             saved => saved.map(|()| user),
         }
     }
+}
+
+fn email_taken() -> Error {
+    Error::with_messages(&[("email", "The email has already been taken.")])
 }

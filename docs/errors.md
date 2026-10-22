@@ -47,7 +47,7 @@ let post = Post::find_or_fail(id)
 
 ## Logs
 
-Every `5xx` is logged with its context and cause:
+The client never sees why a server error happened: every `5xx` answers `{"message":"Server Error"}` (or the status's own phrase, such as `Service Unavailable`), even when the code wrote a message, because it may name tables, columns or settings. Every `5xx` is logged with its context and cause:
 
 ```text
 ERROR could not connect to the database: pool timed out while waiting for an open connection

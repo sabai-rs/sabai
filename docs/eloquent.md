@@ -60,6 +60,22 @@ let post = Post::find_or_fail(7).await?;         // Post::findOrFail(7), or a 40
 
 Bring the trait in first: `use sabai::orm::Model;`.
 
+### Where Clauses
+
+`where_eq` keeps the rows where a column equals a value. Chain more for `and`, then take the `first()` or `get()` them all:
+
+```rust
+let user = User::where_eq("email", &request.email).first().await?;              // Option<User>
+let drafts = Post::where_eq("author_id", 7).where_eq("published", false).get().await?; // Vec<Post>
+let unread = Post::where_eq("read_at", None::<String>).get().await?;             // `read_at is null`
+```
+
+Values are always bound, never written into the SQL. A column must be one of the model's fields, so a name that came from a request can never reach the SQL either: an unknown one is an error when the query runs.
+
+::: laravel
+`User::where('email', $email)->first()`. Rust keeps `where` for its own use, so this one is `where_eq`, which also says it compares for equality. It is the only name that differs: the rest will keep Laravel's, such as `or_where`, `where_in` and `where_null`.
+:::
+
 Models find their database by themselves. There is no `db` to pass, in a controller, a service, a repository or a test.
 
 ## Save Models
