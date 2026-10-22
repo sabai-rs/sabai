@@ -111,3 +111,37 @@ They change what `request.input`, `request.all` and form requests see; `request.
 ::: laravel
 Both are Laravel's default global middleware of the same names, and `remove::<...>()` is `$middleware->remove(...)`.
 :::
+
+## Request Limits
+
+`sabai serve` protects itself from clients that send too much or too slowly:
+
+| Limit | When it is passed |
+| --- | --- |
+| A body of at most 2 MB | `413 Payload Too Large`, before any handler runs |
+| The client sends all headers within 30 seconds | the connection is closed |
+| The client sends the whole body within 30 seconds of its headers | `408 Request Timeout` |
+
+These limits cover receiving the request only. How long a handler runs is not limited yet (M1-34b).
+
+Change them in `config/app.toml`, or in `.env` through the variables it names:
+
+```toml
+max_body_kb = "${APP_MAX_BODY_KB:-2048}"     # 2 MB
+header_timeout = "${APP_HEADER_TIMEOUT:-30}" # seconds
+body_timeout = "${APP_BODY_TIMEOUT:-30}"     # seconds
+```
+
+```bash
+# .env: accept uploads of up to 10 MB on slow connections
+APP_MAX_BODY_KB=10240
+APP_BODY_TIMEOUT=120
+```
+
+A missing key uses the default, and `0` stops the app at startup. These limits apply to every route, so raise them only as far as your largest upload needs; per-route limits are coming (M1-04).
+
+The time limits stop slowloris attacks, where a client sends one byte at a time to hold its connection open; a few thousand such clients would otherwise use up the server. Per-route body limits are coming (M1-04).
+
+::: laravel
+In Laravel, PHP's `post_max_size` and nginx or Apache set these limits. A Sabai app is its own server, so it sets them itself.
+:::

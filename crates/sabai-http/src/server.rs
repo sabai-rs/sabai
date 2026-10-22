@@ -3,20 +3,71 @@ use std::error::Error as StdError;
 use std::io;
 use std::net::TcpListener as StdTcpListener;
 use std::sync::Arc;
+use std::time::Duration;
 
 use http_body_util::{BodyExt, LengthLimitError, Limited};
 use hyper::body::Incoming;
 use hyper::server::conn::http1;
 use hyper::service::service_fn;
-use hyper_util::rt::TokioIo;
-use sabai_core::{App, Body, Error, IntoResponse, Request, Response, Result, StatusCode, log};
+use hyper_util::rt::{TokioIo, TokioTimer};
+use sabai_core::{
+    App, Body, Config, Error, IntoResponse, Request, Response, Result, StatusCode, log,
+};
 use tokio::net::TcpListener;
 
 use crate::catch_panic::catch_panic;
 use crate::{Router, Routes};
 
-// Bodies are buffered before the handler runs, so this caps memory per request.
-const BODY_LIMIT: usize = 2 * 1024 * 1024;
+const DEFAULT_BODY_KB: u64 = 2048;
+const DEFAULT_TIMEOUT_SECONDS: u64 = 30;
+
+/// How much a client may send and how long it may take; the times stop slowloris clients.
+#[derive(Clone, Copy)]
+pub(crate) struct Limits {
+    body_bytes: usize,
+    headers: Duration,
+    body: Duration,
+}
+
+impl Default for Limits {
+    fn default() -> Self {
+        Self::new(
+            DEFAULT_BODY_KB,
+            DEFAULT_TIMEOUT_SECONDS,
+            DEFAULT_TIMEOUT_SECONDS,
+        )
+    }
+}
+
+impl Limits {
+    fn new(body_kb: u64, header_seconds: u64, body_seconds: u64) -> Self {
+        Self {
+            body_bytes: (body_kb * 1024) as usize,
+            headers: Duration::from_secs(header_seconds),
+            body: Duration::from_secs(body_seconds),
+        }
+    }
+
+    fn from_config(config: &Config) -> Result<Self> {
+        Ok(Self::new(
+            positive(config, "app.max_body_kb", DEFAULT_BODY_KB)?,
+            positive(config, "app.header_timeout", DEFAULT_TIMEOUT_SECONDS)?,
+            positive(config, "app.body_timeout", DEFAULT_TIMEOUT_SECONDS)?,
+        ))
+    }
+}
+
+fn positive(config: &Config, key: &str, default: u64) -> Result<u64> {
+    match config.get_or(key, default)? {
+        0 => Err(Error::new(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!(
+                "`{key}` in config/app.toml must be at least 1; check the value there or the variable it reads in .env"
+            ),
+        )),
+        value => Ok(value),
+    }
+}
 
 /// Serves `router` until the process stops, on `app.host`:`app.port` from config
 /// (default `127.0.0.1:8000`), like `php artisan serve`.
@@ -28,13 +79,22 @@ pub fn serve(app: Arc<App>, router: Router) -> Result<()> {
     let listener = StdTcpListener::bind((host.as_str(), port))
         .map_err(|error| listen_failed(error, &host, port))?;
     log::info!("Sabai is serving on http://{}", listener.local_addr()?);
-    serve_on(listener, Arc::new(Site { app, routes }))
+    let limits = Limits::from_config(app.config())?;
+    serve_on(
+        listener,
+        Arc::new(Site {
+            app,
+            routes,
+            limits,
+        }),
+    )
 }
 
 /// What every connection needs, shared behind one `Arc`.
 pub(crate) struct Site {
     app: Arc<App>,
     routes: Routes,
+    limits: Limits,
 }
 
 fn listen_failed(error: io::Error, host: &str, port: u16) -> Error {
@@ -66,8 +126,12 @@ async fn accept_forever(listener: StdTcpListener, site: Arc<Site>) -> Result<()>
 }
 
 async fn serve_connection(io: TokioIo<tokio::net::TcpStream>, site: Arc<Site>) {
+    let mut http = http1::Builder::new();
+    // hyper only enforces its header timeout when it has a timer; without one it is silently off.
+    http.timer(TokioTimer::new())
+        .header_read_timeout(site.limits.headers);
     let service = service_fn(move |request| handle(site.clone(), request));
-    if let Err(error) = http1::Builder::new().serve_connection(io, service).await {
+    if let Err(error) = http.serve_connection(io, service).await {
         log::debug!("connection closed: {error}");
     }
 }
@@ -76,7 +140,7 @@ async fn handle(
     site: Arc<Site>,
     request: hyper::Request<Incoming>,
 ) -> Result<Response, Infallible> {
-    let response = match read_body(request).await {
+    let response = match read_body(request, site.limits).await {
         Ok(request) => {
             // Handlers are caught inside the middleware already; this catches a middleware that panics.
             let dispatch = catch_panic(site.routes.dispatch(request.with_app(site.app.clone())));
@@ -87,11 +151,12 @@ async fn handle(
     Ok(response)
 }
 
-async fn read_body(request: hyper::Request<Incoming>) -> Result<Request> {
+async fn read_body(request: hyper::Request<Incoming>, limits: Limits) -> Result<Request> {
     let (parts, body) = request.into_parts();
-    let collected = Limited::new(body, BODY_LIMIT)
-        .collect()
+    let collect = Limited::new(body, limits.body_bytes).collect();
+    let collected = tokio::time::timeout(limits.body, collect)
         .await
+        .map_err(|_| Error::from_status(StatusCode::REQUEST_TIMEOUT))?
         .map_err(body_error)?;
     let body = Body::from(collected.to_bytes());
     Ok(Request::from(http::Request::from_parts(parts, body)))
@@ -139,6 +204,10 @@ mod tests {
     }
 
     fn running_server() -> std::net::SocketAddr {
+        running_server_with(Limits::default())
+    }
+
+    fn running_server_with(limits: Limits) -> std::net::SocketAddr {
         let listener = StdTcpListener::bind("127.0.0.1:0").unwrap();
         let address = listener.local_addr().unwrap();
         let mut router = Router::new();
@@ -151,6 +220,7 @@ mod tests {
         let site = Site {
             app: App::builder(Config::default()).boot().unwrap(),
             routes: router.compile().unwrap(),
+            limits,
         };
         std::thread::spawn(move || serve_on(listener, Arc::new(site)));
         address
@@ -207,7 +277,7 @@ mod tests {
 
     #[test]
     fn a_body_over_the_limit_is_rejected_before_any_handler_runs() {
-        let body = vec![b'x'; BODY_LIMIT + 1];
+        let body = vec![b'x'; Limits::default().body_bytes + 1];
         let head = format!(
             "POST / HTTP/1.1\r\nHost: test\r\nConnection: close\r\nContent-Length: {}\r\n\r\n",
             body.len()
@@ -266,5 +336,76 @@ mod tests {
         assert!(response.starts_with("HTTP/1.1 200 OK"), "{response}");
         assert!(response.contains("content-length: 12\r\n"), "{response}");
         assert!(response.ends_with("\r\n\r\n"), "{response:?}");
+    }
+
+    fn impatient_server() -> std::net::SocketAddr {
+        running_server_with(Limits {
+            headers: Duration::from_millis(300),
+            body: Duration::from_millis(300),
+            ..Limits::default()
+        })
+    }
+
+    #[test]
+    fn a_client_that_never_finishes_its_headers_is_disconnected() {
+        let started = std::time::Instant::now();
+
+        let response = send(impatient_server(), "GET / HTTP/1.1\r\nHost: te", b"");
+
+        assert!(!response.starts_with("HTTP/1.1 200"), "{response}");
+        assert!(
+            started.elapsed() < Duration::from_secs(3),
+            "{:?}",
+            started.elapsed()
+        );
+    }
+
+    #[test]
+    fn a_client_that_never_finishes_its_body_gets_a_408() {
+        let head =
+            "POST / HTTP/1.1\r\nHost: test\r\nConnection: close\r\nContent-Length: 10\r\n\r\n";
+
+        let response = send(impatient_server(), head, b"abc");
+
+        assert!(response.starts_with("HTTP/1.1 408"), "{response}");
+    }
+
+    fn config_with(app_toml: &str) -> Config {
+        let base = std::env::temp_dir().join(format!(
+            "sabai-limits-{}-{}",
+            std::process::id(),
+            app_toml.len()
+        ));
+        std::fs::create_dir_all(base.join("config")).unwrap();
+        std::fs::write(base.join("config/app.toml"), app_toml).unwrap();
+        Config::load(&base).unwrap()
+    }
+
+    #[test]
+    fn limits_come_from_config_app_toml_and_default_when_missing() {
+        // The same `${...:-default}` form as `config/app.toml`, with variables no one sets.
+        let raised = config_with(concat!(
+            "max_body_kb = \"${SABAI_TEST_UNSET_KB:-10240}\"\n",
+            "body_timeout = \"${SABAI_TEST_UNSET_SECONDS:-120}\"\n",
+        ));
+
+        let limits = Limits::from_config(&raised).unwrap();
+
+        assert_eq!(limits.body_bytes, 10 * 1024 * 1024);
+        assert_eq!(limits.body, Duration::from_secs(120));
+        assert_eq!(limits.headers, Duration::from_secs(30));
+    }
+
+    #[test]
+    fn a_zero_limit_stops_the_app_and_names_the_key() {
+        let error = Limits::from_config(&config_with("max_body_kb = 0\n"))
+            .err()
+            .unwrap()
+            .to_string();
+
+        assert!(
+            error.contains("`app.max_body_kb` in config/app.toml must be at least 1"),
+            "{error}"
+        );
     }
 }

@@ -50,8 +50,7 @@ fn is_safe_to_log(id: &str) -> bool {
     !id.is_empty() && id.len() <= 64 && id.chars().all(allowed)
 }
 
-// A counter hashed with a key chosen once per process: unique here, unguessable elsewhere,
-// with no extra dependency. IDs only tell requests apart; they are not secrets.
+// Unique per process and hard to guess elsewhere, with no extra dependency; not a secret.
 fn new_id() -> String {
     static COUNT: AtomicU64 = AtomicU64::new(0);
     static KEY: OnceLock<RandomState> = OnceLock::new();

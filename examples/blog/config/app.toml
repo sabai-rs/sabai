@@ -1,3 +1,8 @@
 name = "${APP_NAME:-Blog}"
 host = "${APP_HOST:-127.0.0.1}"
 port = "${APP_PORT:-8000}"
+
+# Requests: the largest body in KB, and the seconds a client may take to send its headers and its body.
+max_body_kb = "${APP_MAX_BODY_KB:-2048}"
+header_timeout = "${APP_HEADER_TIMEOUT:-30}"
+body_timeout = "${APP_BODY_TIMEOUT:-30}"
