@@ -1,8 +1,18 @@
 //! Validation rules for a [`FormRequest`](crate::FormRequest), like the array its `rules()` returns
 //! in Laravel: `Rules::new().field("title", [required(), string(), max(255)])`.
 
+mod catalog;
+mod checks;
+mod email;
+mod fields;
+
 use sabai_core::{Error, Result};
 use serde_json::{Map, Value};
+
+use checks::{Check, check_field};
+use fields::matching_fields;
+
+pub use catalog::{array, confirmed, email, lowercase, max, min, required, sometimes, string};
 
 /// The rules of each field, checked in the order they were added.
 #[derive(Default)]
@@ -10,41 +20,8 @@ pub struct Rules {
     fields: Vec<(String, Vec<Rule>)>,
 }
 
-/// One rule, made by [`required`], [`sometimes`], [`string`], [`array`] or [`max`].
+/// One rule, made by [`required`], [`string`], [`email`], [`min`], [`confirmed`] and the others here.
 pub struct Rule(Check);
-
-enum Check {
-    Required,
-    Sometimes,
-    String,
-    Array,
-    Max(u64),
-}
-
-/// The field must be present and not empty: not missing, `null`, `""`, `[]` or `{}`.
-pub fn required() -> Rule {
-    Rule(Check::Required)
-}
-
-/// Check the field only when it is present; it may be left out.
-pub fn sometimes() -> Rule {
-    Rule(Check::Sometimes)
-}
-
-/// The field must be a string.
-pub fn string() -> Rule {
-    Rule(Check::String)
-}
-
-/// The field must be a list; check its items with a `*` field such as `posts.*.title`.
-pub fn array() -> Rule {
-    Rule(Check::Array)
-}
-
-/// At most `limit` characters for a string, `limit` for a number, `limit` items for a list.
-pub fn max(limit: u64) -> Rule {
-    Rule(Check::Max(limit))
-}
 
 impl Rules {
     /// No rules yet.
@@ -68,7 +45,7 @@ impl Rules {
         let mut messages = Vec::new();
         for (pattern, rules) in &self.fields {
             for (name, value) in matching_fields(pattern, input) {
-                check_field(&name, value, rules, &mut messages);
+                check_field(&name, value, rules, input, &mut messages);
             }
         }
         if messages.is_empty() {
@@ -80,109 +57,6 @@ impl Rules {
             .collect();
         Err(Error::with_messages(&messages))
     }
-}
-
-fn check_field(
-    name: &str,
-    value: Option<&Value>,
-    rules: &[Rule],
-    messages: &mut Vec<(String, String)>,
-) {
-    let attribute = name.replace('_', " ");
-    for Rule(check) in rules {
-        if let Check::Required = check {
-            if is_blank(value) {
-                messages.push((
-                    name.to_owned(),
-                    format!("The {attribute} field is required."),
-                ));
-                return;
-            }
-            continue;
-        }
-        let Some(value) = value.filter(|value| !is_blank_text(value)) else {
-            continue;
-        };
-        if let Some(message) = failure(check, &attribute, value) {
-            messages.push((name.to_owned(), message));
-        }
-    }
-}
-
-fn failure(check: &Check, attribute: &str, value: &Value) -> Option<String> {
-    match (check, value) {
-        (Check::String, Value::String(_)) => None,
-        (Check::String, _) => Some(format!("The {attribute} field must be a string.")),
-        (Check::Array, Value::Array(_)) => None,
-        (Check::Array, _) => Some(format!("The {attribute} field must be an array.")),
-        (Check::Max(limit), Value::String(text)) if text.chars().count() as u64 > *limit => Some(
-            format!("The {attribute} field must not be greater than {limit} characters."),
-        ),
-        (Check::Max(limit), Value::Number(number))
-            if number.as_f64().is_some_and(|number| number > *limit as f64) =>
-        {
-            Some(format!(
-                "The {attribute} field must not be greater than {limit}."
-            ))
-        }
-        (Check::Max(limit), Value::Array(items)) if items.len() as u64 > *limit => Some(format!(
-            "The {attribute} field must not have more than {limit} items."
-        )),
-        _ => None,
-    }
-}
-
-/// Every field `pattern` names in `input`, by its full name, like Laravel: `posts.*.title`
-/// gives `posts.0.title`, `posts.1.title`, ... A `*` over anything but a list names nothing.
-fn matching_fields<'a>(
-    pattern: &str,
-    input: &'a Map<String, Value>,
-) -> Vec<(String, Option<&'a Value>)> {
-    let mut found = Vec::new();
-    let segments: Vec<&str> = pattern.split('.').collect();
-    let Some((first, rest)) = segments.split_first() else {
-        return found;
-    };
-    walk(rest, (*first).to_owned(), input.get(*first), &mut found);
-    found
-}
-
-fn walk<'a>(
-    segments: &[&str],
-    name: String,
-    value: Option<&'a Value>,
-    found: &mut Vec<(String, Option<&'a Value>)>,
-) {
-    let Some((segment, rest)) = segments.split_first() else {
-        found.push((name, value));
-        return;
-    };
-    if *segment == "*" {
-        if let Some(Value::Array(items)) = value {
-            for (index, item) in items.iter().enumerate() {
-                walk(rest, format!("{name}.{index}"), Some(item), found);
-            }
-        }
-        return;
-    }
-    let child = match value {
-        Some(Value::Object(fields)) => fields.get(*segment),
-        _ => None,
-    };
-    walk(rest, format!("{name}.{segment}"), child, found);
-}
-
-fn is_blank(value: Option<&Value>) -> bool {
-    match value {
-        None | Some(Value::Null) => true,
-        Some(Value::Array(items)) => items.is_empty(),
-        Some(Value::Object(fields)) => fields.is_empty(),
-        Some(value) => is_blank_text(value),
-    }
-}
-
-fn is_blank_text(value: &Value) -> bool {
-    matches!(value, Value::String(text) if text.trim().is_empty())
 }
 
 #[cfg(test)]
@@ -310,6 +184,110 @@ mod tests {
         assert_eq!(
             import_errors(input),
             vec![field("posts", "The posts field must be an array.")]
+        );
+    }
+
+    // Laravel Breeze's `RegisteredUserController@store`, with `Password::defaults()`'s minimum.
+    fn registration_errors(input: Value) -> Vec<(String, Vec<String>)> {
+        let rules = Rules::new()
+            .field("name", [required(), string(), max(255)])
+            .field(
+                "email",
+                [required(), string(), lowercase(), email(), max(255)],
+            )
+            .field("password", [required(), confirmed(), min(8)]);
+        match rules.validate(input.as_object().unwrap()) {
+            Ok(()) => Vec::new(),
+            Err(error) => error.errors().to_vec(),
+        }
+    }
+
+    #[test]
+    fn a_valid_registration_passes() {
+        let input = json!({
+            "name": "Sang",
+            "email": "sang@example.com",
+            "password": "correct horse",
+            "password_confirmation": "correct horse",
+        });
+
+        assert!(registration_errors(input).is_empty());
+    }
+
+    #[test]
+    fn a_bad_registration_gets_laravels_messages() {
+        let input = json!({
+            "name": "Sang",
+            "email": "Sang@Example",
+            "password": "short",
+            "password_confirmation": "shorter",
+        });
+
+        assert_eq!(
+            registration_errors(input),
+            vec![
+                field("email", "The email field must be lowercase."),
+                (
+                    "password".to_owned(),
+                    vec![
+                        "The password field confirmation does not match.".to_owned(),
+                        "The password field must be at least 8 characters.".to_owned(),
+                    ]
+                ),
+            ]
+        );
+    }
+
+    #[test]
+    fn a_missing_confirmation_does_not_match() {
+        let input =
+            json!({"name": "Sang", "email": "sang@example.com", "password": "correct horse"});
+
+        assert_eq!(
+            registration_errors(input),
+            vec![field(
+                "password",
+                "The password field confirmation does not match."
+            )]
+        );
+    }
+
+    #[test]
+    fn a_nested_field_is_confirmed_by_its_own_sibling() {
+        let rules = Rules::new().field("users.*.password", [confirmed()]);
+        let input = json!({"users": [
+            {"password": "a", "password_confirmation": "a"},
+            {"password": "b", "password_confirmation": "c"},
+        ]});
+
+        let error = rules.validate(input.as_object().unwrap()).unwrap_err();
+
+        assert_eq!(
+            error.errors(),
+            [field(
+                "users.1.password",
+                "The users.1.password field confirmation does not match."
+            )]
+        );
+    }
+
+    #[test]
+    fn min_counts_characters_and_compares_numbers_and_lists() {
+        let rules = Rules::new()
+            .field("name", [min(3)])
+            .field("age", [min(18)])
+            .field("tags", [min(2)]);
+        let input = json!({"name": "ไท", "age": 17, "tags": [1]});
+
+        let error = rules.validate(input.as_object().unwrap()).unwrap_err();
+
+        assert_eq!(
+            error.errors(),
+            [
+                field("name", "The name field must be at least 3 characters."),
+                field("age", "The age field must be at least 18."),
+                field("tags", "The tags field must have at least 2 items."),
+            ]
         );
     }
 }

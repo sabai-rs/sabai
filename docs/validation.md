@@ -36,9 +36,22 @@ Rules are Rust functions, so a typo does not compile and your editor suggests th
 | `sometimes()` | always; the field may be left out |
 | `string()` | the value is a string |
 | `array()` | the value is a list |
+| `email()` | one `@`, no spaces, and a domain of letters, digits, `-` and `.` |
+| `lowercase()` | the value has no uppercase letters |
+| `confirmed()` | the value equals `{field}_confirmation`, such as `password_confirmation` |
+| `min(n)` | a string has at least `n` characters, a number is at least `n`, a list has at least `n` items |
 | `max(n)` | a string has at most `n` characters, a number is at most `n`, a list has at most `n` items |
 
-More rules are coming: `email`, `min`, `in`, `numeric`, `nullable` and the rest of Laravel's list.
+Laravel Breeze's registration rules read the same way:
+
+```rust
+Rules::new()
+    .field("name", [required(), string(), max(255)])
+    .field("email", [required(), string(), lowercase(), email(), max(255)])
+    .field("password", [required(), confirmed(), min(8)])
+```
+
+More rules are coming: `in`, `numeric`, `nullable`, `unique` and the rest of Laravel's list.
 
 ## Nested and Array Fields
 
