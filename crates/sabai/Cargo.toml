@@ -11,10 +11,12 @@ autotests = false
 [features]
 default = []
 orm = ["dep:sabai-orm"]
+mysql = ["orm", "sabai-orm/mysql"]
+sqlite = ["orm", "sabai-orm/sqlite"]
 auth = ["orm", "dep:sabai-auth"]
 argon2 = ["auth", "sabai-auth/argon2"]
 queue = ["dep:sabai-queue"]
-full = ["orm", "auth", "argon2", "queue"]
+full = ["orm", "mysql", "sqlite", "auth", "argon2", "queue"]
 
 [dependencies]
 sabai-core.workspace = true

@@ -1,10 +1,10 @@
+use sabai_core::Result;
 use sabai_core::contracts::BoxFuture;
-use sabai_core::{Error, Result};
 
 use crate::database::unreachable;
 use sabai_core::App;
 
-use crate::{Database, DatabaseManager, Migration, Migrations, Schema};
+use crate::{Database, DatabaseManager, Migration, Migrations, Schema, SqlValue};
 
 const TABLE: &str = "migrations";
 
@@ -18,19 +18,25 @@ impl Database {
     async fn run_pending(&self, migrations: &Migrations) -> Result<Vec<String>> {
         migrations.check_order()?;
         self.create_migrations_table().await?;
-        let ran: Vec<String> = sqlx::query_scalar("select migration from migrations")
-            .fetch_all(self.pool())
-            .await?;
+        let ran = self
+            .pool()?
+            .fetch_all("select migration from migrations", Vec::new())
+            .await?
+            .iter()
+            .map(|row| row.get::<String>("migration"))
+            .collect::<Result<Vec<_>>>()?;
         let batch = self.last_batch().await? + 1;
         let mut done = Vec::new();
         for (name, migration) in migrations.pending(&ran) {
             self.run_up(migration.as_ref())
                 .await
                 .map_err(|error| error.context(format!("migration `{name}` failed")))?;
-            sqlx::query("insert into migrations (migration, batch) values (?, ?)")
-                .bind(name)
-                .bind(batch)
-                .execute(self.pool())
+            let values = vec![SqlValue::Text(name.clone()), SqlValue::Integer(batch)];
+            self.pool()?
+                .execute(
+                    "insert into migrations (migration, batch) values (?, ?)",
+                    values,
+                )
                 .await?;
             done.push(name.clone());
         }
@@ -49,18 +55,26 @@ impl Database {
             None => self,
         };
         for sql in schema.to_sql(target.driver()) {
-            sqlx::query(&sql).execute(target.pool()).await?;
+            target.pool()?.execute(&sql, Vec::new()).await?;
         }
         Ok(())
     }
 
     async fn create_migrations_table(&self) -> Result<()> {
-        let exists: i64 = sqlx::query_scalar(self.driver().has_table())
-            .bind(TABLE)
-            .fetch_one(self.pool())
+        let found = self
+            .pool()?
+            .fetch_all(
+                self.driver().has_table(),
+                vec![SqlValue::Text(TABLE.to_owned())],
+            )
             .await
             .map_err(unreachable)?;
-        if exists > 0 {
+        if found
+            .first()
+            .map(|row| row.get::<i64>("tables"))
+            .transpose()?
+            > Some(0)
+        {
             return Ok(());
         }
         let mut schema = Schema::default();
@@ -70,20 +84,22 @@ impl Database {
             table.integer("batch");
         });
         for sql in schema.to_sql(self.driver()) {
-            sqlx::query(&sql).execute(self.pool()).await?;
+            self.pool()?.execute(&sql, Vec::new()).await?;
         }
         Ok(())
     }
 
     async fn last_batch(&self) -> Result<i64> {
-        sqlx::query_scalar(self.driver().last_batch())
-            .fetch_one(self.pool())
-            .await
-            .map_err(Error::from)
+        let rows = self
+            .pool()?
+            .fetch_all(self.driver().last_batch(), Vec::new())
+            .await?;
+        rows.first().map_or(Ok(0), |row| row.get::<i64>("batch"))
     }
 }
 
 #[cfg(test)]
+#[cfg(feature = "sqlite")]
 mod tests {
     use super::*;
 
@@ -126,11 +142,16 @@ mod tests {
     }
 
     async fn batch_of(database: &Database, name: &str) -> i64 {
-        sqlx::query_scalar("select batch from migrations where migration = ?")
-            .bind(name)
-            .fetch_one(database.pool())
-            .await
+        let rows = database
+            .pool()
             .unwrap()
+            .fetch_all(
+                "select batch from migrations where migration = ?",
+                vec![SqlValue::Text(name.to_owned())],
+            )
+            .await
+            .expect("the batch can be read");
+        rows[0].get("batch").expect("the batch is a number")
     }
 
     #[test]
@@ -172,10 +193,16 @@ mod tests {
 
         block_on(async {
             let error = database.migrate(&twice).await.err().unwrap().to_string();
-            let recorded: Vec<String> = sqlx::query_scalar("select migration from migrations")
-                .fetch_all(database.pool())
+            let rows = database
+                .pool()
+                .unwrap()
+                .fetch_all("select migration from migrations", Vec::new())
                 .await
                 .unwrap();
+            let recorded: Vec<String> = rows
+                .iter()
+                .map(|row| row.get("migration").unwrap())
+                .collect();
 
             assert!(
                 error.starts_with("migration `2026_10_15_000001_create_posts_table_again` failed"),

@@ -13,7 +13,7 @@ mod events;
 mod facade;
 mod log;
 mod middleware;
-#[cfg(feature = "orm")]
+#[cfg(feature = "sqlite")]
 mod model;
 mod request;
 mod response;

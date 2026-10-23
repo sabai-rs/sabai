@@ -1,4 +1,5 @@
-# LLVM lines each crate may compile to (`cargo llvm-lines -p <crate> --lib`).
+# LLVM lines each crate may compile to (`cargo llvm-lines -p <crate> --lib`), with all its
+# features unless the entry names one: `crate[feature]`.
 # CI fails when one goes over. If the growth is worth it, raise the number in the
 # same pull request and say why, so every jump is reviewed.
 # Set at M0-05b (2026-10-20) to the measured size plus about 10%.
@@ -11,7 +12,11 @@ sabai-core = 58000
 # M1-06 added `route:list` (+7k: its layout, `stty` for the terminal width, and the Vec and
 # iterator code they use); replacing `sort_by` with ordered insertion saved 2.9k of it.
 sabai-http = 81000
-sabai-orm = 85000
+# M2-01d replaced `sqlx::Any` with one Cargo feature per driver, and an app compiles only the
+# drivers it turns on, so each driver is measured on its own: `crate[feature]` builds the crate
+# with just that feature. Measured 74.5k with mysql and 75.8k with sqlite, down from 78k with `Any`.
+sabai-orm[mysql] = 82000
+sabai-orm[sqlite] = 83000
 # M3-03a: tokio's spawn_blocking for `Hash::make` and `Hash::check`, the semaphore that runs one
 # hash per core at most, and bcrypt read from config/hashing.toml. Argon2id is behind a feature.
 # Raised at M3-01 for `Authenticatable::attempt`, its rehash on login and the unused-hash check.

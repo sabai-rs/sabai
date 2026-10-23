@@ -148,7 +148,7 @@ mod tests {
         assert!(manifest.contains("name = \"my-shop\""), "{manifest}");
         assert!(
             manifest.contains(
-                r#"sabai = { git = "https://github.com/sabai-rs/sabai", features = ["orm", "auth"] }"#
+                r#"sabai = { git = "https://github.com/sabai-rs/sabai", features = ["orm", "auth", "sqlite"] }"#
             ),
             "{manifest}"
         );

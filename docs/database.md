@@ -2,6 +2,21 @@
 
 Sabai supports MySQL and SQLite. Postgres comes later.
 
+## Drivers
+
+Each database driver is a Cargo feature, so your app compiles only the drivers it uses. Turn on the ones you need in `Cargo.toml`:
+
+```toml
+[dependencies]
+sabai = { version = "...", features = ["orm", "mysql"] }
+
+[dev-dependencies]
+# The tests run on an in-memory SQLite database.
+sabai = { version = "...", features = ["sqlite"] }
+```
+
+`DB_CONNECTION` still picks the connection when the app starts. A connection whose driver is not compiled in can stay in `config/database.toml`; the first query on it fails and names the feature to add.
+
 ## Configuration
 
 `config/database.toml` works like Laravel's `config/database.php`. `default` picks one of the `connections`:

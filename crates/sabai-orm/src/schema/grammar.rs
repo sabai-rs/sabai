@@ -39,19 +39,21 @@ impl Driver {
     pub(crate) fn has_table(self) -> &'static str {
         match self {
             Driver::MySql => {
-                "select count(*) from information_schema.tables \
+                "select count(*) as tables from information_schema.tables \
                  where table_schema = database() and table_name = ?"
             }
             Driver::Sqlite => {
-                "select count(*) from sqlite_master where type = 'table' and name = ?"
+                "select count(*) as tables from sqlite_master where type = 'table' and name = ?"
             }
         }
     }
 
     pub(crate) fn last_batch(self) -> &'static str {
         match self {
-            Driver::MySql => "select cast(coalesce(max(batch), 0) as signed) from migrations",
-            Driver::Sqlite => "select coalesce(max(batch), 0) from migrations",
+            Driver::MySql => {
+                "select cast(coalesce(max(batch), 0) as signed) as batch from migrations"
+            }
+            Driver::Sqlite => "select coalesce(max(batch), 0) as batch from migrations",
         }
     }
 

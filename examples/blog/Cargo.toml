@@ -13,10 +13,12 @@ publish = false
 name = "bootstrap"
 
 [dependencies]
-sabai = { workspace = true, features = ["orm", "auth"] }
+sabai = { workspace = true, features = ["orm", "auth", "mysql"] }
 serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
+# Feature tests run on SQLite in memory (`.env.testing`); only test builds compile it.
+sabai = { workspace = true, features = ["sqlite"] }
 sabai-testing = { workspace = true, features = ["orm"] }
 
 [lints]
