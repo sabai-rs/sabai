@@ -306,14 +306,6 @@ fn a_query_after_migrate_in_the_same_process_reuses_the_pool() {
 const THREE_POSTS: &str = "insert into posts (id, title, body) values \
     (1, 'Sabai', 'a'), (2, 'Sabai', null), (3, 'Other', 'a')";
 
-fn post(id: u64, title: &str, body: Option<&str>) -> Post {
-    Post {
-        id,
-        title: title.into(),
-        body: body.map(Into::into),
-    }
-}
-
 #[test]
 fn where_eq_finds_rows_by_a_column_and_first_takes_one() {
     let (first, missing) = run(&app("where-first"), &[CREATE_POSTS, THREE_POSTS], async {
@@ -322,7 +314,14 @@ fn where_eq_finds_rows_by_a_column_and_first_takes_one() {
         (first, missing)
     });
 
-    assert_eq!(first.unwrap(), Some(post(1, "Sabai", Some("a"))));
+    assert_eq!(
+        first.unwrap(),
+        Some(Post {
+            id: 1,
+            title: "Sabai".into(),
+            body: Some("a".into())
+        })
+    );
     assert_eq!(missing.unwrap(), None);
 }
 
@@ -334,7 +333,14 @@ fn chained_where_eqs_all_have_to_match() {
         Post::where_eq("title", "Sabai").where_eq("body", "a").get(),
     );
 
-    assert_eq!(posts.unwrap(), [post(1, "Sabai", Some("a"))]);
+    assert_eq!(
+        posts.unwrap(),
+        [Post {
+            id: 1,
+            title: "Sabai".into(),
+            body: Some("a".into())
+        }]
+    );
 }
 
 #[test]
@@ -345,7 +351,14 @@ fn where_eq_none_finds_null_columns() {
         Post::where_eq("body", None::<String>).get(),
     );
 
-    assert_eq!(posts.unwrap(), [post(2, "Sabai", None)]);
+    assert_eq!(
+        posts.unwrap(),
+        [Post {
+            id: 2,
+            title: "Sabai".into(),
+            body: None
+        }]
+    );
 }
 
 #[test]

@@ -3,10 +3,8 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use pollster::block_on;
 use sabai::contracts::{Clock, SystemClock};
-use sabai::http::{Controller, Param, Router, Routes, Service};
-use sabai::{
-    App, Body, Config, Error, FromApp, Method, Provider, Request, Response, Result, StatusCode,
-};
+use sabai::http::{Controller, Param, Router, Service};
+use sabai::{App, Config, Error, FromApp, Method, Provider, Request, Result, StatusCode};
 
 async fn index() -> &'static str {
     "All posts"
@@ -72,52 +70,47 @@ impl Provider for ClockProvider {
     }
 }
 
-fn routes() -> Routes {
-    let mut router = Router::new();
-    router.get("/posts", index);
-    router.get("/health", health);
-    router.get("/admin", broken);
-    router.compile().unwrap()
-}
-
-fn send(routes: &Routes, method: Method, path: &str) -> Response {
-    let request = http::Request::builder()
-        .method(method)
-        .uri(path)
-        .body(Body::empty())
-        .unwrap();
-    block_on(routes.dispatch(Request::from(request)))
-}
-
-fn body_text(response: Response) -> String {
-    String::from_utf8(response.body().as_bytes().to_vec()).unwrap()
-}
-
 #[test]
 fn a_matching_route_runs_its_handler() {
-    let response = send(&routes(), Method::GET, "/posts");
+    let mut router = Router::new();
+    router.get("/posts", index);
+    let routes = router.compile().unwrap();
+
+    let response = block_on(routes.dispatch(Request::create(Method::GET, "/posts").unwrap()));
 
     assert_eq!(response.status(), StatusCode::OK);
     assert_eq!(response.body().as_bytes(), b"All posts");
 }
 
 #[test]
-fn handlers_can_return_results() {
-    let routes = routes();
+fn a_handler_that_returns_ok_answers_its_value() {
+    let mut router = Router::new();
+    router.get("/health", health);
+    let routes = router.compile().unwrap();
 
-    assert_eq!(
-        send(&routes, Method::GET, "/health").body().as_bytes(),
-        b"ok"
-    );
-    assert_eq!(
-        send(&routes, Method::GET, "/admin").status(),
-        StatusCode::FORBIDDEN
-    );
+    let response = block_on(routes.dispatch(Request::create(Method::GET, "/health").unwrap()));
+
+    assert_eq!(response.body().as_bytes(), b"ok");
+}
+
+#[test]
+fn a_handler_that_returns_an_error_answers_its_status() {
+    let mut router = Router::new();
+    router.get("/admin", broken);
+    let routes = router.compile().unwrap();
+
+    let response = block_on(routes.dispatch(Request::create(Method::GET, "/admin").unwrap()));
+
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
 }
 
 #[test]
 fn an_unknown_path_is_a_json_404() {
-    let response = send(&routes(), Method::GET, "/nope");
+    let mut router = Router::new();
+    router.get("/posts", index);
+    let routes = router.compile().unwrap();
+
+    let response = block_on(routes.dispatch(Request::create(Method::GET, "/nope").unwrap()));
 
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
     assert_eq!(response.body().as_bytes(), br#"{"message":"Not Found"}"#);
@@ -128,20 +121,25 @@ fn a_known_path_with_the_wrong_method_is_a_405_naming_the_methods_it_takes() {
     let mut router = Router::new();
     router.get("/posts/{id}", show);
     router.delete("/posts/{id}", show);
+    let routes = router.compile().unwrap();
 
-    let response = send(&router.compile().unwrap(), Method::POST, "/posts/7");
+    let response = block_on(routes.dispatch(Request::create(Method::POST, "/posts/7").unwrap()));
 
     assert_eq!(response.status(), StatusCode::METHOD_NOT_ALLOWED);
     assert_eq!(response.headers()["allow"], "GET, HEAD, DELETE");
     assert_eq!(
-        body_text(response),
+        String::from_utf8_lossy(response.body().as_bytes()),
         r#"{"message":"The POST method is not supported for route posts/7. Supported methods: GET, HEAD, DELETE."}"#
     );
 }
 
 #[test]
 fn options_answers_200_listing_the_methods() {
-    let response = send(&routes(), Method::OPTIONS, "/posts");
+    let mut router = Router::new();
+    router.get("/posts", index);
+    let routes = router.compile().unwrap();
+
+    let response = block_on(routes.dispatch(Request::create(Method::OPTIONS, "/posts").unwrap()));
 
     assert_eq!(response.status(), StatusCode::OK);
     assert_eq!(response.headers()["allow"], "GET,HEAD");
@@ -150,49 +148,63 @@ fn options_answers_200_listing_the_methods() {
 
 #[test]
 fn head_runs_the_get_route() {
-    let response = send(&routes(), Method::HEAD, "/posts");
+    let mut router = Router::new();
+    router.get("/posts", index);
+    let routes = router.compile().unwrap();
+
+    let response = block_on(routes.dispatch(Request::create(Method::HEAD, "/posts").unwrap()));
 
     assert_eq!(response.status(), StatusCode::OK);
 }
 
 #[test]
-fn route_mistakes_are_reported_at_boot() {
-    let mut duplicate = Router::new();
-    duplicate.get("/posts", index);
-    duplicate.get("/posts", index);
-    let mut malformed = Router::new();
-    malformed.get("/posts/{id", index);
+fn a_route_defined_twice_is_reported_at_boot() {
+    let mut router = Router::new();
+    router.get("/posts", index);
+    router.get("/posts", index);
 
-    let duplicate = duplicate.compile().err().unwrap().to_string();
-    let malformed = malformed.compile().err().unwrap().to_string();
+    let error = router.compile().err().unwrap().to_string();
 
     assert_eq!(
-        duplicate,
+        error,
         "route `GET /posts` is invalid: it is defined twice; remove one of them"
-    );
-    assert!(
-        malformed.starts_with("route `GET /posts/{id` is invalid: "),
-        "{malformed}"
     );
 }
 
 #[test]
-fn route_params_reach_the_handler() {
+fn a_malformed_path_is_reported_at_boot() {
+    let mut router = Router::new();
+    router.get("/posts/{id", index);
+
+    let error = router.compile().err().unwrap().to_string();
+
+    assert!(
+        error.starts_with("route `GET /posts/{id` is invalid: "),
+        "{error}"
+    );
+}
+
+#[test]
+fn a_route_param_reaches_the_handler() {
     let mut router = Router::new();
     router.get("/posts/{id}", show);
+    let routes = router.compile().unwrap();
+
+    let response = block_on(routes.dispatch(Request::create(Method::GET, "/posts/7").unwrap()));
+
+    assert_eq!(response.body().as_bytes(), b"post 7");
+}
+
+#[test]
+fn a_wildcard_param_takes_the_rest_of_the_path() {
+    let mut router = Router::new();
     router.get("/files/{*path}", file);
     let routes = router.compile().unwrap();
 
-    assert_eq!(
-        send(&routes, Method::GET, "/posts/7").body().as_bytes(),
-        b"post 7"
-    );
-    assert_eq!(
-        send(&routes, Method::GET, "/files/docs/terms.pdf")
-            .body()
-            .as_bytes(),
-        b"file docs/terms.pdf"
-    );
+    let request = Request::create(Method::GET, "/files/docs/terms.pdf").unwrap();
+    let response = block_on(routes.dispatch(request));
+
+    assert_eq!(response.body().as_bytes(), b"file docs/terms.pdf");
 }
 
 #[test]
@@ -212,22 +224,32 @@ fn every_method_routes_to_its_own_handler() {
         Method::PATCH,
         Method::DELETE,
     ] {
-        let response = send(&routes, method.clone(), "/posts/1");
+        let request = Request::create(method.clone(), "/posts/1").unwrap();
+        let response = block_on(routes.dispatch(request));
         assert_eq!(response.body().as_bytes(), method.as_str().as_bytes());
     }
 }
 
 #[test]
-fn handlers_take_typed_params_alongside_the_request() {
+fn a_handler_takes_a_typed_param_alongside_the_request() {
     let mut router = Router::new();
     router.get("/posts/{id}", show_typed);
     let routes = router.compile().unwrap();
 
-    let found = send(&routes, Method::GET, "/posts/7");
-    let not_a_number = send(&routes, Method::GET, "/posts/abc");
+    let response = block_on(routes.dispatch(Request::create(Method::GET, "/posts/7").unwrap()));
 
-    assert_eq!(found.body().as_bytes(), b"post 7 via GET");
-    assert_eq!(not_a_number.status(), StatusCode::NOT_FOUND);
+    assert_eq!(response.body().as_bytes(), b"post 7 via GET");
+}
+
+#[test]
+fn a_typed_param_that_does_not_parse_is_a_404() {
+    let mut router = Router::new();
+    router.get("/posts/{id}", show_typed);
+    let routes = router.compile().unwrap();
+
+    let response = block_on(routes.dispatch(Request::create(Method::GET, "/posts/abc").unwrap()));
+
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
 }
 
 #[test]
@@ -256,15 +278,10 @@ fn a_controller_is_made_once_at_startup_and_shared_by_every_request() {
         .unwrap();
 
     routes.prepare(&app).unwrap();
-    let send_with_app = |path| {
-        let request = http::Request::builder()
-            .uri(path)
-            .body(Body::empty())
-            .unwrap();
-        block_on(routes.dispatch(Request::from(request).with_app(app.clone())))
-    };
-    let first = send_with_app("/posts/1");
-    let second = send_with_app("/posts/2");
+    let first = Request::create(Method::GET, "/posts/1").unwrap();
+    let second = Request::create(Method::GET, "/posts/2").unwrap();
+    let first = block_on(routes.dispatch(first.with_app(app.clone())));
+    let second = block_on(routes.dispatch(second.with_app(app.clone())));
 
     assert_eq!(first.body().as_bytes(), b"post 1");
     assert_eq!(second.body().as_bytes(), b"post 2");
@@ -302,15 +319,16 @@ fn a_prefix_group_puts_its_routes_under_the_prefix_and_can_nest() {
     });
     let routes = router.compile().unwrap();
 
-    let body = |path| send(&routes, Method::GET, path).body().as_bytes().to_vec();
+    let root = block_on(routes.dispatch(Request::create(Method::GET, "/api").unwrap()));
+    let health = block_on(routes.dispatch(Request::create(Method::GET, "/api/health").unwrap()));
+    let nested =
+        block_on(routes.dispatch(Request::create(Method::GET, "/api/v1/posts/7").unwrap()));
+    let outside = block_on(routes.dispatch(Request::create(Method::GET, "/health").unwrap()));
 
-    assert_eq!(body("/api"), b"All posts");
-    assert_eq!(body("/api/health"), b"ok");
-    assert_eq!(body("/api/v1/posts/7"), b"post 7");
-    assert_eq!(
-        send(&routes, Method::GET, "/health").status(),
-        StatusCode::NOT_FOUND
-    );
+    assert_eq!(root.body().as_bytes(), b"All posts");
+    assert_eq!(health.body().as_bytes(), b"ok");
+    assert_eq!(nested.body().as_bytes(), b"post 7");
+    assert_eq!(outside.status(), StatusCode::NOT_FOUND);
 }
 
 #[test]
@@ -356,7 +374,7 @@ fn an_api_resource_routes_each_action_with_its_paths_and_names() {
         (Method::DELETE, "/api/posts/7"),
     ];
     for (method, path) in requests {
-        let response = send(&routes, method.clone(), path);
+        let response = block_on(routes.dispatch(Request::create(method.clone(), path).unwrap()));
         assert_eq!(
             response.body().as_bytes(),
             format!("{method} {path}").as_bytes()
@@ -380,13 +398,10 @@ fn an_api_resource_routes_only_the_actions_it_declares() {
     });
     let routes = router.compile().unwrap();
 
-    assert_eq!(
-        send(&routes, Method::POST, "/posts").status(),
-        StatusCode::METHOD_NOT_ALLOWED
-    );
-    assert_eq!(
-        send(&routes, Method::GET, "/posts/7").status(),
-        StatusCode::NOT_FOUND
-    );
+    let store = block_on(routes.dispatch(Request::create(Method::POST, "/posts").unwrap()));
+    let show = block_on(routes.dispatch(Request::create(Method::GET, "/posts/7").unwrap()));
+
+    assert_eq!(store.status(), StatusCode::METHOD_NOT_ALLOWED);
+    assert_eq!(show.status(), StatusCode::NOT_FOUND);
     assert!(routes.route::<&str>("posts.store", &[]).is_err());
 }
