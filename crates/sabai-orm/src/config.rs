@@ -32,9 +32,11 @@ enum Connection {
     },
 }
 
+/// The URL of a SQLite database in memory, which lives as long as its one connection.
+pub(crate) const SQLITE_MEMORY: &str = "sqlite::memory:";
+
 pub(crate) struct Target {
     pub(crate) url: String,
-    pub(crate) in_memory: bool,
     pub(crate) driver: Driver,
 }
 
@@ -60,13 +62,11 @@ pub(crate) fn targets(config: &Config) -> Result<(String, Vec<(String, Target)>)
 fn target(connection: &Connection) -> Target {
     match connection {
         Connection::Sqlite { database } if database == ":memory:" => Target {
-            url: "sqlite::memory:".to_owned(),
-            in_memory: true,
+            url: SQLITE_MEMORY.to_owned(),
             driver: Driver::Sqlite,
         },
         Connection::Sqlite { database } => Target {
             url: format!("sqlite://{database}?mode=rwc"),
-            in_memory: false,
             driver: Driver::Sqlite,
         },
         Connection::Mysql {
@@ -82,7 +82,6 @@ fn target(connection: &Connection) -> Target {
                 encode(password),
                 encode(database)
             ),
-            in_memory: false,
             driver: Driver::MySql,
         },
     }
@@ -132,7 +131,7 @@ mod tests {
     }
 
     #[test]
-    fn sqlite_memory_is_marked_so_the_pool_keeps_one_connection() {
+    fn sqlite_memory_and_file_get_their_urls() {
         let memory = target(&Connection::Sqlite {
             database: ":memory:".to_owned(),
         });
@@ -140,8 +139,7 @@ mod tests {
             database: "database/database.sqlite".to_owned(),
         });
 
-        assert!(memory.in_memory);
+        assert_eq!(memory.url, SQLITE_MEMORY);
         assert_eq!(file.url, "sqlite://database/database.sqlite?mode=rwc");
-        assert!(!file.in_memory);
     }
 }

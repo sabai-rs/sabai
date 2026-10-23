@@ -1,35 +1,28 @@
-use std::str::FromStr;
-use std::sync::{Once, OnceLock};
-use std::time::Duration;
+use std::sync::OnceLock;
 
 use sabai_core::contracts::BoxFuture;
 use sabai_core::{Config, Error, Result};
-use sqlx::AnyPool;
-use sqlx::any::{AnyConnectOptions, AnyPoolOptions, install_default_drivers};
 
 use crate::Driver;
 use crate::config::{Target, targets};
-
-const ACQUIRE_TIMEOUT: Duration = Duration::from_secs(5);
+use crate::pool::{Options, Pool};
 
 /// The app's database, like Laravel's `DB`: a pool for the default connection in
 /// `config/database.toml`. Handlers take it as `db: Service<Database>`.
 pub struct Database {
-    options: AnyConnectOptions,
-    in_memory: bool,
+    options: Options,
     driver: Driver,
-    pool: OnceLock<AnyPool>,
+    pool: OnceLock<Pool>,
 }
 
 impl Database {
-    #[cfg(test)]
+    #[cfg(all(test, feature = "sqlite"))]
     pub(crate) fn in_memory() -> Self {
-        Self {
-            options: AnyConnectOptions::from_str("sqlite::memory:").unwrap(),
-            in_memory: true,
+        Self::from_target(Target {
+            url: crate::config::SQLITE_MEMORY.to_owned(),
             driver: Driver::Sqlite,
-            pool: OnceLock::new(),
-        }
+        })
+        .expect("an in-memory SQLite database is always valid")
     }
 
     /// The default connection from config, checked now; nothing connects until the first query.
@@ -43,12 +36,8 @@ impl Database {
     }
 
     pub(crate) fn from_target(target: Target) -> Result<Self> {
-        let options = AnyConnectOptions::from_str(&target.url).map_err(|error| {
-            Error::from(error).context("config/database.toml has an invalid connection")
-        })?;
         Ok(Self {
-            options,
-            in_memory: target.in_memory,
+            options: Options::parse(&target)?,
             driver: target.driver,
             pool: OnceLock::new(),
         })
@@ -59,10 +48,13 @@ impl Database {
         self.driver
     }
 
-    /// The sqlx pool, for queries the query builder cannot write yet.
     // sqlx needs the tokio runtime, which starts after boot.
-    pub fn pool(&self) -> &AnyPool {
-        self.pool.get_or_init(|| self.new_pool())
+    pub(crate) fn pool(&self) -> Result<&Pool> {
+        if let Some(pool) = self.pool.get() {
+            return Ok(pool);
+        }
+        let pool = self.options.lazy_pool()?;
+        Ok(self.pool.get_or_init(|| pool))
     }
 
     /// Runs one SQL statement as written, like Laravel's `DB::statement(...)`.
@@ -71,7 +63,7 @@ impl Database {
     }
 
     async fn execute(&self, sql: &str) -> Result<()> {
-        sqlx::query(sql).execute(self.pool()).await?;
+        self.pool()?.execute(sql, Vec::new()).await?;
         Ok(())
     }
 
@@ -81,33 +73,20 @@ impl Database {
     }
 
     async fn select_one(&self) -> Result<()> {
-        sqlx::query("SELECT 1")
-            .execute(self.pool())
+        self.pool()?
+            .fetch_all("SELECT 1", Vec::new())
             .await
             .map_err(unreachable)?;
         Ok(())
     }
-
-    fn new_pool(&self) -> AnyPool {
-        static DRIVERS: Once = Once::new();
-        DRIVERS.call_once(install_default_drivers);
-        let options = match self.in_memory {
-            // Every `:memory:` connection is a separate database.
-            true => AnyPoolOptions::new()
-                .max_connections(1)
-                .idle_timeout(None)
-                .max_lifetime(None),
-            false => AnyPoolOptions::new().acquire_timeout(ACQUIRE_TIMEOUT),
-        };
-        options.connect_lazy_with(self.options.clone())
-    }
 }
 
-pub(crate) fn unreachable(error: sqlx::Error) -> Error {
-    Error::from(error).context("could not connect to the database")
+pub(crate) fn unreachable(error: Error) -> Error {
+    error.context("could not connect to the database")
 }
 
 #[cfg(test)]
+#[cfg(feature = "sqlite")]
 mod tests {
     use std::path::PathBuf;
     use std::{fs, process};
@@ -157,12 +136,11 @@ mod tests {
             .unwrap();
 
         for sql in schema.to_sql(crate::Driver::Sqlite) {
-            runtime
-                .block_on(sqlx::query(&sql).execute(database.pool()))
-                .unwrap();
+            runtime.block_on(database.statement(&sql)).unwrap();
         }
     }
 
+    #[cfg(feature = "mysql")]
     #[test]
     fn a_numeric_password_from_the_env_is_read_as_text() {
         let config = config_with(
@@ -181,6 +159,25 @@ mod tests {
 
         assert!(
             error.contains("`default` is `mysql`, but there is no `[connections.mysql]`"),
+            "{error}"
+        );
+    }
+
+    #[cfg(not(feature = "mysql"))]
+    #[test]
+    fn a_driver_built_without_its_feature_fails_when_used_and_says_how_to_add_it() {
+        let config = config_with(
+            "no-mysql",
+            "default = \"mysql\"\n[connections.mysql]\ndriver = \"mysql\"\nhost = \"127.0.0.1\"\nport = 3306\ndatabase = \"blog\"\nusername = \"sabai\"\npassword = \"secret\"\n",
+        );
+
+        let database = Database::from_config(&config).unwrap();
+        let error = database.pool().err().unwrap().to_string();
+
+        assert!(
+            error.contains(
+                "add the `mysql` feature: sabai = { ..., features = [\"orm\", \"mysql\"] }"
+            ),
             "{error}"
         );
     }

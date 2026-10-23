@@ -10,6 +10,13 @@ pub mod console;
 #[cfg(feature = "orm")]
 pub use sabai_orm as orm;
 
+// Every query goes through a database driver, so the ORM is useless without one.
+#[cfg(all(feature = "orm", not(any(feature = "mysql", feature = "sqlite"))))]
+compile_error!(
+    "the `orm` feature needs a database driver: turn on `mysql` or `sqlite`, \
+     such as sabai = { ..., features = [\"orm\", \"sqlite\"] }"
+);
+
 #[cfg(feature = "auth")]
 pub use sabai_auth as auth;
 

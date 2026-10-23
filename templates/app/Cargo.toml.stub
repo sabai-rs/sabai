@@ -10,7 +10,8 @@ publish = false
 name = "bootstrap"
 
 [dependencies]
-sabai = { {{sabai}}, features = ["orm", "auth"] }
+# The database drivers this app can use: `sqlite`, `mysql`, or both.
+sabai = { {{sabai}}, features = ["orm", "auth", "sqlite"] }
 serde = { version = "1", features = ["derive"] }
 
 [dev-dependencies]

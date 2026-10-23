@@ -1,9 +1,15 @@
-use sabai_core::{Error, Result};
+use sabai_core::{Error, Result, StatusCode};
 use sqlx::Row as _;
-use sqlx::any::AnyRow;
 
 /// One row of a query result; `#[derive(Model)]` reads each field from it.
-pub struct Row(pub(crate) AnyRow);
+pub struct Row(pub(crate) DriverRow);
+
+pub(crate) enum DriverRow {
+    #[cfg(feature = "mysql")]
+    MySql(sqlx::mysql::MySqlRow),
+    #[cfg(feature = "sqlite")]
+    Sqlite(sqlx::sqlite::SqliteRow),
+}
 
 impl Row {
     /// The value of `column` as `T`.
@@ -19,65 +25,92 @@ pub trait FromColumn: Sized {
     fn from_column(row: &Row, column: &str) -> Result<Self>;
 }
 
+// Each driver decodes the type the field asks for; the macro writes the `match` once. The type
+// annotation lets the `match` compile with no driver, when it has no arms.
+macro_rules! decode {
+    ($row:expr, $column:expr) => {{
+        let value: std::result::Result<_, sqlx::Error> = match $row.0 {
+            #[cfg(feature = "mysql")]
+            DriverRow::MySql(ref row) => row.try_get($column),
+            #[cfg(feature = "sqlite")]
+            DriverRow::Sqlite(ref row) => row.try_get($column),
+        };
+        value
+    }};
+}
+
 macro_rules! read_directly {
     ($($type:ty),+) => {$(
         impl FromColumn for $type {
             fn from_column(row: &Row, column: &str) -> Result<Self> {
-                Ok(row.0.try_get(column)?)
+                Ok(decode!(row, column)?)
             }
         }
     )+};
 }
 
-// `sqlx::Any` has no unsigned integers, so they arrive as `i64`; a negative one is an error.
-macro_rules! read_through_i64 {
-    ($($type:ty),+) => {$(
+read_directly!(f64, bool, String, Option<f64>, Option<bool>, Option<String>);
+
+// MySQL keeps signed and unsigned integers apart (`id` is `bigint unsigned`), so a field reads
+// whichever the column is and converts; a value that does not fit is an error, never wrapped.
+fn signed(row: &Row, column: &str) -> Result<Option<i64>> {
+    match row.0 {
+        #[cfg(feature = "mysql")]
+        DriverRow::MySql(ref row) => match row.try_get::<Option<i64>, _>(column) {
+            Ok(value) => Ok(value),
+            Err(_) => {
+                let value: Option<u64> = row.try_get(column)?;
+                Ok(value.map(i64::try_from).transpose()?)
+            }
+        },
+        #[cfg(feature = "sqlite")]
+        DriverRow::Sqlite(ref row) => Ok(row.try_get(column)?),
+    }
+}
+
+fn unsigned(row: &Row, column: &str) -> Result<Option<u64>> {
+    match row.0 {
+        #[cfg(feature = "mysql")]
+        DriverRow::MySql(ref row) => match row.try_get::<Option<u64>, _>(column) {
+            Ok(value) => Ok(value),
+            Err(_) => {
+                let value: Option<i64> = row.try_get(column)?;
+                Ok(value.map(u64::try_from).transpose()?)
+            }
+        },
+        // SQLite has no unsigned integers; reading through `i64` refuses a negative one.
+        #[cfg(feature = "sqlite")]
+        DriverRow::Sqlite(ref row) => {
+            let value: Option<i64> = row.try_get(column)?;
+            Ok(value.map(u64::try_from).transpose()?)
+        }
+    }
+}
+
+macro_rules! read_integer {
+    ($read:ident: $($type:ty),+) => {$(
         impl FromColumn for $type {
             fn from_column(row: &Row, column: &str) -> Result<Self> {
-                let value: i64 = row.0.try_get(column)?;
+                let value = $read(row, column)?.ok_or_else(null)?;
                 Ok(<$type>::try_from(value)?)
             }
         }
 
         impl FromColumn for Option<$type> {
             fn from_column(row: &Row, column: &str) -> Result<Self> {
-                let value: Option<i64> = row.0.try_get(column)?;
-                value.map(<$type>::try_from).transpose().map_err(Error::from)
+                let value = $read(row, column)?;
+                Ok(value.map(<$type>::try_from).transpose()?)
             }
         }
     )+};
 }
 
-read_directly!(
-    i64,
-    i32,
-    f64,
-    bool,
-    Option<i64>,
-    Option<i32>,
-    Option<f64>,
-    Option<bool>
-);
-read_through_i64!(u64, u32);
+read_integer!(signed: i64, i32);
+read_integer!(unsigned: u64, u32);
 
-// sqlx's `Any` driver hands MySQL `TEXT` columns over as `BLOB`, so text may arrive as bytes.
-impl FromColumn for String {
-    fn from_column(row: &Row, column: &str) -> Result<Self> {
-        match row.0.try_get::<String, _>(column) {
-            Ok(text) => Ok(text),
-            Err(_) => Ok(String::from_utf8(row.0.try_get::<Vec<u8>, _>(column)?)?),
-        }
-    }
-}
-
-impl FromColumn for Option<String> {
-    fn from_column(row: &Row, column: &str) -> Result<Self> {
-        match row.0.try_get::<Option<String>, _>(column) {
-            Ok(text) => Ok(text),
-            Err(_) => {
-                let bytes: Option<Vec<u8>> = row.0.try_get(column)?;
-                Ok(bytes.map(String::from_utf8).transpose()?)
-            }
-        }
-    }
+fn null() -> Error {
+    Error::new(
+        StatusCode::INTERNAL_SERVER_ERROR,
+        "the column is NULL; make the field an `Option`",
+    )
 }

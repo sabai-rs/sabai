@@ -2,10 +2,8 @@ use std::sync::Arc;
 
 use sabai_core::contracts::BoxFuture;
 use sabai_core::{App, Error, Result, StatusCode};
-use sqlx::any::{AnyArguments, AnyRow};
-use sqlx::query::Query as SqlQuery;
 
-use crate::{Database, DatabaseManager, Driver, Query, Row, SqlValue, ToColumn};
+use crate::{Database, DatabaseManager, Query, Row, SqlValue, ToColumn};
 
 /// A table row as a struct, like an Eloquent model. Write `#[derive(Model)]`, not this impl.
 pub trait Model: Sized + Send + 'static {
@@ -97,10 +95,7 @@ pub(crate) fn select(
         if let Some(limit) = limit {
             sql.push_str(&format!(" limit {limit}"));
         }
-        let rows: Vec<AnyRow> = bind_all(sqlx::query(&sql), values)
-            .fetch_all(database.pool())
-            .await?;
-        Ok(rows.into_iter().map(Row).collect())
+        database.pool()?.fetch_all(&sql, values).await
     })
 }
 
@@ -125,27 +120,12 @@ fn insert(
             driver.quote(table),
             names.join(", ")
         );
-        let failed = |error: sqlx::Error| {
-            Error::from(error).context(format!("could not insert into `{table}`"))
-        };
-        let id = match driver {
-            // sqlx's `Any` driver reports no last insert id for SQLite, so ask for it back.
-            Driver::Sqlite => {
-                let sql = format!("{sql} returning {}", driver.quote("id"));
-                let row = bind_all(sqlx::query(&sql), values)
-                    .fetch_one(database.pool())
-                    .await
-                    .map_err(failed)?;
-                Row(row).get::<i64>("id")?
-            }
-            Driver::MySql => bind_all(sqlx::query(&sql), values)
-                .execute(database.pool())
-                .await
-                .map_err(failed)?
-                .last_insert_id()
-                .ok_or_else(|| no_id(table))?,
-        };
-        Ok(u64::try_from(id)?)
+        database
+            .pool()?
+            .execute(&sql, values)
+            .await
+            .map_err(|error| error.context(format!("could not insert into `{table}`")))?
+            .ok_or_else(|| no_id(table))
     })
 }
 
@@ -172,30 +152,13 @@ fn update(
             sets.join(", "),
             driver.quote("id")
         );
-        bind_all(sqlx::query(&sql), values)
-            .execute(database.pool())
+        database
+            .pool()?
+            .execute(&sql, values)
             .await
-            .map_err(|error| {
-                Error::from(error).context(format!("could not update `{table}` {id}"))
-            })?;
+            .map_err(|error| error.context(format!("could not update `{table}` {id}")))?;
         Ok(())
     })
-}
-
-fn bind_all<'q>(
-    mut query: SqlQuery<'q, sqlx::Any, AnyArguments<'q>>,
-    values: Vec<SqlValue>,
-) -> SqlQuery<'q, sqlx::Any, AnyArguments<'q>> {
-    for value in values {
-        query = match value {
-            SqlValue::Null => query.bind(None::<i64>),
-            SqlValue::Integer(value) => query.bind(value),
-            SqlValue::Float(value) => query.bind(value),
-            SqlValue::Bool(value) => query.bind(value),
-            SqlValue::Text(value) => query.bind(value),
-        };
-    }
-    query
 }
 
 fn database(connection: Option<&str>) -> Result<Arc<Database>> {
@@ -206,11 +169,11 @@ fn database(connection: Option<&str>) -> Result<Arc<Database>> {
     }
 }
 
+fn not_found(table: &str, id: u64) -> Error {
+    Error::not_found().context(format!("no `{table}` row has id {id}"))
+}
+
 fn no_id(table: &str) -> Error {
     Error::from_status(StatusCode::INTERNAL_SERVER_ERROR)
         .context(format!("`{table}` gave no id for the new row"))
-}
-
-fn not_found(table: &str, id: u64) -> Error {
-    Error::not_found().context(format!("no `{table}` row has id {id}"))
 }
