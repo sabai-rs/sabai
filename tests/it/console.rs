@@ -92,31 +92,30 @@ impl Provider for GreetingProvider {
     }
 }
 
-fn app_with_commands(names: &[&'static str]) -> (Result<Arc<App>>, Arc<Mutex<Vec<String>>>) {
-    let ran_with = Arc::new(Mutex::new(Vec::new()));
-    let provider = GreetingProvider {
-        names: names.to_vec(),
-        ran_with: Arc::clone(&ran_with),
-    };
-    (
-        App::builder(Config::default()).provider(provider).boot(),
-        ran_with,
-    )
-}
-
 #[test]
 fn a_package_command_runs_with_the_arguments_after_its_name() {
-    let (app, ran_with) = app_with_commands(&["greet"]);
-    let args = ["greet", "Somchai"].map(String::from);
+    let ran_with = Arc::new(Mutex::new(Vec::new()));
+    let app = App::builder(Config::default())
+        .provider(GreetingProvider {
+            names: vec!["greet"],
+            ran_with: Arc::clone(&ran_with),
+        })
+        .boot();
+    let args = ["greet", "World"].map(String::from);
 
     Console::new(app.unwrap()).run_with(&args).unwrap();
 
-    assert_eq!(*ran_with.lock().unwrap(), ["Somchai"]);
+    assert_eq!(*ran_with.lock().unwrap(), ["World"]);
 }
 
 #[test]
 fn help_lists_package_commands_after_the_built_in_ones() {
-    let (app, _) = app_with_commands(&["greet"]);
+    let app = App::builder(Config::default())
+        .provider(GreetingProvider {
+            names: vec!["greet"],
+            ran_with: Arc::default(),
+        })
+        .boot();
     let help = Console::new(app.unwrap()).help();
 
     let greet = help
@@ -134,7 +133,12 @@ fn help_lists_package_commands_after_the_built_in_ones() {
 
 #[test]
 fn two_commands_with_one_name_fail_at_boot() {
-    let (app, _) = app_with_commands(&["greet", "greet"]);
+    let app = App::builder(Config::default())
+        .provider(GreetingProvider {
+            names: vec!["greet", "greet"],
+            ran_with: Arc::default(),
+        })
+        .boot();
 
     let error = app.unwrap_err().to_string();
 
@@ -143,7 +147,12 @@ fn two_commands_with_one_name_fail_at_boot() {
 
 #[test]
 fn a_package_command_cannot_hide_a_built_in_one() {
-    let (app, _) = app_with_commands(&["serve"]);
+    let app = App::builder(Config::default())
+        .provider(GreetingProvider {
+            names: vec!["serve"],
+            ran_with: Arc::default(),
+        })
+        .boot();
     let console = Console::new(app.unwrap()).routes(sabai::http::Router::new());
 
     let error = run(console, &["serve"]);
@@ -156,7 +165,12 @@ fn a_package_command_cannot_hide_a_built_in_one() {
 
 #[test]
 fn a_typo_suggests_the_command_it_looks_like() {
-    let (app, _) = app_with_commands(&["inspire", "greet"]);
+    let app = App::builder(Config::default())
+        .provider(GreetingProvider {
+            names: vec!["inspire", "greet"],
+            ran_with: Arc::default(),
+        })
+        .boot();
 
     assert_eq!(
         run(Console::new(app.unwrap()), &["inspi"]),
@@ -166,7 +180,12 @@ fn a_typo_suggests_the_command_it_looks_like() {
 
 #[test]
 fn a_wrong_letter_is_a_typo_too() {
-    let (app, _) = app_with_commands(&["greet"]);
+    let app = App::builder(Config::default())
+        .provider(GreetingProvider {
+            names: vec!["greet"],
+            ran_with: Arc::default(),
+        })
+        .boot();
 
     assert_eq!(
         run(Console::new(app.unwrap()), &["graet"]),
@@ -176,7 +195,12 @@ fn a_wrong_letter_is_a_typo_too() {
 
 #[test]
 fn every_lookalike_is_suggested() {
-    let (app, _) = app_with_commands(&["cache:clear", "view:clear", "inspire"]);
+    let app = App::builder(Config::default())
+        .provider(GreetingProvider {
+            names: vec!["cache:clear", "view:clear", "inspire"],
+            ran_with: Arc::default(),
+        })
+        .boot();
 
     assert_eq!(
         run(Console::new(app.unwrap()), &["clear"]),

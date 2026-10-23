@@ -87,6 +87,13 @@ pub async fn show(request: Request) -> String {
 
 `Request` is cheap to clone, so you can take it next to other arguments.
 
+To build one by hand, for a test or to call a route from code, use `Request::create`, like Laravel's `Request::create('/posts/7', 'GET')`:
+
+```rust
+let request = Request::create(Method::GET, "/posts/7")?;
+let response = routes.dispatch(request).await;
+```
+
 ## Input Trimming and Normalization
 
 Two default middleware clean the input before any handler reads it:

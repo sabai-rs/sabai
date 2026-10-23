@@ -27,6 +27,16 @@ struct RequestInner {
 }
 
 impl Request {
+    /// A request built by hand, with no headers and no body, like Laravel's
+    /// `Request::create('/posts', 'GET')`: for tests, and for calling a route from code.
+    pub fn create(method: Method, uri: &str) -> Result<Self> {
+        let request = http::Request::builder()
+            .method(method)
+            .uri(uri)
+            .body(Body::empty())?;
+        Ok(Self::from(request))
+    }
+
     /// The HTTP method, such as `GET` or `POST`.
     pub fn method(&self) -> &Method {
         self.inner.http.method()
@@ -165,6 +175,18 @@ mod tests {
             .body(Body::from("title=Hello"))
             .unwrap();
         Request::from(inner)
+    }
+
+    #[test]
+    fn create_builds_a_request_by_hand() {
+        let request = Request::create(Method::DELETE, "/posts/7?force=1").unwrap();
+        let broken = Request::create(Method::GET, "not a uri").err().unwrap();
+
+        assert_eq!(request.method(), Method::DELETE);
+        assert_eq!(request.path(), "/posts/7");
+        assert_eq!(request.query_string(), Some("force=1"));
+        assert!(request.body().as_bytes().is_empty());
+        assert_eq!(broken.status(), 500);
     }
 
     #[test]

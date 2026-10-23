@@ -46,20 +46,15 @@ impl Provider for ShopProvider {
     }
 }
 
-fn shop(journal: &Journal) -> Arc<App> {
-    App::builder(Config::default())
-        .provider(ShopProvider(journal.clone()))
-        .boot()
-        .unwrap()
-}
-
 #[test]
 fn listeners_run_in_the_order_they_were_added() {
     let journal = Journal::default();
-
-    shop(&journal)
-        .dispatch(&OrderShipped { order_id: 7 })
+    let app = App::builder(Config::default())
+        .provider(ShopProvider(journal.clone()))
+        .boot()
         .unwrap();
+
+    app.dispatch(&OrderShipped { order_id: 7 }).unwrap();
 
     assert_eq!(
         *journal.lock().unwrap(),
@@ -70,8 +65,12 @@ fn listeners_run_in_the_order_they_were_added() {
 #[test]
 fn an_event_without_listeners_is_fine() {
     let journal = Journal::default();
+    let app = App::builder(Config::default())
+        .provider(ShopProvider(journal.clone()))
+        .boot()
+        .unwrap();
 
-    shop(&journal).dispatch(&UserRegistered).unwrap();
+    app.dispatch(&UserRegistered).unwrap();
 
     assert!(journal.lock().unwrap().is_empty());
 }
