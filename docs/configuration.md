@@ -9,6 +9,7 @@ Each file in `config/` is one section. `config/app.toml` is the `app` section, l
 name = "${APP_NAME:-Blog}"
 host = "${APP_HOST:-127.0.0.1}"
 port = "${APP_PORT:-8000}"
+timezone = "${APP_TIMEZONE:-UTC}"
 ```
 
 - `${NAME}` reads an environment variable.

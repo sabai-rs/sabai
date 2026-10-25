@@ -29,8 +29,8 @@ http-body = "1"
 http-body-util = "0.1"
 hyper = { version = "1", default-features = false, features = ["server", "http1"] }
 hyper-util = { version = "0.1", default-features = false, features = ["tokio"] }
-# UTC only for now: the time zone database comes with a configurable APP_TIMEZONE.
-jiff = { version = "0.2.38", default-features = false, features = ["std"] }
+# Zone names like `Asia/Bangkok` read the system's /usr/share/zoneinfo; only Windows bundles the data.
+jiff = { version = "0.2.38", default-features = false, features = ["std", "tzdb-zoneinfo", "tzdb-bundle-platform"] }
 matchit = "0.8"
 percent-encoding = "2.3"
 pollster = "0.4"

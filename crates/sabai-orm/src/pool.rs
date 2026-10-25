@@ -61,8 +61,14 @@ impl Options {
             Driver::MySql => {
                 let options: sqlx::mysql::MySqlConnectOptions =
                     target.url.parse().map_err(invalid)?;
-                // `DateTime` is UTC, and a `timestamp` column converts to the session's zone.
-                Ok(Self::MySql(options.timezone(Some("+00:00".to_owned()))))
+                // A `timestamp` column converts through the session's zone, so Sabai keeps the
+                // server's like Laravel does, to read what a Laravel app on the same database wrote.
+                let timezone = target
+                    .timezone
+                    .as_deref()
+                    .map(session_timezone)
+                    .transpose()?;
+                Ok(Self::MySql(options.timezone(timezone)))
             }
             #[cfg(not(feature = "mysql"))]
             Driver::MySql => Ok(Self::Missing("mysql")),
@@ -157,6 +163,22 @@ impl Pool {
     }
 }
 
+// sqlx writes the zone into `SET time_zone='...'` as is, so only a zone's own characters pass.
+#[cfg(feature = "mysql")]
+fn session_timezone(zone: &str) -> Result<String> {
+    let allowed = |c: char| c.is_ascii_alphanumeric() || "/_+-:".contains(c);
+    if zone.is_empty() || !zone.chars().all(allowed) {
+        return Err(Error::new(
+            sabai_core::StatusCode::INTERNAL_SERVER_ERROR,
+            format!(
+                "config/database.toml: `timezone` is `{zone}`; use an offset like `+00:00` \
+                 or a zone name like `Asia/Bangkok`"
+            ),
+        ));
+    }
+    Ok(zone.to_owned())
+}
+
 #[cfg(not(all(feature = "mysql", feature = "sqlite")))]
 fn missing_feature(feature: &str) -> Error {
     Error::new(
@@ -166,4 +188,25 @@ fn missing_feature(feature: &str) -> Error {
              add the `{feature}` feature: sabai = {{ ..., features = [\"orm\", \"{feature}\"] }}"
         ),
     )
+}
+
+#[cfg(all(test, feature = "mysql"))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_session_timezone_may_be_a_name_or_an_offset() {
+        assert_eq!(session_timezone("Asia/Bangkok").unwrap(), "Asia/Bangkok");
+        assert_eq!(session_timezone("+07:00").unwrap(), "+07:00");
+    }
+
+    #[test]
+    fn a_session_timezone_that_could_change_the_set_statement_is_refused() {
+        let error = session_timezone("+00:00'; drop table users; --")
+            .err()
+            .unwrap()
+            .to_string();
+
+        assert!(error.contains("use an offset like `+00:00`"), "{error}");
+    }
 }

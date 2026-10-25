@@ -4,16 +4,17 @@ use std::time::SystemTime;
 
 use jiff::Timestamp;
 use jiff::civil;
-use jiff::tz::Offset;
+use jiff::tz::TimeZone;
 use serde::de::{self, Deserialize, Deserializer};
 use serde::ser::{Serialize, Serializer};
 
-use crate::{Error, Result, StatusCode};
+use crate::{App, Config, Error, Result, StatusCode};
 
 const DATABASE_FORMAT: &str = "%Y-%m-%d %H:%M:%S";
 const JSON_FORMAT: &str = "%Y-%m-%dT%H:%M:%S%.6fZ";
 
-/// A moment in time, kept in UTC: what a `timestamp` column holds.
+/// A moment in time, kept in UTC: what a `timestamp` column holds. It prints and reads text in
+/// the app's `timezone`, like Carbon in PHP's default zone, and JSON in UTC.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct DateTime(Timestamp);
 
@@ -44,14 +45,15 @@ impl TryFrom<SystemTime> for DateTime {
     }
 }
 
-/// Prints the form a database stores: `2026-10-23 10:00:00`.
+/// Prints the form a database stores, in the app's zone: `2026-10-23 10:00:00`.
 impl fmt::Display for DateTime {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0.strftime(DATABASE_FORMAT))
+        let local = self.0.to_zoned(current_timezone());
+        write!(f, "{}", local.strftime(DATABASE_FORMAT))
     }
 }
 
-/// Reads a time with an offset (`2026-10-23T10:00:00Z`), or the database form, taken as UTC.
+/// Reads a time with an offset (`2026-10-23T10:00:00Z`), or the database form, in the app's zone.
 impl FromStr for DateTime {
     type Err = Error;
 
@@ -60,7 +62,7 @@ impl FromStr for DateTime {
             return Ok(Self(timestamp));
         }
         let civil: civil::DateTime = input.parse().map_err(|_| not_a_date_time(input))?;
-        Ok(Self(Offset::UTC.to_timestamp(civil)?))
+        Ok(Self(civil.to_zoned(current_timezone())?.timestamp()))
     }
 }
 
@@ -75,6 +77,32 @@ impl<'de> Deserialize<'de> for DateTime {
         let input = String::deserialize(deserializer)?;
         input.parse().map_err(de::Error::custom)
     }
+}
+
+// Outside an app, like PHP without `date_default_timezone_set`, times are in UTC.
+fn current_timezone() -> TimeZone {
+    App::current().map_or(TimeZone::UTC, |app| app.timezone().clone())
+}
+
+/// The zone `app.timezone` names, like Laravel's `config('app.timezone')`; `UTC` when unset.
+pub(crate) fn app_timezone(config: &Config) -> Result<TimeZone> {
+    let name: String = config.get_or("app.timezone", "UTC".to_owned())?;
+    // UTC needs no zone data, so it works on images without /usr/share/zoneinfo.
+    if name == "UTC" {
+        return Ok(TimeZone::UTC);
+    }
+    TimeZone::get(&name).map_err(|_| unknown_timezone(&name))
+}
+
+fn unknown_timezone(name: &str) -> Error {
+    Error::new(
+        StatusCode::INTERNAL_SERVER_ERROR,
+        format!(
+            "`app.timezone` in config/app.toml is `{name}`, which is not a time zone; use a name \
+             like `UTC` or `Asia/Bangkok`. If the name is right, the system has no zone data: \
+             install the `tzdata` package"
+        ),
+    )
 }
 
 fn not_a_date_time(input: &str) -> Error {
@@ -153,6 +181,54 @@ mod tests {
         let time = DateTime::try_from(time).unwrap();
 
         assert_eq!(time.to_string(), "1970-01-02 00:00:00");
+    }
+
+    #[test]
+    fn in_an_app_text_is_read_and_printed_in_its_zone() {
+        let base = std::env::temp_dir().join(format!("sabai-core-zone-{}", std::process::id()));
+        std::fs::create_dir_all(base.join("config")).unwrap();
+        std::fs::write(
+            base.join("config/app.toml"),
+            "timezone = \"Asia/Bangkok\"\n",
+        )
+        .unwrap();
+        let app = App::builder(Config::load(&base).unwrap()).boot().unwrap();
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .build()
+            .unwrap();
+
+        let (read, printed) = runtime.block_on(app.scope(async {
+            let read: DateTime = "2026-10-23 17:00:00".parse().unwrap();
+            let utc: DateTime = "2026-10-23T10:00:00Z".parse().unwrap();
+            (read, utc.to_string())
+        }));
+
+        assert_eq!(read.to_json(), "2026-10-23T10:00:00.000000Z");
+        assert_eq!(printed, "2026-10-23 17:00:00");
+    }
+
+    #[test]
+    fn an_unknown_zone_stops_the_app_at_boot() {
+        let base = std::env::temp_dir().join(format!("sabai-core-bad-zone-{}", std::process::id()));
+        std::fs::create_dir_all(base.join("config")).unwrap();
+        std::fs::write(
+            base.join("config/app.toml"),
+            "timezone = \"Asia/Bangkokk\"\n",
+        )
+        .unwrap();
+
+        let error = App::builder(Config::load(&base).unwrap())
+            .boot()
+            .err()
+            .unwrap()
+            .to_string();
+
+        assert!(
+            error.contains(
+                "`app.timezone` in config/app.toml is `Asia/Bangkokk`, which is not a time zone"
+            ),
+            "{error}"
+        );
     }
 
     #[test]

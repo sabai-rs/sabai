@@ -3,7 +3,10 @@ use std::collections::HashMap;
 use std::fmt;
 use std::sync::{Arc, PoisonError, RwLock};
 
+use jiff::tz::TimeZone;
+
 use crate::command::Commands;
+use crate::datetime::app_timezone;
 use crate::events::Events;
 use crate::{Command, Config, Container, Error, Event, Listener, Result};
 
@@ -44,6 +47,7 @@ pub trait FromApp: Sized {
 #[derive(Debug)]
 pub struct App {
     config: Config,
+    timezone: TimeZone,
     container: Container,
     events: Events,
     commands: Commands,
@@ -71,6 +75,7 @@ impl App {
         AppBuilder {
             app: App {
                 config,
+                timezone: TimeZone::UTC,
                 container: Container::default(),
                 events: Events::default(),
                 commands: Commands::default(),
@@ -83,6 +88,11 @@ impl App {
     /// The app config.
     pub fn config(&self) -> &Config {
         &self.config
+    }
+
+    /// The zone of `app.timezone`, which column values and printed times are in.
+    pub(crate) fn timezone(&self) -> &TimeZone {
+        &self.timezone
     }
 
     /// Binds a service; see [`Container::bind`].
@@ -182,6 +192,7 @@ impl AppBuilder {
     /// shared and read-only from here on.
     pub fn boot(self) -> Result<Arc<App>> {
         let Self { mut app, providers } = self;
+        app.timezone = app_timezone(&app.config)?;
         for NamedProvider { name, provider } in &providers {
             let failed =
                 |error: Error| error.context(format!("provider `{name}` failed to register"));
