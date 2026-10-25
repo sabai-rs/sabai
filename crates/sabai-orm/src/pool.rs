@@ -58,7 +58,12 @@ impl Options {
         };
         match target.driver {
             #[cfg(feature = "mysql")]
-            Driver::MySql => Ok(Self::MySql(target.url.parse().map_err(invalid)?)),
+            Driver::MySql => {
+                let options: sqlx::mysql::MySqlConnectOptions =
+                    target.url.parse().map_err(invalid)?;
+                // `DateTime` is UTC, and a `timestamp` column converts to the session's zone.
+                Ok(Self::MySql(options.timezone(Some("+00:00".to_owned()))))
+            }
             #[cfg(not(feature = "mysql"))]
             Driver::MySql => Ok(Self::Missing("mysql")),
             #[cfg(feature = "sqlite")]
