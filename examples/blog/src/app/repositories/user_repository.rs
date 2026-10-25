@@ -30,10 +30,10 @@ impl UserRepository {
         hashed_password: String,
     ) -> Result<User> {
         let mut user = User {
-            id: 0,
             name,
             email,
             password: hashed_password,
+            ..Default::default()
         };
         match user.save().await {
             Err(error) if is_unique_violation(&error) => Err(email_taken()),

@@ -3,6 +3,7 @@ use std::sync::Arc;
 use sabai_core::contracts::BoxFuture;
 use sabai_core::{App, Error, Result, StatusCode};
 
+use crate::timestamps::{self, Timestamps};
 use crate::{Database, DatabaseManager, Query, Row, SqlValue, ToColumn};
 
 /// A table row as a struct, like an Eloquent model. Write `#[derive(Model)]`, not this impl.
@@ -28,6 +29,11 @@ pub trait Model: Sized + Send + 'static {
     /// Sets the primary key the database gave a new row.
     fn set_id(&mut self, id: u64);
 
+    /// The `created_at` and `updated_at` fields, when the model has both.
+    fn timestamps(&mut self) -> Option<Timestamps<'_>> {
+        None
+    }
+
     /// Every row of the table, like Laravel's `Post::all()`.
     fn all() -> BoxFuture<'static, Result<Vec<Self>>> {
         Query::new().get()
@@ -51,9 +57,10 @@ pub trait Model: Sized + Send + 'static {
     }
 
     /// Inserts the row when its id is `0` and fills the id in, or updates it, like `$post->save()`.
+    /// A model with `created_at` and `updated_at` gets them set: both on insert, `updated_at` after.
     fn save(&mut self) -> BoxFuture<'_, Result<()>> {
-        let values = self.values();
         let id = self.id();
+        let values = timestamps::touch(self.timestamps(), id == 0).and_then(|()| self.values());
         Box::pin(async move {
             match id {
                 0 => self

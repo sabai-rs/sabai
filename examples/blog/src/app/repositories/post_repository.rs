@@ -1,5 +1,5 @@
 use sabai::orm::Model;
-use sabai::{App, DateTime, FromApp, Result};
+use sabai::{App, FromApp, Result};
 
 use crate::app::models::Post;
 
@@ -22,13 +22,10 @@ impl PostRepository {
     }
 
     pub async fn create(&self, title: String, body: String) -> Result<Post> {
-        let now = Some(DateTime::now());
         let mut post = Post {
-            id: 0,
             title,
             body,
-            created_at: now,
-            updated_at: now,
+            ..Default::default()
         };
         post.save().await?;
         Ok(post)

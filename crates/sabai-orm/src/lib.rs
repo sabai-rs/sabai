@@ -18,6 +18,7 @@ mod provider;
 mod query;
 mod row;
 mod schema;
+mod timestamps;
 mod unique;
 mod value;
 
@@ -32,5 +33,6 @@ pub use row::{FromColumn, Row};
 pub use sabai_core::Result;
 pub use sabai_macros::Model;
 pub use schema::{Blueprint, Column, Driver, Schema};
+pub use timestamps::{Timestamp, Timestamps};
 pub use unique::is_unique_violation;
 pub use value::{SqlValue, ToColumn};
