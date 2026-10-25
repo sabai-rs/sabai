@@ -147,7 +147,7 @@ struct Post {
 }
 ```
 
-Times are UTC: Sabai sets each MySQL connection's `time_zone` to `+00:00`, since a `timestamp` column converts to and from the session's zone. MySQL's zero date `0000-00-00 00:00:00` is an error when read; store `NULL` instead.
+Column values are in the app's [time zone](/dates#time-zone). On MySQL, a `timestamp` column also converts through the connection's session zone; Sabai leaves the server's, like Laravel, unless the connection sets `timezone` (see [Database](/database#time-zone)). MySQL's zero date `0000-00-00 00:00:00` is an error when read; store `NULL` instead.
 
 ## Not Yet
 

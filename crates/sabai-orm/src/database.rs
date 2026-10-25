@@ -21,6 +21,7 @@ impl Database {
         Self::from_target(Target {
             url: crate::config::SQLITE_MEMORY.to_owned(),
             driver: Driver::Sqlite,
+            timezone: None,
         })
         .expect("an in-memory SQLite database is always valid")
     }

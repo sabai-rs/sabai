@@ -50,6 +50,19 @@ DB_PASSWORD=secret
 
 For SQLite, `DB_DATABASE` is a file path, or `:memory:` for a database that lives only as long as the app.
 
+## Time Zone
+
+On MySQL, a `timestamp` column stores what it is given converted from the session's `time_zone`, and converts back when read. Sabai keeps the server's zone for the session, like Laravel, so both read the same values from a shared database. To set it, add `timezone` to the connection, like Laravel's `'timezone'` option:
+
+```toml
+[connections.mysql]
+driver = "mysql"
+# ...
+timezone = "+00:00"
+```
+
+It takes an offset like `+07:00` or a zone name the server knows, like `Asia/Bangkok`. The app's own zone is `app.timezone`; see [Dates](/dates#time-zone).
+
 ## Register the Provider
 
 Add `DatabaseServiceProvider` in `src/lib.rs`:

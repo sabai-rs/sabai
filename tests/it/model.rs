@@ -31,6 +31,14 @@ struct Comment {
     updated_at: Option<DateTime>,
 }
 
+/// The same table read as text, to see the string a column holds.
+#[derive(Model)]
+#[model(table = "meetings")]
+struct MeetingAsText {
+    id: u64,
+    starts_at: String,
+}
+
 /// A clock that only moves when told to, like Laravel's `travel()`.
 struct FrozenClock(Mutex<SystemTime>);
 
@@ -498,4 +506,43 @@ fn the_saved_model_holds_the_same_timestamps_the_database_keeps() {
     );
 
     assert_eq!(saved, read);
+}
+
+#[test]
+fn columns_hold_times_in_the_app_timezone_and_json_stays_utc() {
+    let base = std::env::temp_dir().join(format!("sabai-it-model-zone-{}", process::id()));
+    fs::create_dir_all(base.join("config")).unwrap();
+    fs::write(base.join("config/database.toml"), ONE_CONNECTION).unwrap();
+    fs::write(
+        base.join("config/app.toml"),
+        "timezone = \"Asia/Bangkok\"\n",
+    )
+    .unwrap();
+    let app = App::builder(Config::load(&base).unwrap())
+        .provider(DatabaseServiceProvider)
+        .boot()
+        .unwrap();
+
+    let (stored, read) = run(
+        &app,
+        &[
+            "create table meetings (id integer primary key, starts_at datetime not null, ended_at datetime)",
+        ],
+        async {
+            let mut meeting = Meeting {
+                id: 0,
+                starts_at: "2026-10-23T10:05:09Z".parse().unwrap(),
+                ended_at: None,
+            };
+            meeting.save().await.unwrap();
+            let stored = MeetingAsText::find_or_fail(meeting.id).await.unwrap();
+            (
+                stored.starts_at,
+                Meeting::find_or_fail(meeting.id).await.unwrap(),
+            )
+        },
+    );
+
+    assert_eq!(stored, "2026-10-23 17:05:09");
+    assert_eq!(read.starts_at.to_json(), "2026-10-23T10:05:09.000000Z");
 }

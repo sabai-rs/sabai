@@ -29,6 +29,9 @@ enum Connection {
         username: String,
         #[serde(deserialize_with = "string_or_number")]
         password: String,
+        /// The session's `time_zone`, like Laravel's `timezone`; unset keeps the server's.
+        #[serde(default)]
+        timezone: Option<String>,
     },
 }
 
@@ -38,6 +41,9 @@ pub(crate) const SQLITE_MEMORY: &str = "sqlite::memory:";
 pub(crate) struct Target {
     pub(crate) url: String,
     pub(crate) driver: Driver,
+    // Only MySQL sessions have a zone to set.
+    #[cfg_attr(not(feature = "mysql"), allow(dead_code))]
+    pub(crate) timezone: Option<String>,
 }
 
 /// The name of the default connection, and every connection's target.
@@ -64,10 +70,12 @@ fn target(connection: &Connection) -> Target {
         Connection::Sqlite { database } if database == ":memory:" => Target {
             url: SQLITE_MEMORY.to_owned(),
             driver: Driver::Sqlite,
+            timezone: None,
         },
         Connection::Sqlite { database } => Target {
             url: format!("sqlite://{database}?mode=rwc"),
             driver: Driver::Sqlite,
+            timezone: None,
         },
         Connection::Mysql {
             host,
@@ -75,6 +83,7 @@ fn target(connection: &Connection) -> Target {
             database,
             username,
             password,
+            timezone,
         } => Target {
             url: format!(
                 "mysql://{}:{}@{host}:{port}/{}",
@@ -83,6 +92,7 @@ fn target(connection: &Connection) -> Target {
                 encode(database)
             ),
             driver: Driver::MySql,
+            timezone: timezone.clone(),
         },
     }
 }
@@ -117,6 +127,7 @@ mod tests {
             database: "blog".to_owned(),
             username: "sabai".to_owned(),
             password: password.to_owned(),
+            timezone: None,
         }
     }
 
