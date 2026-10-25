@@ -321,8 +321,8 @@ Models
   - [x] **M2-10b** The blog's `PostRepository` is a plain struct with `async fn`s over `Post::all`, `find_or_fail` and `save`, like a Laravel repository class; the in-memory store is gone. Text columns read as `String` even when MySQL sends `TEXT` as `BLOB` through sqlx's `Any`
 - [ ] **M2-11** Timestamps (`created_at`, `updated_at`) on by default
   - [x] **M2-11a** `sabai::DateTime`, a UTC moment over `jiff::Timestamp` (UTC only, no time zone database yet): prints `2026-10-23 10:00:00`, parses that or a time with an offset, JSON as `2026-10-23T10:00:00.000000Z` like Laravel's models; `DateTime::try_from(clock.now())`; the blog's `/api/health` prints one
-  - [ ] **M2-11b** A `DateTime` field reads and writes a `timestamp` column natively on MySQL and SQLite (`Option<DateTime>` for nullable)
-  - [ ] **M2-11c** `save()` fills `created_at` and `updated_at` from the app's `Clock`, so a test can freeze time
+  - [x] **M2-11b** A `DateTime` field reads and writes a `timestamp` column natively on MySQL and SQLite (`Option<DateTime>` for nullable): MySQL's binary date bytes are decoded in sabai-orm, so sqlx needs neither chrono nor time; each MySQL session's `time_zone` is pinned to `+00:00`; the zero date is an error that says to store NULL; the blog's posts carry `created_at` and `updated_at`. Checked on MySQL 8.4 and SQLite
+  - [ ] **M2-11c** `save()` fills `created_at` and `updated_at` from the app's `Clock`, so a test can freeze time, cut to whole seconds like Laravel so the saved model matches what the database keeps
 - [ ] **M2-12** Soft deletes via `#[model(soft_delete)]`
 - [ ] **M2-13** Mass-assignment guard: `#[model(fillable(...))]`
 - [ ] **M2-14** Casts: JSON, enum, dates (`DateTime`)

@@ -120,9 +120,26 @@ The database checks while it saves, so two requests at once cannot both take the
 | `f64` | float |
 | `bool` | boolean |
 | `String` | text |
+| `DateTime` | `timestamp` or `datetime` |
 | `Option<T>` | a nullable column |
 
 A negative number in a `u64` field is an error, never a wrong value.
+
+### Dates
+
+A [`DateTime`](/dates) field reads a `timestamp` column on MySQL and a `datetime` column on SQLite, and is written as `2026-10-23 10:00:00`, like Laravel does. The columns from `table.timestamps()` are nullable, so their fields are `Option<DateTime>`:
+
+```rust
+#[derive(Model, Serialize)]
+struct Post {
+    id: u64,
+    title: String,
+    created_at: Option<DateTime>,
+    updated_at: Option<DateTime>,
+}
+```
+
+Times are UTC: Sabai sets each MySQL connection's `time_zone` to `+00:00`, since a `timestamp` column converts to and from the session's zone. MySQL's zero date `0000-00-00 00:00:00` is an error when read; store `NULL` instead.
 
 ## Not Yet
 

@@ -11,6 +11,8 @@ mod manager;
 mod migration;
 mod migrator;
 mod model;
+#[cfg(feature = "mysql")]
+mod mysql_timestamp;
 mod pool;
 mod provider;
 mod query;

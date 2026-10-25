@@ -5,13 +5,20 @@ use sabai::StatusCode;
 use sabai::orm::{
     Database, DatabaseManager, DatabaseServiceProvider, Migration, Migrations, Model, Schema,
 };
-use sabai::{App, Config};
+use sabai::{App, Config, DateTime};
 
 #[derive(Model, Debug, PartialEq)]
 struct Post {
     id: u64,
     title: String,
     body: Option<String>,
+}
+
+#[derive(Model, Debug, PartialEq)]
+struct Meeting {
+    id: u64,
+    starts_at: DateTime,
+    ended_at: Option<DateTime>,
 }
 
 #[derive(Model)]
@@ -351,5 +358,48 @@ fn a_column_the_model_does_not_have_never_reaches_the_sql() {
     assert_eq!(
         error.to_string(),
         "`posts` has no column `title = '' or 1=1 --`; its columns are id, title, body"
+    );
+}
+
+#[test]
+fn a_date_time_field_is_saved_and_read_back() {
+    let meeting = run(
+        &app("date-time"),
+        &[
+            "create table meetings (id integer primary key, starts_at datetime not null, ended_at datetime)",
+        ],
+        async {
+            let mut meeting = Meeting {
+                id: 0,
+                starts_at: "2026-10-23 10:05:09".parse().unwrap(),
+                ended_at: None,
+            };
+            meeting.save().await.unwrap();
+            Meeting::find_or_fail(meeting.id).await.unwrap()
+        },
+    );
+
+    assert_eq!(meeting.starts_at.to_string(), "2026-10-23 10:05:09");
+    assert_eq!(meeting.ended_at, None);
+}
+
+#[test]
+fn a_date_time_column_holding_other_text_names_the_column() {
+    let error = run(
+        &app("date-time-text"),
+        &[
+            "create table meetings (id integer primary key, starts_at datetime not null, ended_at datetime)",
+            "insert into meetings (starts_at) values ('tomorrow')",
+        ],
+        async { Meeting::find_or_fail(1).await.err().unwrap().to_string() },
+    );
+
+    assert!(
+        error.contains("could not read column `starts_at`"),
+        "{error}"
+    );
+    assert!(
+        error.contains("`tomorrow` is not a date and time"),
+        "{error}"
     );
 }

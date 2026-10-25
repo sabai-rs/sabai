@@ -1,4 +1,4 @@
-use sabai_core::{Error, Result, StatusCode};
+use sabai_core::{DateTime, Error, Result, StatusCode};
 use sqlx::Row as _;
 
 /// One row of a query result; `#[derive(Model)]` reads each field from it.
@@ -107,6 +107,34 @@ macro_rules! read_integer {
 
 read_integer!(signed: i64, i32);
 read_integer!(unsigned: u64, u32);
+
+impl FromColumn for DateTime {
+    fn from_column(row: &Row, column: &str) -> Result<Self> {
+        date_time(row, column)?.ok_or_else(null)
+    }
+}
+
+impl FromColumn for Option<DateTime> {
+    fn from_column(row: &Row, column: &str) -> Result<Self> {
+        date_time(row, column)
+    }
+}
+
+fn date_time(row: &Row, column: &str) -> Result<Option<DateTime>> {
+    match row.0 {
+        #[cfg(feature = "mysql")]
+        DriverRow::MySql(ref row) => {
+            let time: Option<crate::mysql_timestamp::MySqlTimestamp> = row.try_get(column)?;
+            Ok(time.map(|time| time.0))
+        }
+        // SQLite has no date type: a `datetime` column holds the text `2026-10-23 10:00:00`.
+        #[cfg(feature = "sqlite")]
+        DriverRow::Sqlite(ref row) => {
+            let text: Option<String> = row.try_get(column)?;
+            text.map(|text| text.parse()).transpose()
+        }
+    }
+}
 
 fn null() -> Error {
     Error::new(

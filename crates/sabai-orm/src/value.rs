@@ -1,4 +1,4 @@
-use sabai_core::Result;
+use sabai_core::{DateTime, Result};
 
 /// A value bound into a query.
 #[derive(Clone, Debug, PartialEq)]
@@ -33,7 +33,7 @@ macro_rules! to_column {
 
 to_column!(i64 => Integer, i32 => Integer, f64 => Float, bool => Bool, String => Text);
 
-// `sqlx::Any` binds no unsigned integers; values above `i64::MAX` are refused, not wrapped.
+// `SqlValue` keeps integers as `i64`; values above `i64::MAX` are refused, not wrapped.
 macro_rules! to_column_through_i64 {
     ($($type:ty),+) => {$(
         impl ToColumn for $type {
@@ -52,6 +52,13 @@ impl<T: ToColumn> ToColumn for Option<T> {
             Some(value) => value.to_column(),
             None => Ok(SqlValue::Null),
         }
+    }
+}
+
+// The form Laravel writes too; a `timestamp` column keeps whole seconds unless given a precision.
+impl ToColumn for DateTime {
+    fn to_column(&self) -> Result<SqlValue> {
+        Ok(SqlValue::Text(self.to_string()))
     }
 }
 
