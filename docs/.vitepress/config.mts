@@ -96,6 +96,7 @@ export default defineConfig({
           { text: 'Service container', link: '/container' },
           { text: 'Service providers', link: '/providers' },
           { text: 'Console', link: '/console' },
+          { text: 'Dates', link: '/dates' },
         ],
       },
     ],

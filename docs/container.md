@@ -61,8 +61,8 @@ Take a bound service as an argument with `Service<T>`:
 
 ```rust
 async fn health(clock: Service<dyn Clock>) -> Result<String> {
-    let now = clock.now().duration_since(UNIX_EPOCH)?;
-    Ok(format!("ok at {}", now.as_secs()))
+    let now = DateTime::try_from(clock.now())?;
+    Ok(format!("ok at {now}"))
 }
 ```
 
