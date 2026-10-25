@@ -1,11 +1,9 @@
 //! Endpoints for programs, like Laravel's `routes/api.php`; `routes.rs` puts them under `/api`.
 
-use std::time::UNIX_EPOCH;
-
-use sabai::Result;
 use sabai::contracts::Clock;
 use sabai::http::{Router, Service};
 use sabai::orm::Database;
+use sabai::{DateTime, Result};
 
 use crate::app::http::controllers::{
     AuthController, PostController, RegisteredUserController, StatsController,
@@ -32,6 +30,6 @@ pub fn routes(route: &mut Router) {
 
 async fn health(clock: Service<dyn Clock>, db: Service<Database>) -> Result<String> {
     db.ping().await?;
-    let now = clock.now().duration_since(UNIX_EPOCH)?;
-    Ok(format!("ok at {}", now.as_secs()))
+    let now = DateTime::try_from(clock.now())?;
+    Ok(format!("ok at {now}"))
 }
