@@ -28,7 +28,7 @@ Take it as an action argument. The action only runs when the rules pass:
 
 ```rust
 pub async fn store(request: StorePostRequest) -> Result<(StatusCode, Json<Post>)> {
-    let mut post = Post { id: 0, title: request.title, body: request.body };
+    let mut post = Post { title: request.title, body: request.body, ..Default::default() };
     post.save().await?;
     Ok((StatusCode::CREATED, Json(post)))
 }

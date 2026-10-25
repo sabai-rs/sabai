@@ -23,6 +23,12 @@ impl DateTime {
         Self(Timestamp::now())
     }
 
+    /// The same time without its fraction of a second, like Carbon's `startOfSecond()`.
+    pub fn start_of_second(self) -> Self {
+        // The whole seconds of a valid time are always in range, so the fallback never runs.
+        Self(Timestamp::from_second(self.0.as_second()).unwrap_or(self.0))
+    }
+
     /// The time in JSON's form, with microseconds: `2026-10-23T10:00:00.000000Z`.
     pub fn to_json(&self) -> String {
         self.0.strftime(JSON_FORMAT).to_string()
@@ -128,6 +134,16 @@ mod tests {
         let time: DateTime = serde_json::from_value(value).unwrap();
 
         assert_eq!(time.to_string(), "2026-10-23 10:05:09");
+    }
+
+    #[test]
+    fn the_start_of_a_second_drops_its_fraction() {
+        let time: DateTime = "2026-10-23T10:05:09.987654Z".parse().unwrap();
+
+        assert_eq!(
+            time.start_of_second().to_json(),
+            "2026-10-23T10:05:09.000000Z"
+        );
     }
 
     #[test]

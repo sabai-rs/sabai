@@ -22,6 +22,17 @@ pub(crate) fn expand(input: &DeriveInput) -> Result<TokenStream> {
             "`Model` needs an `id: u64` field for the primary key, the column `table.id()` makes in a migration",
         ));
     }
+    let has = |field: &str| columns.iter().any(|column| column == field);
+    let timestamps = (has("created_at") && has("updated_at")).then(|| {
+        quote! {
+            fn timestamps(&mut self) -> ::core::option::Option<#orm::Timestamps<'_>> {
+                ::core::option::Option::Some(#orm::Timestamps {
+                    created_at: &mut self.created_at,
+                    updated_at: &mut self.updated_at,
+                })
+            }
+        }
+    });
     Ok(quote! {
         impl #orm::Model for #name {
             const TABLE: &'static str = #table;
@@ -43,6 +54,8 @@ pub(crate) fn expand(input: &DeriveInput) -> Result<TokenStream> {
             fn set_id(&mut self, id: u64) {
                 self.id = id;
             }
+
+            #timestamps
         }
     })
 }

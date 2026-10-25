@@ -8,7 +8,7 @@ Derive `Model` on a struct. Its fields are the table's columns:
 use sabai::orm::Model;
 use serde::Serialize;
 
-#[derive(Model, Serialize, Clone)]
+#[derive(Model, Serialize, Clone, Default)]
 pub struct Post {
     pub id: u64,
     pub title: String,
@@ -80,10 +80,10 @@ Models find their database by themselves. There is no `db` to pass, in a control
 
 ## Save Models
 
-`save` inserts a model whose `id` is `0`, then fills in the new id:
+`save` inserts a model whose `id` is `0`, then fills in the new id. Derive `Default` on the model and `..Default::default()` fills the fields you leave out: `id` becomes `0` and the timestamps `None`:
 
 ```rust
-let mut post = Post { id: 0, title: "Sabai".into(), body: "Rust, but sabai".into() };
+let mut post = Post { title: "Sabai".into(), body: "Rust, but sabai".into(), ..Default::default() };
 post.save().await?;
 println!("{}", post.id);    // 1
 ```
@@ -94,6 +94,14 @@ Change a saved model and `save` again to update it:
 post.title = "Sabai 2".into();
 post.save().await?;
 ```
+
+### Timestamps
+
+A model with `created_at` and `updated_at` fields gets them filled by `save`, like Laravel's timestamps: both when the row is inserted, then only `updated_at` on each update. The time comes from the app's `Clock`, so a test can freeze it, or the system clock when none is bound. It is cut to whole seconds, as a `timestamp` column keeps it, so the saved model matches what you read back.
+
+Write out any field that must never be empty, such as a user's `password`: `..Default::default()` would quietly make a forgotten one `""`.
+
+A model without both fields is left alone. Unlike Laravel, `save` always sets them, even if you set `created_at` yourself; keeping a value you set needs change tracking, which comes later.
 
 ### A Taken Unique Value
 
@@ -143,4 +151,4 @@ Times are UTC: Sabai sets each MySQL connection's `time_zone` to `+00:00`, since
 
 ## Not Yet
 
-These are on the roadmap: `where` and the query builder, `count`, `delete`, automatic timestamps, casts, relations and eager loading.
+These are on the roadmap: `where` and the query builder, `count`, `delete`, casts, relations and eager loading.

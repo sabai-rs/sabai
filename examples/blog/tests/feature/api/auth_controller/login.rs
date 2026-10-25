@@ -13,10 +13,10 @@ const PHP_HASH: &str = "$2y$10$.vGA1O9wmRjrwAVXD98HNOgsNpDczlqm3Jq7KnEd1rVAGv3Fy
 fn login_signs_in_with_the_right_password_and_upgrades_an_old_hash() {
     let app = app();
     let mut user = User {
-        id: 0,
         name: "Test User".to_owned(),
         email: "test@example.com".to_owned(),
         password: PHP_HASH.to_owned(),
+        ..Default::default()
     };
     app.run(user.save()).expect("the user saves");
 
@@ -36,10 +36,10 @@ fn login_signs_in_with_the_right_password_and_upgrades_an_old_hash() {
 fn login_refuses_a_wrong_password() {
     let app = app();
     let mut user = User {
-        id: 0,
         name: "Test User".to_owned(),
         email: "test@example.com".to_owned(),
         password: PHP_HASH.to_owned(),
+        ..Default::default()
     };
     app.run(user.save()).expect("the user saves");
 

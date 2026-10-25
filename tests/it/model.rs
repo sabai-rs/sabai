@@ -1,11 +1,13 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, SystemTime};
 use std::{fs, process};
 
-use sabai::StatusCode;
+use sabai::contracts::Clock;
 use sabai::orm::{
     Database, DatabaseManager, DatabaseServiceProvider, Migration, Migrations, Model, Schema,
 };
 use sabai::{App, Config, DateTime};
+use sabai::{Provider, StatusCode};
 
 #[derive(Model, Debug, PartialEq)]
 struct Post {
@@ -19,6 +21,32 @@ struct Meeting {
     id: u64,
     starts_at: DateTime,
     ended_at: Option<DateTime>,
+}
+
+#[derive(Model, Debug, PartialEq)]
+struct Comment {
+    id: u64,
+    body: String,
+    created_at: Option<DateTime>,
+    updated_at: Option<DateTime>,
+}
+
+/// A clock that only moves when told to, like Laravel's `travel()`.
+struct FrozenClock(Mutex<SystemTime>);
+
+impl Clock for FrozenClock {
+    fn now(&self) -> SystemTime {
+        *self.0.lock().unwrap()
+    }
+}
+
+struct FrozenClockProvider(Arc<FrozenClock>);
+
+impl Provider for FrozenClockProvider {
+    fn register(&self, app: &mut App) -> sabai::Result<()> {
+        app.bind::<dyn Clock>(self.0.clone());
+        Ok(())
+    }
 }
 
 #[derive(Model)]
@@ -402,4 +430,72 @@ fn a_date_time_column_holding_other_text_names_the_column() {
         error.contains("`tomorrow` is not a date and time"),
         "{error}"
     );
+}
+
+#[test]
+fn save_sets_both_timestamps_on_insert_and_only_updated_at_after() {
+    let clock = Arc::new(FrozenClock(Mutex::new(
+        SystemTime::UNIX_EPOCH + Duration::from_millis(1_792_000_000_250),
+    )));
+    let base = std::env::temp_dir().join(format!("sabai-it-model-timestamps-{}", process::id()));
+    fs::create_dir_all(base.join("config")).unwrap();
+    fs::write(base.join("config/database.toml"), ONE_CONNECTION).unwrap();
+    let app = App::builder(Config::load(&base).unwrap())
+        .provider(DatabaseServiceProvider)
+        .provider(FrozenClockProvider(clock.clone()))
+        .boot()
+        .unwrap();
+
+    let (inserted, updated) = run(
+        &app,
+        &[
+            "create table comments (id integer primary key, body text not null, created_at datetime, updated_at datetime)",
+        ],
+        async {
+            let mut comment = Comment {
+                id: 0,
+                body: "First".into(),
+                created_at: None,
+                updated_at: None,
+            };
+            comment.save().await.unwrap();
+            let inserted = Comment::find_or_fail(comment.id).await.unwrap();
+            *clock.0.lock().unwrap() += Duration::from_secs(3600);
+            comment.body = "Edited".into();
+            comment.save().await.unwrap();
+            (inserted, Comment::find_or_fail(comment.id).await.unwrap())
+        },
+    );
+
+    let created = inserted.created_at.unwrap().to_json();
+    assert_eq!(created, "2026-10-14T17:46:40.000000Z");
+    assert_eq!(inserted.updated_at, inserted.created_at);
+    assert_eq!(updated.created_at, inserted.created_at);
+    assert_eq!(
+        updated.updated_at.unwrap().to_json(),
+        "2026-10-14T18:46:40.000000Z"
+    );
+}
+
+#[test]
+fn the_saved_model_holds_the_same_timestamps_the_database_keeps() {
+    let (saved, read) = run(
+        &app("timestamps-match"),
+        &[
+            "create table comments (id integer primary key, body text not null, created_at datetime, updated_at datetime)",
+        ],
+        async {
+            let mut comment = Comment {
+                id: 0,
+                body: "First".into(),
+                created_at: None,
+                updated_at: None,
+            };
+            comment.save().await.unwrap();
+            let read = Comment::find_or_fail(comment.id).await.unwrap();
+            (comment, read)
+        },
+    );
+
+    assert_eq!(saved, read);
 }
