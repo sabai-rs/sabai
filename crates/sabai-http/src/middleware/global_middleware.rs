@@ -4,7 +4,7 @@ use std::sync::Arc;
 use super::{BoxedMiddleware, ConvertEmptyStringsToNull, Middleware, TraceRequests, TrimStrings};
 
 /// Changes to the middleware every request runs, given to [`Router::global_middleware`](crate::Router::global_middleware)
-/// like the `$middleware` Laravel's `withMiddleware` gets. Sabai's defaults run unless removed.
+/// as a list to append to or remove from. Sabai's defaults run unless removed.
 #[derive(Default)]
 pub struct GlobalMiddleware {
     appended: Vec<(TypeId, BoxedMiddleware)>,
@@ -46,7 +46,8 @@ impl GlobalMiddleware {
     }
 }
 
-// Laravel's defaults in Laravel's order, after TraceRequests so its log line covers them.
+// Trimming runs before empty strings become null, so "  " becomes null too; both run after
+// TraceRequests so its log line covers them.
 fn defaults() -> Vec<(TypeId, BoxedMiddleware)> {
     vec![
         (TypeId::of::<TraceRequests>(), Arc::new(TraceRequests)),

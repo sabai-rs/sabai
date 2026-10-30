@@ -1,4 +1,4 @@
-//! Feature tests, like Laravel's `tests/Feature`: one file per controller action. They are
+//! Feature tests: one file per controller action. They are
 //! modules of one test binary, because every file directly under `tests/` compiles on its own.
 
 mod api;
@@ -7,7 +7,7 @@ mod middleware;
 use sabai::Config;
 use sabai_testing::TestApp;
 
-/// A freshly booted blog, like Laravel's `TestCase`: every test starts with no posts, and
+/// A freshly booted blog: every test starts with no posts, and
 /// `.env.testing` points it at a SQLite database in memory, migrated before each test.
 fn app() -> TestApp {
     let config = Config::load_for(env!("CARGO_MANIFEST_DIR"), "testing").expect("the config loads");

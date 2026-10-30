@@ -1,4 +1,4 @@
-//! Everything that speaks HTTP, like Laravel's `app/Http`.
+//! Everything that speaks HTTP.
 
 pub mod controllers;
 pub mod middleware;

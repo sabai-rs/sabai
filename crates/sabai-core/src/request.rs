@@ -9,7 +9,7 @@ use crate::{App, Body, Error, Result};
 
 use input::{Fields, InputError};
 
-/// An incoming HTTP request, with Laravel-style helpers on top of [`http::Request`].
+/// An incoming HTTP request, with input and route helpers on top of [`http::Request`].
 /// Cloning it is cheap, so a handler can take `request: Request` alongside other arguments.
 #[derive(Clone, Debug)]
 pub struct Request {
@@ -27,8 +27,8 @@ struct RequestInner {
 }
 
 impl Request {
-    /// A request built by hand, with no headers and no body, like Laravel's
-    /// `Request::create('/posts', 'GET')`: for tests, and for calling a route from code.
+    /// A request built by hand, with no headers and no body: for tests, and for calling a route
+    /// from code.
     pub fn create(method: Method, uri: &str) -> Result<Self> {
         let request = http::Request::builder()
             .method(method)
@@ -67,7 +67,7 @@ impl Request {
         self.inner.http.headers().get(name)?.to_str().ok()
     }
 
-    /// Every input field, like Laravel's `$request->all()`: the query string merged with the JSON
+    /// Every input field: the query string merged with the JSON
     /// or form body, the body winning. The body is parsed once, on first use, and shared by clones.
     pub fn all(&self) -> Result<&Map<String, Value>> {
         let input = self.inner.input.get_or_init(|| input::read(self));
@@ -80,19 +80,19 @@ impl Request {
         self.all().ok()?.get(name)
     }
 
-    /// Replaces the input, for middleware that cleans it, like Laravel's `TrimStrings`.
+    /// Replaces the input, for middleware that cleans it, such as `TrimStrings`.
     pub fn with_input(mut self, fields: Map<String, Value>) -> Self {
         self.inner_mut().input = OnceLock::from(Ok(fields));
         self
     }
 
-    /// Whether the body is JSON by its `Content-Type`, like Laravel's `$request->isJson()`.
+    /// Whether the body is JSON by its `Content-Type`.
     pub fn is_json(&self) -> bool {
         let content_type = input::content_type(self);
         content_type.ends_with("/json") || content_type.ends_with("+json")
     }
 
-    /// A parameter from the matched route, like Laravel's `$request->route('id')`:
+    /// A parameter from the matched route:
     /// `{id}` in `/posts/{id}` gives `param("id") == Some("7")` for `/posts/7`.
     pub fn param(&self, name: &str) -> Option<&str> {
         self.inner
@@ -113,7 +113,7 @@ impl Request {
         self
     }
 
-    /// The app serving this request, like Laravel's `app()`: `request.app()?.get::<dyn Clock>()`.
+    /// The app serving this request: `request.app()?.get::<dyn Clock>()`.
     pub fn app(&self) -> Result<&Arc<App>> {
         self.inner.app.as_ref().ok_or_else(|| {
             Error::from_status(StatusCode::INTERNAL_SERVER_ERROR).context(

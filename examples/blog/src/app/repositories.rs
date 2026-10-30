@@ -1,4 +1,4 @@
-//! Where the blog's data is stored, like a Laravel app's `app/Repositories`.
+//! Where the blog's data is stored.
 
 mod post_repository;
 mod post_view_repository;

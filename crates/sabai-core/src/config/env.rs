@@ -137,7 +137,8 @@ fn lookup<'a>(placeholder: &'a str, key: &str, env: &'a Env) -> Result<&'a str, 
         })
 }
 
-// Like Laravel's env(). JSON number rules keep a zip code such as "01234" a string.
+// `true`, `false`, `null` and numbers become typed values. JSON number rules keep a zip code
+// such as "01234" a string.
 fn typed(text: &str) -> Value {
     match text {
         "true" => Value::Bool(true),

@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use sabai_http::Routes;
 
-/// A named route to request, like Laravel's `route(self::ROUTE, ['id' => 7])` in a test:
+/// A named route to request in a test:
 /// `route("posts.show").with("id", 7)`. The [`TestApp`](crate::TestApp) turns it into a URL.
 pub fn route(name: &str) -> RouteUrl {
     RouteUrl {

@@ -10,7 +10,7 @@ const QUOTES: &[&str] = &[
     "Nothing worth having comes easy. - Theodore Roosevelt",
 ];
 
-/// Prints a quote, like Laravel's `php artisan inspire`.
+/// Prints a quote: `inspire`.
 pub struct Inspire;
 
 impl Command for Inspire {

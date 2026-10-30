@@ -55,7 +55,7 @@ impl<T: ToColumn> ToColumn for Option<T> {
     }
 }
 
-// The form Laravel writes too; a `timestamp` column keeps whole seconds unless given a precision.
+// The database form; a `timestamp` column keeps whole seconds unless given a precision.
 impl ToColumn for DateTime {
     fn to_column(&self) -> Result<SqlValue> {
         Ok(SqlValue::Text(self.to_string()))

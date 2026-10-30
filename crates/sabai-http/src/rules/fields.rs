@@ -1,6 +1,6 @@
 use serde_json::{Map, Value};
 
-/// Every field `pattern` names in `input`, by its full name, like Laravel: `posts.*.title`
+/// Every field `pattern` names in `input`, by its full name: `posts.*.title`
 /// gives `posts.0.title`, `posts.1.title`, ... A `*` over anything but a list names nothing.
 pub(super) fn matching_fields<'a>(
     pattern: &str,

@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use crate::{App, Error, Result, StatusCode};
 
-/// A console command from the app or a package, like a Laravel `Command` class.
+/// A console command from the app or a package.
 /// A provider adds it with [`App::command`].
 ///
 /// ```ignore

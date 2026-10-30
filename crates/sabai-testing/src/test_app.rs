@@ -8,7 +8,7 @@ use tokio::runtime::Runtime;
 
 use crate::{TestResponse, ToUri};
 
-/// The app under test, like Laravel's `TestCase`: requests go straight to the router, no port.
+/// The app under test: requests go straight to the router, no port.
 ///
 /// ```ignore
 /// let app = TestApp::new(blog::app(config)?, blog::routes());
@@ -38,7 +38,7 @@ impl TestApp {
         }
     }
 
-    /// Runs `migrations` on the app's database, like Laravel's `RefreshDatabase`; with SQLite in
+    /// Runs `migrations` on the app's database; with SQLite in
     /// memory every `TestApp` starts from an empty database.
     #[cfg(feature = "orm")]
     pub fn refresh_database(self, migrations: &sabai_orm::Migrations) -> Self {
@@ -52,24 +52,24 @@ impl TestApp {
         self
     }
 
-    /// Sends `name: value` with every request this app makes, like Laravel's `$this->withHeader(...)`.
+    /// Sends `name: value` with every request this app makes.
     pub fn with_header(mut self, name: &str, value: &str) -> Self {
         self.headers.push((name.to_owned(), value.to_owned()));
         self
     }
 
-    /// Runs `future` with this app as the current one, like calling Eloquent in a Laravel test:
+    /// Runs `future` with this app as the current one, so models can query its database:
     /// `let user = app.run(User::find_or_fail(1))?;`
     pub fn run<T>(&self, future: impl Future<Output = T>) -> T {
         self.runtime.block_on(self.app.scope(future))
     }
 
-    /// Sends `GET` as a JSON client, like Laravel's `$this->getJson(route(...))`.
+    /// Sends `GET` as a JSON client.
     pub fn get_json(&self, uri: impl ToUri) -> TestResponse {
         self.send_json(Method::GET, uri.to_uri(&self.routes), Body::empty())
     }
 
-    /// Sends `data` as a JSON body, like Laravel's `$this->postJson(...)`.
+    /// Sends `data` as a JSON body.
     pub fn post_json(&self, uri: impl ToUri, data: impl Serialize) -> TestResponse {
         let body = serde_json::to_string(&data).expect("the test data serializes to JSON");
         self.send_json(Method::POST, uri.to_uri(&self.routes), Body::from(body))

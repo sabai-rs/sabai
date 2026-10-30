@@ -14,7 +14,7 @@ struct UserRegistered;
 
 impl Event for UserRegistered {}
 
-/// A listener as a struct, like a Laravel listener class.
+/// A listener as a struct.
 struct SendShipmentNotification;
 
 impl Listener<OrderShipped> for SendShipmentNotification {

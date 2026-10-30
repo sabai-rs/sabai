@@ -4,7 +4,7 @@ use sabai_core::{App, Command, Result};
 
 use crate::{Database, Migrations};
 
-/// `migrate`: runs the pending migrations, like `php artisan migrate`.
+/// `migrate`: runs the pending migrations.
 pub struct MigrateCommand {
     migrations: Migrations,
 }
@@ -30,7 +30,7 @@ impl Command for MigrateCommand {
     }
 }
 
-/// Runs the pending migrations and prints each one, like `php artisan migrate`.
+/// Runs the pending migrations and prints each one.
 pub fn migrate(app: &Arc<App>, migrations: &Migrations) -> Result<()> {
     let database = app.get::<Database>()?;
     let ran = sabai_core::block_on(app.scope(database.migrate(migrations)))??;

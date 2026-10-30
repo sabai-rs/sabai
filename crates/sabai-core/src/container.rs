@@ -14,7 +14,7 @@ struct Binding {
     service: BoxedService,
 }
 
-/// Shared services looked up by type or by trait, like Laravel's `app()`: filled at boot, read-only after.
+/// Shared services looked up by type or by trait: filled at boot, read-only after.
 #[derive(Default)]
 pub struct Container {
     bindings: HashMap<TypeId, Binding>,

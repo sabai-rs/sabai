@@ -1,4 +1,4 @@
-//! The database's console commands, like Laravel's `Illuminate\Database\Console`.
+//! The database's console commands, such as `migrate`.
 
 mod migrate;
 

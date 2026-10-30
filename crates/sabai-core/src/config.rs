@@ -46,7 +46,7 @@ impl Config {
         Self::load_dir(&base.join("config"), &env)
     }
 
-    /// Reads a section or a dotted key, like Laravel's `config('app.name')`, into any deserializable type.
+    /// Reads a section or a dotted key, such as `app.name`, into any deserializable type.
     pub fn get<T: DeserializeOwned>(&self, key: &str) -> Result<T> {
         let value = self.lookup(key).ok_or_else(|| missing(key))?;
         T::deserialize(value).map_err(|source| invalid(key, source))

@@ -19,7 +19,7 @@ pub fn config() -> Result<Config> {
     Config::load(env!("CARGO_MANIFEST_DIR"))
 }
 
-/// Boots the app with its providers, like Laravel's `bootstrap/app.php`.
+/// Boots the app with its providers.
 pub fn app(config: Config) -> Result<Arc<App>> {
     App::builder(config)
         .provider(DatabaseServiceProvider)

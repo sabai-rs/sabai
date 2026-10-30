@@ -1,5 +1,5 @@
-//! Validation rules for a [`FormRequest`](crate::FormRequest), like the array its `rules()` returns
-//! in Laravel: `Rules::new().field("title", [required(), string(), max(255)])`.
+//! Validation rules for a [`FormRequest`](crate::FormRequest), one list per field:
+//! `Rules::new().field("title", [required(), string(), max(255)])`.
 
 mod catalog;
 mod checks;
@@ -189,7 +189,7 @@ mod tests {
         );
     }
 
-    // Laravel Breeze's `RegisteredUserController@store`, with `Password::defaults()`'s minimum.
+    // A sign-up form's rules, with an 8-character password minimum.
     fn registration_errors(input: Value) -> Vec<(String, Vec<String>)> {
         let rules = Rules::new()
             .field("name", [required(), string(), max(255)])

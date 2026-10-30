@@ -4,7 +4,7 @@ use sabai::http::rules::{
 };
 use serde::Deserialize;
 
-/// The input for creating an account, with Laravel Breeze's rules.
+/// The input for creating an account.
 #[derive(Deserialize)]
 pub struct RegisterRequest {
     pub name: String,

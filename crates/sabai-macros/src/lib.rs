@@ -18,7 +18,7 @@ pub fn derive_config_section(input: TokenStream) -> TokenStream {
         .into()
 }
 
-/// Maps a struct to a table, like an Eloquent model: `Post` reads the `posts` table.
+/// Maps a struct to a table: `Post` reads the `posts` table.
 /// Use `#[model(table = "people")]` when the plural is irregular.
 #[proc_macro_derive(Model, attributes(model))]
 pub fn derive_model(input: TokenStream) -> TokenStream {

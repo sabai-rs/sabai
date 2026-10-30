@@ -33,7 +33,7 @@ pub(crate) fn touch(timestamps: Option<Timestamps<'_>>, inserting: bool) -> Resu
     let Some(timestamps) = timestamps else {
         return Ok(());
     };
-    // Whole seconds, like Laravel, so the saved model matches what a `timestamp` column keeps.
+    // Whole seconds, so the saved model matches what a `timestamp` column keeps.
     let now = DateTime::try_from(now())?.start_of_second();
     if inserting {
         timestamps.created_at.set(now);
@@ -42,7 +42,7 @@ pub(crate) fn touch(timestamps: Option<Timestamps<'_>>, inserting: bool) -> Resu
     Ok(())
 }
 
-// An app without a bound `Clock` reads the system's, like Carbon without `setTestNow`.
+// An app without a bound `Clock` reads the system's, so only tests need to bind one.
 fn now() -> SystemTime {
     App::current()
         .and_then(|app| app.get::<dyn Clock>())

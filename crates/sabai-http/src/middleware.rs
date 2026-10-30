@@ -1,4 +1,4 @@
-//! Middleware, and the ones Sabai ships, like Laravel's `Illuminate\Http\Middleware`.
+//! Middleware, and the ones Sabai ships.
 
 mod convert_empty_strings_to_null;
 mod frame_guard;
@@ -22,7 +22,7 @@ pub use global_middleware::GlobalMiddleware;
 pub use trace_requests::TraceRequests;
 pub use trim_strings::TrimStrings;
 
-/// Code that runs around a request, like a Laravel middleware's `handle($request, $next)`.
+/// Code that runs around a request.
 /// Call `next.run(request).await` to go on, or return a response without calling it to stop there.
 /// Implement it with `async fn handle(&self, request: Request, next: Next) -> Response`.
 pub trait Middleware: Send + Sync + 'static {

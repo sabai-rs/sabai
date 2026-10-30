@@ -1,4 +1,4 @@
-//! The blog's data, like Laravel's `app/Models`.
+//! The blog's data.
 
 mod post;
 mod post_view;

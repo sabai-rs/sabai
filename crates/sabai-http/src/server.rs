@@ -70,7 +70,7 @@ fn positive(config: &Config, key: &str, default: u64) -> Result<u64> {
 }
 
 /// Serves `router` until the process stops, on `app.host`:`app.port` from config
-/// (default `127.0.0.1:8000`), like `php artisan serve`.
+/// (default `127.0.0.1:8000`).
 pub fn serve(app: Arc<App>, router: Router) -> Result<()> {
     let routes = router.compile()?;
     routes.prepare(&app)?;

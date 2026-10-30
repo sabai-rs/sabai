@@ -96,7 +96,7 @@ fn a_failing_provider_stops_boot_with_its_error() {
     assert!(journal.lock().unwrap().is_empty());
 }
 
-/// Built by `app.make()`, like a Laravel class resolved by autowiring.
+/// Built by `app.make()` from the services it needs.
 struct WelcomeService {
     mailer: Arc<dyn Mailer>,
 }

@@ -12,7 +12,7 @@ use crate::handler::{BoxedHandler, Handler, boxed};
 use crate::middleware::{BoxedMiddleware, GlobalMiddleware, Middleware, Pipeline};
 use crate::route_urls::RouteUrls;
 
-/// Collects routes, one statement each like Laravel's `routes/web.php`:
+/// Collects routes, one statement each:
 /// `route.get("/posts", index);`. Mistakes such as a duplicate route are reported by
 /// [`Router::compile`] at boot, so declaring routes needs no `?` on every line.
 #[derive(Default)]
@@ -39,7 +39,7 @@ pub(crate) struct RouteRow {
 }
 
 /// Routes that share a prefix or middleware, started by [`Router::prefix`] or [`Router::middleware`]
-/// like Laravel's `Route::prefix('api')` and `Route::middleware('auth')`.
+/// such as `route.prefix("/api")` and `route.middleware(Auth)`.
 pub struct RouteGroup<'a> {
     router: &'a mut Router,
     prefix: String,
@@ -110,14 +110,13 @@ impl Router {
         }
     }
 
-    /// Starts a group whose routes all run `middleware`, like Laravel's `Route::middleware(...)`:
+    /// Starts a group whose routes all run `middleware`:
     /// `route.middleware(Auth).group(|route| { route.get("/profile", profile); });`
     pub fn middleware<M: Middleware>(&mut self, middleware: M) -> RouteGroup<'_> {
         self.prefix("").middleware(middleware)
     }
 
-    /// Changes the middleware every request runs, 404s and 405s included, like `withMiddleware`
-    /// in Laravel's `bootstrap/app.php`. Sabai's defaults, `TrimStrings` and
+    /// Changes the middleware every request runs, 404s and 405s included. Sabai's defaults, `TrimStrings` and
     /// `ConvertEmptyStringsToNull`, run unless removed:
     /// `route.global_middleware(|middleware| { middleware.append(FrameGuard); });`
     pub fn global_middleware<F: FnOnce(&mut GlobalMiddleware)>(
@@ -214,13 +213,13 @@ impl RouteGroup<'_> {
 }
 
 impl Route {
-    /// Names the route, like Laravel's `->name('posts.show')`, so URLs can be built from the name.
+    /// Names the route, such as `posts.show`, so URLs can be built from the name.
     pub fn name(&mut self, name: &str) -> &mut Self {
         self.name = Some(name.to_owned());
         self
     }
 
-    /// Runs `middleware` on this route only, after its groups' middleware, like Laravel's `->middleware(...)`.
+    /// Runs `middleware` on this route only, after its groups' middleware.
     pub fn middleware<M: Middleware>(&mut self, middleware: M) -> &mut Self {
         self.push_middleware(Arc::new(middleware))
     }
@@ -230,7 +229,7 @@ impl Route {
         self
     }
 
-    // Like Laravel, `prefix("api")` and `prefix("/api/")` mean the same, and `/` inside the group is `/api`.
+    // `prefix("api")` and `prefix("/api/")` mean the same, and `/` inside the group is `/api`.
     fn prefixed(self, prefix: &str) -> Self {
         let prefix = prefix.trim_matches('/');
         let path = self.path.trim_start_matches('/');
@@ -265,7 +264,7 @@ impl Routes {
         Ok(())
     }
 
-    /// The URL of the route named `name`, like Laravel's `route('posts.show', ['id' => 7])`:
+    /// The URL of the route named `name`:
     /// `route("posts.show", &[("id", 7)])` gives `/posts/7`. Params the path does not use
     /// become the query string, and every value is percent-encoded.
     pub fn route<V: Display>(&self, name: &str, params: &[(&str, V)]) -> Result<String> {
@@ -348,7 +347,7 @@ async fn not_found() -> Error {
 }
 
 impl Endpoint {
-    /// The route for `method`; a `HEAD` without its own route runs the `GET` one, like Laravel.
+    /// The route for `method`; a `HEAD` without its own route runs the `GET` one.
     fn pipeline(&self, method: &Method) -> Option<&Pipeline> {
         let find = |wanted: &Method| {
             let route = self.methods.iter().find(|(method, _)| method == wanted);
@@ -377,7 +376,7 @@ impl Endpoint {
     }
 }
 
-// Like Laravel: `OPTIONS` answers `200` listing the methods (`GET,HEAD`, no spaces), and any
+// `OPTIONS` answers `200` listing the methods (`GET,HEAD`, no spaces), and any
 // other method answers `405` naming them in the message and in `Allow` (`GET, HEAD`).
 fn answer_other_method(allowed: &[Method], request: &Request) -> Response {
     let names: Vec<&str> = allowed.iter().map(Method::as_str).collect();

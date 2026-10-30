@@ -6,7 +6,7 @@ use sabai_core::{Config, Error, Result, StatusCode};
 use crate::Database;
 use crate::config::targets;
 
-/// Every connection in `config/database.toml`, like Laravel's `DB::connection('report')`.
+/// Every connection in `config/database.toml`, by name: `manager.connection("report")`.
 /// Each has its own pool, opened on first use.
 pub struct DatabaseManager {
     default: String,

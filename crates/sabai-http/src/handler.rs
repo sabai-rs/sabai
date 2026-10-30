@@ -6,7 +6,7 @@ use sabai_core::contracts::BoxFuture;
 use sabai_core::{App, IntoResponse, Request, Response, Result};
 
 /// A type a handler can take as an argument, built from the request before the handler runs,
-/// like a type-hinted argument in a Laravel controller. Failing rejects the request with that error.
+/// so a handler states what it needs in its signature. Failing rejects the request with that error.
 pub trait FromRequest: Sized + Send + 'static {
     /// Builds the argument from `request`.
     fn from_request(request: &Request) -> BoxFuture<'_, Result<Self>>;

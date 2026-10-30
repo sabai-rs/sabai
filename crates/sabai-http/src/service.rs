@@ -7,7 +7,7 @@ use sabai_core::{App, Request, Result};
 
 use crate::FromRequest;
 
-/// A service from the app's container, like a type-hinted service in a Laravel controller method:
+/// A service from the app's container, taken as a handler argument:
 /// `clock: Service<dyn Clock>`, then `clock.now()`. A service that is not bound is a `500`.
 pub struct Service<T: ?Sized>(pub Arc<T>);
 

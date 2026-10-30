@@ -9,7 +9,7 @@ use std::time::{Duration, SystemTime};
 
 use sabai::contracts::Clock;
 
-/// A clock that only moves when told to, like Laravel's `travel()`.
+/// A clock that only moves when told to.
 struct FrozenClock(Mutex<SystemTime>);
 
 impl FrozenClock {

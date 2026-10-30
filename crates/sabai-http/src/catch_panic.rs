@@ -9,8 +9,7 @@ use std::task::{Context, Poll};
 use sabai_core::contracts::BoxFuture;
 use sabai_core::{Error, IntoResponse, Response};
 
-/// Runs `future`, turning a panic into a logged `500`, like Laravel's handler for an uncaught
-/// exception; without it the client gets an empty reply.
+/// Runs `future`, turning a panic into a logged `500`; without it the client gets an empty reply.
 pub(crate) fn catch_panic(future: BoxFuture<'static, Response>) -> BoxFuture<'static, Response> {
     Box::pin(CatchPanic(future))
 }

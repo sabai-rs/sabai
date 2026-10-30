@@ -7,7 +7,7 @@ use crate::{App, Error, Result};
 /// Something that happened in the app, such as `OrderShipped`; listeners react to it.
 pub trait Event: Any + Send + Sync {}
 
-/// Reacts to an event `E`, like a Laravel listener class. Closures with this signature are listeners too.
+/// Reacts to an event `E`. Closures with this signature are listeners too.
 pub trait Listener<E: Event>: Send + Sync + 'static {
     /// Runs when `E` is dispatched; an error stops the listeners after this one.
     fn handle(&self, event: &E, app: &App) -> Result<()>;

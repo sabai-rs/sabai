@@ -5,7 +5,7 @@ use sabai::{App, Provider, Result};
 
 use crate::app::console::Inspire;
 
-/// Binds the blog's services and adds its commands, like Laravel's `AppServiceProvider`.
+/// Binds the blog's services and adds its commands.
 pub struct AppServiceProvider;
 
 impl Provider for AppServiceProvider {

@@ -1,4 +1,4 @@
-//! The app's own commands, like `php artisan`: `serve`, `migrate` and the commands providers add.
+//! The app's own commands: `serve`, `migrate` and the commands providers add.
 
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -66,7 +66,7 @@ impl Console {
         command.handle(&self.app, args.get(1..).unwrap_or_default())
     }
 
-    /// What `--help` prints, like `php artisan list`: Sabai's commands, then the app's and packages'.
+    /// What `--help` prints: Sabai's commands, then the app's and packages'.
     pub fn help(&self) -> String {
         let commands: Vec<(&str, &str)> = self
             .commands
@@ -143,7 +143,7 @@ fn described(command: &dyn Command) -> (&str, &str) {
     (command.name(), command.description())
 }
 
-// Symfony Console's rule, which `php artisan` uses: a typo of up to a third of the name,
+// Symfony Console's rule: a typo of up to a third of the name,
 // or a name that contains what was typed.
 fn looks_like(typed: &str, name: &str) -> bool {
     name.contains(typed) || edit_distance(typed, name) * 3 <= typed.len()

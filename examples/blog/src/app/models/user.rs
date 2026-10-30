@@ -3,7 +3,7 @@ use sabai::auth::Authenticatable;
 use sabai::orm::Model;
 use serde::Serialize;
 
-/// Someone who can sign in, like Laravel's `App\Models\User`.
+/// Someone who can sign in.
 #[derive(Default, Serialize, Model)]
 pub struct User {
     pub id: u64,

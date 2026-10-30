@@ -6,7 +6,7 @@ use serde_json::Value;
 use super::transforms_request::transform_input;
 use crate::{Middleware, Next};
 
-/// Turns every empty input string into `null`, like Laravel's `ConvertEmptyStringsToNull`,
+/// Turns every empty input string into `null`,
 /// so a blank optional field arrives as `None`.
 pub struct ConvertEmptyStringsToNull;
 

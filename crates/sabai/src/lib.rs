@@ -1,4 +1,5 @@
-//! Sabai: a Laravel-inspired web framework for Rust. Rust, but sabai.
+//! Sabai: a batteries-included web framework for Rust, built for developer experience and fast
+//! compiles. Rust, but sabai.
 
 pub use sabai_core::*;
 pub use sabai_macros::ConfigSection;

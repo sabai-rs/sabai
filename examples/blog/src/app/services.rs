@@ -1,4 +1,4 @@
-//! Logic shared by controllers, jobs and commands, like a Laravel app's `app/Services`.
+//! Logic shared by controllers, jobs and commands.
 
 mod post_service;
 

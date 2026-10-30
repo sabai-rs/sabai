@@ -1,5 +1,4 @@
-//! The `sabai` command: creates apps like `laravel new`, and runs an app's own commands
-//! from anywhere inside it, like `php artisan`.
+//! The `sabai` command: creates apps, and runs an app's own commands from anywhere inside it.
 
 mod new_app;
 

@@ -1,4 +1,4 @@
-//! Pages for people, like Laravel's `routes/web.php`.
+//! Pages for people.
 
 use sabai::http::Router;
 

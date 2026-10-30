@@ -64,7 +64,7 @@ impl<'de> Deserializer<'de> for InputDeserializer<'de> {
         }
     }
 
-    // Laravel's `boolean` rule takes the same four spellings.
+    // The `boolean` rule takes the same four spellings, so what validates also deserializes.
     fn deserialize_bool<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Error> {
         match self.0.as_str().map(str::trim) {
             Some("true" | "1") => visitor.visit_bool(true),

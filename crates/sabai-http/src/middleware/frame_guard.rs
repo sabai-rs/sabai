@@ -5,7 +5,7 @@ use sabai_core::{Request, Response};
 
 use crate::{Middleware, Next};
 
-/// Lets only your own pages show the app in a frame, against clickjacking, like Laravel's `FrameGuard`.
+/// Lets only your own pages show the app in a frame, against clickjacking.
 /// A route that sets its own `X-Frame-Options` keeps it.
 pub struct FrameGuard;
 

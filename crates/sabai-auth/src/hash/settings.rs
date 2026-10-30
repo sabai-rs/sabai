@@ -2,7 +2,7 @@ use sabai_core::{App, Config, Error, Result, StatusCode, log};
 
 use super::{argon, bcrypt};
 
-/// `config/hashing.toml`, with the keys and defaults of Laravel's `config/hashing.php`.
+/// `config/hashing.toml`: the driver, its cost, and whether to check and rehash.
 #[derive(Clone, Copy)]
 pub(super) struct Settings {
     driver: Driver,
@@ -41,7 +41,7 @@ impl Default for Settings {
 }
 
 impl Settings {
-    /// The current app's settings, or Laravel's defaults outside an app.
+    /// The current app's settings, or the defaults outside an app.
     pub(super) fn current() -> Result<Self> {
         match App::current() {
             Ok(app) => Self::from_config(app.config()),
@@ -87,7 +87,7 @@ impl Settings {
         }
     }
 
-    /// Whether `hashed` is one this app checks: with `verify` on, like Laravel, only the driver's own.
+    /// Whether `hashed` is one this app checks: with `verify` on, only the driver's own.
     pub(super) fn accepts(self, hashed: &str) -> bool {
         let Some(algorithm) = Algorithm::of(hashed) else {
             return false;

@@ -1,4 +1,4 @@
-//! Every route file, collected in one place like Laravel's `withRouting(web: ...)`.
+//! Every route file, collected in one place.
 
 mod web;
 

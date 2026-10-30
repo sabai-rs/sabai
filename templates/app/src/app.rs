@@ -1,4 +1,4 @@
-//! The app's own code, like Laravel's `app/` folder.
+//! The app's own code.
 
 pub mod models;
 pub mod providers;

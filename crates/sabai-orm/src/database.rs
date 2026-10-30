@@ -7,7 +7,7 @@ use crate::Driver;
 use crate::config::{Target, targets};
 use crate::pool::{Options, Pool};
 
-/// The app's database, like Laravel's `DB`: a pool for the default connection in
+/// The app's database: a pool for the default connection in
 /// `config/database.toml`. Handlers take it as `db: Service<Database>`.
 pub struct Database {
     options: Options,
@@ -58,7 +58,7 @@ impl Database {
         Ok(self.pool.get_or_init(|| pool))
     }
 
-    /// Runs one SQL statement as written, like Laravel's `DB::statement(...)`.
+    /// Runs one SQL statement as written.
     pub fn statement<'a>(&'a self, sql: &'a str) -> BoxFuture<'a, Result<()>> {
         Box::pin(self.execute(sql))
     }

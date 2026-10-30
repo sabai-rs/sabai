@@ -6,7 +6,7 @@ use sabai_core::{App, Error, Result, StatusCode};
 use crate::timestamps::{self, Timestamps};
 use crate::{Database, DatabaseManager, Query, Row, SqlValue, ToColumn};
 
-/// A table row as a struct, like an Eloquent model. Write `#[derive(Model)]`, not this impl.
+/// A table row as a struct. Write `#[derive(Model)]`, not this impl.
 pub trait Model: Sized + Send + 'static {
     /// The table, such as `posts` for `Post`.
     const TABLE: &'static str;
@@ -14,7 +14,7 @@ pub trait Model: Sized + Send + 'static {
     /// The columns, in field order.
     const COLUMNS: &'static [&'static str];
 
-    /// The connection in `config/database.toml`, like Laravel's `$connection`; `None` is `default`.
+    /// The connection in `config/database.toml`; `None` is `default`.
     const CONNECTION: Option<&'static str> = None;
 
     /// Builds the model from one row.
@@ -34,23 +34,23 @@ pub trait Model: Sized + Send + 'static {
         None
     }
 
-    /// Every row of the table, like Laravel's `Post::all()`.
+    /// Every row of the table: `Post::all()`.
     fn all() -> BoxFuture<'static, Result<Vec<Self>>> {
         Query::new().get()
     }
 
-    /// Rows where `column` equals `value`, like Laravel's `User::where('email', $email)`: add more
+    /// Rows where `column` equals `value`: add more
     /// with `.where_eq(...)`, then call `.first()` or `.get()`.
     fn where_eq(column: &str, value: impl ToColumn) -> Query<Self> {
         Query::new().where_eq(column, value)
     }
 
-    /// The row with this primary key, or `None`, like Laravel's `Post::find($id)`.
+    /// The row with this primary key, or `None`.
     fn find(id: u64) -> BoxFuture<'static, Result<Option<Self>>> {
         Self::where_eq("id", id).first()
     }
 
-    /// The row with this primary key, or a `404`, like Laravel's `Post::findOrFail($id)`.
+    /// The row with this primary key, or a `404`.
     fn find_or_fail(id: u64) -> BoxFuture<'static, Result<Self>> {
         let found = Self::find(id);
         Box::pin(async move { found.await?.ok_or_else(|| not_found(Self::TABLE, id)) })
@@ -87,7 +87,7 @@ pub(crate) fn select(
         let mut conditions = Vec::new();
         let mut values = Vec::new();
         for (column, value) in equals {
-            // `= NULL` matches nothing in SQL, so `None` asks for `is null`, like Laravel.
+            // `= NULL` matches nothing in SQL, so `None` asks for `is null`.
             match value {
                 SqlValue::Null => conditions.push(format!("{} is null", driver.quote(&column))),
                 value => {

@@ -1,4 +1,4 @@
-//! The HTTP console commands, like Laravel's `ServeCommand`.
+//! The HTTP console commands: `serve` and `route:list`.
 
 mod route_list;
 mod serve;

@@ -5,7 +5,7 @@ use tokio::sync::OnceCell;
 
 use crate::Hash;
 
-/// A model people sign in as, like Laravel's `Authenticatable` on the `User` model.
+/// A model people sign in as, such as `User`.
 pub trait Authenticatable: Model + Sync {
     /// The column people sign in with.
     const LOGIN: &'static str = "email";
@@ -16,8 +16,8 @@ pub trait Authenticatable: Model + Sync {
     /// Replaces the stored hash, when it is upgraded on login.
     fn set_password(&mut self, hashed: String);
 
-    /// The user whose login and password match, or `None`, without signing anyone in, like a Laravel
-    /// user provider's `retrieveByCredentials` and `validateCredentials` together. A hash made with
+    /// The user whose login and password match, or `None`, without signing anyone in: it finds the
+    /// user by login, then checks the password. A hash made with
     /// older settings is upgraded and saved, like `rehash_on_login`. Guards build on this (M3-04).
     fn validate_credentials(
         login: &str,

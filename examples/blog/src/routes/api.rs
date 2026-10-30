@@ -1,4 +1,4 @@
-//! Endpoints for programs, like Laravel's `routes/api.php`; `routes.rs` puts them under `/api`.
+//! Endpoints for programs; `routes.rs` puts them under `/api`.
 
 use sabai::contracts::Clock;
 use sabai::http::{Router, Service};

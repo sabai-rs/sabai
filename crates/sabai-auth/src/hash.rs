@@ -1,6 +1,6 @@
 #[cfg(feature = "argon2")]
 mod argon;
-// Most apps hash with bcrypt, like Laravel, so Argon2's crates compile only for apps that ask.
+// Most apps hash with bcrypt, so Argon2's crates compile only for apps that ask.
 #[cfg(not(feature = "argon2"))]
 #[path = "hash/argon_disabled.rs"]
 mod argon;
@@ -17,8 +17,7 @@ use tokio::sync::Semaphore;
 
 use settings::Settings;
 
-/// Password hashing like Laravel's `Hash` facade, set by `config/hashing.toml` with Laravel's
-/// defaults: bcrypt with 12 rounds, or Argon2id.
+/// Password hashing, set by `config/hashing.toml`: bcrypt with 12 rounds by default, or Argon2id.
 ///
 /// Hashing is slow on purpose, so `make` and `check` run on a blocking thread and are awaited:
 /// on a server thread they would stall every request sharing it. At most one hash per CPU core

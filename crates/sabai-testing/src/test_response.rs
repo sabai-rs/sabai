@@ -1,7 +1,7 @@
 use sabai_core::Response;
 use serde_json::Value;
 
-/// A response with Laravel's assertions; each returns `&Self`, so they chain.
+/// A response to assert on; each assertion returns `&Self`, so they chain.
 pub struct TestResponse {
     response: Response,
 }
@@ -47,7 +47,7 @@ impl TestResponse {
         self
     }
 
-    /// Fails unless the header `name` is `expected`, like Laravel's `assertHeader`.
+    /// Fails unless the header `name` is `expected`.
     pub fn assert_header(&self, name: &str, expected: &str) -> &Self {
         let actual = self.response.headers().get(name);
         assert!(
@@ -57,7 +57,7 @@ impl TestResponse {
         self
     }
 
-    /// Fails if the response has the header `name`, like Laravel's `assertHeaderMissing`.
+    /// Fails if the response has the header `name`.
     pub fn assert_header_missing(&self, name: &str) -> &Self {
         let actual = self.response.headers().get(name);
         assert!(

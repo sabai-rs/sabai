@@ -10,7 +10,7 @@ use crate::datetime::app_timezone;
 use crate::events::Events;
 use crate::{Command, Config, Container, Error, Event, Listener, Result};
 
-/// A package's or an app's entry point, like a Laravel service provider.
+/// A package's or an app's entry point: it binds services, then boots.
 pub trait Provider: Send + Sync {
     /// Binds services. Runs for every provider before any `boot`, so do not resolve services here.
     fn register(&self, app: &mut App) -> Result<()>;
@@ -21,7 +21,7 @@ pub trait Provider: Send + Sync {
     }
 }
 
-/// A type the app builds from its services, like a class Laravel resolves by autowiring:
+/// A type the app builds from its services:
 /// controllers, services and repositories take what they need in `new`.
 ///
 /// ```ignore
@@ -38,7 +38,7 @@ pub trait Provider: Send + Sync {
     note = "otherwise build it from the app: `impl FromApp for {Self} {{ fn new(app: &App) -> Result<Self> {{ Ok(Self {{ ... }}) }} }}`"
 )]
 pub trait FromApp: Sized {
-    /// Builds `Self`, like a Laravel constructor whose arguments come from the container.
+    /// Builds `Self` from the services it needs.
     fn new(app: &App) -> Result<Self>;
 }
 
@@ -110,7 +110,7 @@ impl App {
         self.events.dispatch(TypeId::of::<E>(), event, self)
     }
 
-    /// Adds a console command, like `$this->commands([...])` in a Laravel provider.
+    /// Adds a console command.
     /// Two commands with the same name are an error.
     pub fn command<C: Command + 'static>(&mut self, command: C) -> Result<()> {
         self.commands.add(Box::new(command))
@@ -131,13 +131,13 @@ impl App {
         self.container.get()
     }
 
-    /// Builds a new `T` from the app's services, like Laravel's `app()->make(PostService::class)`.
+    /// Builds a new `T` from the app's services: `app.make::<PostService>()`.
     pub fn make<T: FromApp>(&self) -> Result<T> {
         T::new(self)
             .map_err(|error| error.context(format!("could not make `{}`", type_name::<T>())))
     }
 
-    /// Makes `T` the first time and returns that same instance after, like a Laravel singleton.
+    /// Makes `T` the first time and returns that same instance after.
     pub fn singleton<T: FromApp + Send + Sync + 'static>(&self) -> Result<Arc<T>> {
         let id = TypeId::of::<T>();
         if let Some(made) = self

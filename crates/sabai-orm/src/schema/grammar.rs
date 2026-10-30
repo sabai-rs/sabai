@@ -104,7 +104,7 @@ impl Driver {
     }
 }
 
-/// Laravel's index name: `users_email_unique`, `posts_commentable_type_commentable_id_index`.
+/// An index name: `users_email_unique`, `posts_commentable_type_commentable_id_index`.
 fn index_name(table: &str, columns: &[String], kind: &str) -> String {
     format!("{table}_{}_{kind}", columns.join("_"))
         .to_lowercase()
