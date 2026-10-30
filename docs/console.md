@@ -52,7 +52,23 @@ A mistyped command says what to do:
 Error: there is no `migrat` command; did you mean `migrate`?
 ```
 
-Like `php artisan`, it suggests every command that is a small typo away or contains what you typed. With nothing close, it says to run `list`.
+Like `php artisan`, it suggests every command that is a small typo away or contains what you typed. With nothing close, it says to run `sabai list`.
+
+Add `--help` (or `-h`) after a command to see what it does and its options. It runs nothing, so it works without a database:
+
+```bash
+sabai migrate --help
+```
+
+An option the command does not take is refused before the command runs:
+
+```text
+Error: `migrate` has no option `--pretend`; run `sabai migrate --help` to see its options
+```
+
+::: laravel
+Artisan refuses unknown options the same way: `php artisan migrate --loud` says `The "--loud" option does not exist.` Sabai's `migrate` has no `--pretend` yet; it is on the roadmap.
+:::
 
 ## Running Commands on a Server
 
@@ -106,6 +122,16 @@ impl Provider for AppServiceProvider {
 ```bash
 sabai inspire
 ```
+
+A command takes no options unless it lists them. List them in `options`; `--help` shows them, and the console lets only these through, as `--loud` or `--loud=yes`:
+
+```rust
+fn options(&self) -> &[CommandOption] {
+    &[CommandOption { name: "--loud", description: "Shout the quote" }]
+}
+```
+
+Words without dashes, like `sabai greet World`, always reach `handle` in `args`.
 
 ::: laravel
 `app.command(Inspire)` is `$this->commands([Inspire::class])`. The blog keeps its commands in `src/app/console/`, like `app/Console/Commands`.

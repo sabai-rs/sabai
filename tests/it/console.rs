@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use sabai::console::Console;
-use sabai::{App, Command, Config, Provider, Result};
+use sabai::{App, Command, CommandOption, Config, Provider, Result};
 
 fn console() -> Console {
     Console::new(App::builder(Config::default()).boot().unwrap())
@@ -18,7 +18,7 @@ fn an_unknown_command_says_how_to_see_the_commands() {
 
     assert_eq!(
         error,
-        "there is no `migrat` command; run `list` to see them"
+        "there is no `migrat` command; run `sabai list` to see them"
     );
 }
 
@@ -56,6 +56,7 @@ fn the_console_keeps_the_app_it_was_given() {
 /// A command a package would ship: it keeps the arguments it ran with.
 struct Greet {
     name: &'static str,
+    options: &'static [CommandOption],
     ran_with: Arc<Mutex<Vec<String>>>,
 }
 
@@ -68,6 +69,10 @@ impl Command for Greet {
         "Greet someone"
     }
 
+    fn options(&self) -> &[CommandOption] {
+        self.options
+    }
+
     fn handle(&self, _app: &Arc<App>, args: &[String]) -> Result<()> {
         *self.ran_with.lock().unwrap() = args.to_vec();
         Ok(())
@@ -77,6 +82,7 @@ impl Command for Greet {
 /// A package's provider, which adds its commands.
 struct GreetingProvider {
     names: Vec<&'static str>,
+    options: &'static [CommandOption],
     ran_with: Arc<Mutex<Vec<String>>>,
 }
 
@@ -85,6 +91,7 @@ impl Provider for GreetingProvider {
         for name in &self.names {
             app.command(Greet {
                 name,
+                options: self.options,
                 ran_with: Arc::clone(&self.ran_with),
             })?;
         }
@@ -98,6 +105,7 @@ fn a_package_command_runs_with_the_arguments_after_its_name() {
     let app = App::builder(Config::default())
         .provider(GreetingProvider {
             names: vec!["greet"],
+            options: &[],
             ran_with: Arc::clone(&ran_with),
         })
         .boot();
@@ -113,6 +121,7 @@ fn help_lists_package_commands_after_the_built_in_ones() {
     let app = App::builder(Config::default())
         .provider(GreetingProvider {
             names: vec!["greet"],
+            options: &[],
             ran_with: Arc::default(),
         })
         .boot();
@@ -136,6 +145,7 @@ fn two_commands_with_one_name_fail_at_boot() {
     let app = App::builder(Config::default())
         .provider(GreetingProvider {
             names: vec!["greet", "greet"],
+            options: &[],
             ran_with: Arc::default(),
         })
         .boot();
@@ -150,6 +160,7 @@ fn a_package_command_cannot_hide_a_built_in_one() {
     let app = App::builder(Config::default())
         .provider(GreetingProvider {
             names: vec!["serve"],
+            options: &[],
             ran_with: Arc::default(),
         })
         .boot();
@@ -168,6 +179,7 @@ fn a_typo_suggests_the_command_it_looks_like() {
     let app = App::builder(Config::default())
         .provider(GreetingProvider {
             names: vec!["inspire", "greet"],
+            options: &[],
             ran_with: Arc::default(),
         })
         .boot();
@@ -183,6 +195,7 @@ fn a_wrong_letter_is_a_typo_too() {
     let app = App::builder(Config::default())
         .provider(GreetingProvider {
             names: vec!["greet"],
+            options: &[],
             ran_with: Arc::default(),
         })
         .boot();
@@ -198,6 +211,7 @@ fn every_lookalike_is_suggested() {
     let app = App::builder(Config::default())
         .provider(GreetingProvider {
             names: vec!["cache:clear", "view:clear", "inspire"],
+            options: &[],
             ran_with: Arc::default(),
         })
         .boot();
@@ -205,5 +219,80 @@ fn every_lookalike_is_suggested() {
     assert_eq!(
         run(Console::new(app.unwrap()), &["clear"]),
         "there is no `clear` command; did you mean `cache:clear` or `view:clear`?"
+    );
+}
+
+#[test]
+fn help_after_a_command_runs_nothing() {
+    let ran_with = Arc::new(Mutex::new(vec!["not run".to_owned()]));
+    let app = App::builder(Config::default())
+        .provider(GreetingProvider {
+            names: vec!["greet"],
+            options: &[],
+            ran_with: Arc::clone(&ran_with),
+        })
+        .boot();
+    let args = ["greet", "World", "--help"].map(String::from);
+
+    Console::new(app.unwrap()).run_with(&args).unwrap();
+
+    assert_eq!(*ran_with.lock().unwrap(), ["not run"]);
+}
+
+#[test]
+fn an_option_the_command_does_not_take_is_refused_before_it_runs() {
+    let ran_with = Arc::new(Mutex::new(vec!["not run".to_owned()]));
+    let app = App::builder(Config::default())
+        .provider(GreetingProvider {
+            names: vec!["greet"],
+            options: &[],
+            ran_with: Arc::clone(&ran_with),
+        })
+        .boot();
+    let args = ["greet", "World", "--loud=yes"].map(String::from);
+
+    let error = Console::new(app.unwrap())
+        .run_with(&args)
+        .err()
+        .unwrap()
+        .to_string();
+
+    assert_eq!(
+        error,
+        "`greet` has no option `--loud`; run `sabai greet --help` to see its options"
+    );
+    assert_eq!(*ran_with.lock().unwrap(), ["not run"]);
+}
+
+#[test]
+fn an_option_the_command_takes_reaches_it_with_its_value() {
+    let ran_with = Arc::new(Mutex::new(Vec::new()));
+    let app = App::builder(Config::default())
+        .provider(GreetingProvider {
+            names: vec!["greet"],
+            options: &[CommandOption {
+                name: "--loud",
+                description: "Greet in capitals",
+            }],
+            ran_with: Arc::clone(&ran_with),
+        })
+        .boot();
+    let args = ["greet", "World", "--loud=yes"].map(String::from);
+
+    Console::new(app.unwrap()).run_with(&args).unwrap();
+
+    assert_eq!(*ran_with.lock().unwrap(), ["World", "--loud=yes"]);
+}
+
+#[cfg(feature = "orm")]
+#[test]
+fn migrate_with_an_option_it_does_not_take_never_reaches_the_database() {
+    let console = console().migrations(sabai::orm::Migrations::new());
+
+    let error = run(console, &["migrate", "--pretend"]);
+
+    assert_eq!(
+        error,
+        "`migrate` has no option `--pretend`; run `sabai migrate --help` to see its options"
     );
 }

@@ -63,7 +63,16 @@ impl Console {
         let command = self
             .find(name)
             .ok_or_else(|| self.command_not_found(name))?;
-        command.handle(&self.app, args.get(1..).unwrap_or_default())
+        let args = args.get(1..).unwrap_or_default();
+        if args
+            .iter()
+            .any(|arg| matches!(arg.as_str(), "--help" | "-h"))
+        {
+            print!("{}", command_help(command));
+            return Ok(());
+        }
+        reject_unknown_options(command, args)?;
+        command.handle(&self.app, args)
     }
 
     /// What `--help` prints: Sabai's commands, then the app's and packages'.
@@ -75,17 +84,10 @@ impl Console {
             .chain([("list", "Show these commands")])
             .chain(self.app.commands().map(described))
             .collect();
-        let width = commands
-            .iter()
-            .map(|(name, _)| name.len())
-            .max()
-            .unwrap_or(0)
-            + 3;
-        let lines: String = commands
-            .iter()
-            .map(|(name, description)| format!("  {name:width$}{description}\n"))
-            .collect();
-        format!("Usage: <command> [arguments]\n\nCommands:\n{lines}")
+        format!(
+            "Usage: sabai <command> [arguments]\n\nCommands:\n{}",
+            two_columns(&commands)
+        )
     }
 
     fn all(&self) -> impl Iterator<Item = &dyn Command> {
@@ -121,7 +123,7 @@ impl Console {
             .map(|name| format!("`{name}`"))
             .collect();
         if similar.is_empty() {
-            return String::from("run `list` to see them");
+            return String::from("run `sabai list` to see them");
         }
         format!("did you mean {}?", similar.join(" or "))
     }
@@ -141,6 +143,44 @@ impl Console {
 
 fn described(command: &dyn Command) -> (&str, &str) {
     (command.name(), command.description())
+}
+
+fn command_help(command: &dyn Command) -> String {
+    let options: Vec<(&str, &str)> = command
+        .options()
+        .iter()
+        .map(|option| (option.name, option.description))
+        .chain([("-h, --help", "Show this help")])
+        .collect();
+    format!(
+        "{}\n\nUsage: sabai {} [options] [arguments]\n\nOptions:\n{}",
+        command.description(),
+        command.name(),
+        two_columns(&options)
+    )
+}
+
+fn two_columns(rows: &[(&str, &str)]) -> String {
+    let width = rows.iter().map(|(name, _)| name.len()).max().unwrap_or(0) + 3;
+    rows.iter()
+        .map(|(name, description)| format!("  {name:width$}{description}\n"))
+        .collect()
+}
+
+// A command never sees an option it does not take, so `migrate --pretend` cannot migrate for real.
+fn reject_unknown_options(command: &dyn Command, args: &[String]) -> Result<()> {
+    let mut names = args
+        .iter()
+        .filter(|arg| arg.starts_with('-'))
+        .map(|arg| arg.split_once('=').map_or(arg.as_str(), |(name, _)| name));
+    let takes = |name: &str| command.options().iter().any(|option| option.name == name);
+    match names.find(|name| !takes(name)) {
+        Some(unknown) => Err(console_error(format!(
+            "`{0}` has no option `{unknown}`; run `sabai {0} --help` to see its options",
+            command.name()
+        ))),
+        None => Ok(()),
+    }
 }
 
 // Symfony Console's rule: a typo of up to a third of the name,
@@ -166,4 +206,43 @@ fn edit_distance(from: &str, to: &str) -> usize {
 
 fn console_error(problem: impl Into<String>) -> Error {
     Error::new(StatusCode::INTERNAL_SERVER_ERROR, problem.into())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sabai_core::CommandOption;
+
+    struct Deploy;
+
+    impl Command for Deploy {
+        fn name(&self) -> &str {
+            "deploy"
+        }
+
+        fn description(&self) -> &str {
+            "Ship the app"
+        }
+
+        fn options(&self) -> &[CommandOption] {
+            &[CommandOption {
+                name: "--force",
+                description: "Run in production",
+            }]
+        }
+
+        fn handle(&self, _app: &Arc<App>, _args: &[String]) -> Result<()> {
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn a_command_help_lists_its_options_then_help_itself() {
+        assert_eq!(
+            command_help(&Deploy),
+            "Ship the app\n\nUsage: sabai deploy [options] [arguments]\n\nOptions:\n\
+             \x20 --force      Run in production\n\
+             \x20 -h, --help   Show this help\n"
+        );
+    }
 }

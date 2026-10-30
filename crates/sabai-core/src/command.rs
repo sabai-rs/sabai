@@ -23,8 +23,23 @@ pub trait Command: Send + Sync {
     /// One line shown by `list`.
     fn description(&self) -> &str;
 
+    /// The options it takes, shown by `<command> --help`; the console refuses any other.
+    fn options(&self) -> &[CommandOption] {
+        &[]
+    }
+
     /// Runs the command with the arguments typed after its name.
     fn handle(&self, app: &Arc<App>, args: &[String]) -> Result<()>;
+}
+
+/// An option a command takes: `CommandOption { name: "--force", description: "Run in production" }`.
+/// `--force=yes` matches it too; the command reads the value from its arguments.
+#[derive(Clone, Copy, Debug)]
+pub struct CommandOption {
+    /// What is typed, with its dashes.
+    pub name: &'static str,
+    /// One line shown by `<command> --help`.
+    pub description: &'static str,
 }
 
 /// The commands providers added, in the order they were added.
