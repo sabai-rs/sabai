@@ -21,7 +21,7 @@ pub fn config() -> Result<Config> {
     Config::load(env!("CARGO_MANIFEST_DIR"))
 }
 
-/// Boots the blog with its providers, like Laravel's `bootstrap/app.php`.
+/// Boots the blog with its providers.
 pub fn app(config: Config) -> Result<Arc<App>> {
     App::builder(config)
         .provider(DatabaseServiceProvider)
@@ -29,8 +29,7 @@ pub fn app(config: Config) -> Result<Arc<App>> {
         .boot()
 }
 
-/// Every route, and the middleware that runs on every request, like `withRouting` and
-/// `withMiddleware` in Laravel's `bootstrap/app.php`.
+/// Every route, and the middleware that runs on every request.
 pub fn routes() -> Router {
     let mut route = routes::all();
     route.global_middleware(|middleware| {

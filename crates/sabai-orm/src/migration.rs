@@ -2,7 +2,7 @@ use sabai_core::{Error, Result, StatusCode};
 
 use crate::Schema;
 
-/// One schema change, like a Laravel migration class: `up` makes it, `down` undoes it.
+/// One schema change: `up` makes it, `down` undoes it.
 pub trait Migration: Send + Sync {
     /// Describes the change.
     fn up(&self, schema: &mut Schema);
@@ -10,7 +10,7 @@ pub trait Migration: Send + Sync {
     /// Describes how to undo it.
     fn down(&self, schema: &mut Schema);
 
-    /// The connection it changes, like a Laravel migration's `$connection`; `None` is `default`.
+    /// The connection it changes; `None` is `default`.
     /// The `migrations` table that records it is always on `default`.
     fn connection(&self) -> Option<&'static str> {
         None
@@ -39,7 +39,7 @@ impl Migrations {
         self
     }
 
-    // Laravel runs migrations sorted by file name; a list out of that order is a mistake.
+    // Migrations run in the order of their dated names; a list out of that order is a mistake.
     pub(crate) fn check_order(&self) -> Result<()> {
         for pair in self.list.windows(2) {
             let (before, after) = (&pair[0].0, &pair[1].0);

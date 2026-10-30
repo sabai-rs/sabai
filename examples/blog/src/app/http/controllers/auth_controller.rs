@@ -4,7 +4,7 @@ use sabai::{Error, Json, Result};
 use crate::app::http::requests::LoginRequest;
 use crate::app::models::User;
 
-/// Signs people in, like Laravel Breeze's `AuthenticatedSessionController`.
+/// Signs people in.
 pub struct AuthController;
 
 impl AuthController {

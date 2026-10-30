@@ -9,7 +9,7 @@ use crate::{Middleware, Next};
 // Spaces around a password are part of it.
 const NOT_TRIMMED: [&str; 3] = ["current_password", "password", "password_confirmation"];
 
-/// Trims spaces around every input string except passwords, like Laravel's `TrimStrings`.
+/// Trims spaces around every input string except passwords.
 pub struct TrimStrings;
 
 impl Middleware for TrimStrings {

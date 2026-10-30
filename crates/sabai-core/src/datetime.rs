@@ -14,7 +14,7 @@ const DATABASE_FORMAT: &str = "%Y-%m-%d %H:%M:%S";
 const JSON_FORMAT: &str = "%Y-%m-%dT%H:%M:%S%.6fZ";
 
 /// A moment in time, kept in UTC: what a `timestamp` column holds. It prints and reads text in
-/// the app's `timezone`, like Carbon in PHP's default zone, and JSON in UTC.
+/// the app's `timezone`, and JSON in UTC.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct DateTime(Timestamp);
 
@@ -24,7 +24,7 @@ impl DateTime {
         Self(Timestamp::now())
     }
 
-    /// The same time without its fraction of a second, like Carbon's `startOfSecond()`.
+    /// The same time without its fraction of a second.
     pub fn start_of_second(self) -> Self {
         // The whole seconds of a valid time are always in range, so the fallback never runs.
         Self(Timestamp::from_second(self.0.as_second()).unwrap_or(self.0))
@@ -84,7 +84,7 @@ fn current_timezone() -> TimeZone {
     App::current().map_or(TimeZone::UTC, |app| app.timezone().clone())
 }
 
-/// The zone `app.timezone` names, like Laravel's `config('app.timezone')`; `UTC` when unset.
+/// The zone `app.timezone` names; `UTC` when unset.
 pub(crate) fn app_timezone(config: &Config) -> Result<TimeZone> {
     let name: String = config.get_or("app.timezone", "UTC".to_owned())?;
     // UTC needs no zone data, so it works on images without /usr/share/zoneinfo.

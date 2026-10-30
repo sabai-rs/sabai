@@ -20,7 +20,7 @@ impl From<&InputError> for Error {
 }
 
 /// The query string, merged with the body unless the request is a `GET` or `HEAD`;
-/// the body wins when both have a field, like Laravel.
+/// the body wins when both have a field.
 pub(super) fn read(request: &Request) -> Result<Fields, InputError> {
     let query = request.query_string().unwrap_or_default();
     let mut fields = form_fields(query.as_bytes())?;

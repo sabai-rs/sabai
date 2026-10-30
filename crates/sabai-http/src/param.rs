@@ -9,7 +9,7 @@ use sabai_core::{Error, Request, Result, StatusCode, log};
 use crate::FromRequest;
 
 /// The route's parameter, parsed: `{id}` in `/posts/{id}` gives `Param(7)` for `/posts/7`.
-/// A value that does not parse is a `404`, like Laravel's `whereNumber('id')`.
+/// A value that does not parse is a `404`, so `/posts/abc` never reaches the handler.
 pub struct Param<T>(pub T);
 
 impl<T> FromRequest for Param<T>

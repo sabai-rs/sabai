@@ -61,7 +61,7 @@ pub trait StorageDriver: Send + Sync {
         })
     }
 
-    /// Moves a file (Laravel's `move`, a keyword in Rust). The default copies, then deletes.
+    /// Moves a file (`move` is a keyword in Rust). The default copies, then deletes.
     fn rename<'a>(&'a self, from: &'a str, to: &'a str) -> BoxFuture<'a, Result<()>> {
         Box::pin(async move {
             self.copy(from, to).await?;

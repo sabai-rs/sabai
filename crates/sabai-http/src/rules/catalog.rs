@@ -22,7 +22,7 @@ pub fn array() -> Rule {
 }
 
 /// The field must be an email address: one `@`, with no spaces, and a domain of letters,
-/// digits, `-` and `.`, like Laravel's default `email` rule.
+/// digits, `-` and `.`.
 pub fn email() -> Rule {
     Rule(Check::Email)
 }

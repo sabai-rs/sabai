@@ -74,7 +74,7 @@ impl Command for Greet {
     }
 }
 
-/// A package's provider, like `$this->commands([...])` in Laravel.
+/// A package's provider, which adds its commands.
 struct GreetingProvider {
     names: Vec<&'static str>,
     ran_with: Arc<Mutex<Vec<String>>>,

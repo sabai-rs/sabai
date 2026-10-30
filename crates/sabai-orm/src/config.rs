@@ -29,7 +29,7 @@ enum Connection {
         username: String,
         #[serde(deserialize_with = "string_or_number")]
         password: String,
-        /// The session's `time_zone`, like Laravel's `timezone`; unset keeps the server's.
+        /// The session's `time_zone`; unset keeps the server's.
         #[serde(default)]
         timezone: Option<String>,
     },

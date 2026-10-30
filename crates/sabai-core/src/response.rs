@@ -64,7 +64,7 @@ impl<T: IntoResponse, E: IntoResponse> IntoResponse for Result<T, E> {
     }
 }
 
-/// A JSON response, like Laravel's `response()->json($post)`: `Json(post)`.
+/// A JSON response: `Json(post)`.
 pub struct Json<T>(pub T);
 
 impl<T: Serialize> IntoResponse for Json<T> {

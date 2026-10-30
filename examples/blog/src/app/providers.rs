@@ -1,4 +1,4 @@
-//! The blog's service providers, like Laravel's `app/Providers`.
+//! The blog's service providers.
 
 mod app_service_provider;
 

@@ -6,7 +6,7 @@ use sabai_core::{Error, Result, StatusCode};
 use crate::model::select;
 use crate::{Model, SqlValue, ToColumn};
 
-/// Rows of a model that match conditions, like Laravel's query builder:
+/// Rows of a model that match conditions:
 /// `User::where_eq("email", email).first()`. Values are always bound, never written into the SQL.
 pub struct Query<M> {
     conditions: Conditions,

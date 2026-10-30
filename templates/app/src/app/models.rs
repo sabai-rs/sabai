@@ -1,4 +1,4 @@
-//! The app's data, like Laravel's `app/Models`.
+//! The app's data.
 
 mod user;
 

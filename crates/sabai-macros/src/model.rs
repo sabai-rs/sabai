@@ -110,7 +110,7 @@ fn options(input: &DeriveInput) -> Result<Options> {
     Ok(options)
 }
 
-// Laravel's `Str::plural` for regular English; irregular ones use `#[model(table = "people")]`.
+// Regular English plurals; irregular ones use `#[model(table = "people")]`.
 fn plural(word: &str) -> String {
     if let Some(stem) = word.strip_suffix('y')
         && !stem.ends_with(['a', 'e', 'i', 'o', 'u'])

@@ -10,7 +10,7 @@ tokio::task_local! {
 }
 
 impl App {
-    /// The app this request, test or command runs in, like Laravel's `app()`.
+    /// The app this request, test or command runs in.
     pub fn current() -> Result<Arc<App>> {
         CURRENT.try_with(Arc::clone).map_err(|_| no_current_app())
     }

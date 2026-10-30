@@ -16,11 +16,11 @@ const RED: &str = "31";
 const WHITE: &str = "37";
 const YELLOW: &str = "33";
 
-// Laravel's characters, written as escapes so the source stays ASCII.
+// The separators, written as escapes so the source stays ASCII.
 const NAME_SEPARATOR: &str = " \u{203a} ";
 const ELLIPSIS: char = '\u{2026}';
 
-/// `route:list`: every route with its name and handler, like `php artisan route:list`.
+/// `route:list`: every route with its name and handler.
 pub struct RouteListCommand {
     rows: Vec<RouteRow>,
 }
@@ -94,7 +94,7 @@ impl Line {
         }
     }
 
-    // Laravel's layout: the method column is the widest method plus six, and dots fill the rest.
+    // The method column is the widest method plus six, and dots fill the rest.
     fn render(&self, widest_method: usize, width: usize, paint: Paint) -> String {
         let spaces = " ".repeat(widest_method + 6 - self.method.len());
         let used = chars(&self.method) + spaces.len() + chars(&self.uri);
@@ -120,7 +120,7 @@ impl Line {
         }
     }
 
-    // Like Laravel, a line wider than the terminal loses the end of its action, never its path.
+    // A line wider than the terminal loses the end of its action, never its path.
     fn fitted_action(&self, used: usize, width: usize) -> String {
         if self.action.is_empty() || used + chars(&self.action) <= width.saturating_sub(6) {
             return self.action.clone();
@@ -150,8 +150,8 @@ fn table(rows: &[RouteRow], width: usize, paint: Paint) -> Vec<String> {
     output
 }
 
-// Inserting after equal paths keeps routes on one path in the order added, like Laravel's stable
-// `sortBy`, without compiling a whole sort algorithm for a list of a few hundred routes.
+// Inserting after equal paths keeps routes on one path in the order added, as a stable sort
+// would, without compiling a whole sort algorithm for a list of a few hundred routes.
 fn sorted_by_uri(rows: &[RouteRow]) -> Vec<Line> {
     let mut lines: Vec<Line> = Vec::with_capacity(rows.len());
     for row in rows {
@@ -163,7 +163,7 @@ fn sorted_by_uri(rows: &[RouteRow]) -> Vec<Line> {
 }
 
 /// `PostController@index` for a controller method, the path inside the app for a function,
-/// and nothing for a closure, which Laravel shows by its name alone.
+/// and nothing for a closure, which is shown by its name alone.
 fn short_action(type_name: &str) -> Option<String> {
     if type_name.contains("{{closure}}") {
         return None;
@@ -214,7 +214,7 @@ fn chars(text: &str) -> usize {
     text.chars().count()
 }
 
-// Like Symfony's `Terminal`, which Laravel uses: `COLUMNS`, then `stty size`, then 80.
+// `COLUMNS`, then `stty size`, then 80, so a resized terminal or a pipe both get a sane width.
 fn terminal_width() -> usize {
     let columns = env::var("COLUMNS")
         .ok()

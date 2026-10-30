@@ -4,7 +4,7 @@ rehash_on_login = true
 [bcrypt]
 rounds = "${BCRYPT_ROUNDS:-12}"
 verify = true
-# bcrypt reads 72 bytes; a longer password is refused. 0 cuts it short like Laravel.
+# bcrypt reads 72 bytes; a longer password is refused. 0 cuts it short instead.
 limit = 72
 
 [argon]

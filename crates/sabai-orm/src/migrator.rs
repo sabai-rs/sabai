@@ -9,8 +9,7 @@ use crate::{Database, DatabaseManager, Migration, Migrations, Schema, SqlValue};
 const TABLE: &str = "migrations";
 
 impl Database {
-    /// Runs every migration that has not run yet, in order, as one new batch, like
-    /// `php artisan migrate`; returns their names.
+    /// Runs every migration that has not run yet, in order, as one new batch; returns their names.
     pub fn migrate<'a>(&'a self, migrations: &'a Migrations) -> BoxFuture<'a, Result<Vec<String>>> {
         Box::pin(self.run_pending(migrations))
     }

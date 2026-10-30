@@ -8,7 +8,7 @@ use serde::de::DeserializeOwned;
 
 use crate::{FromRequest, Rules};
 
-/// The input of one action as a struct, like Laravel's `StorePostRequest`: a handler that takes
+/// The input of one action as a struct, such as `StorePostRequest`: a handler that takes
 /// `request: StorePostRequest` receives it filled from the query string (`GET`) or the JSON or
 /// form body, after its [`rules`](FormRequest::rules) pass.
 ///

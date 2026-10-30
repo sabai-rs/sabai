@@ -1,6 +1,6 @@
 use sabai::{App, Provider, Result};
 
-/// Binds the app's services and adds its commands, like Laravel's `AppServiceProvider`.
+/// Binds the app's services and adds its commands.
 pub struct AppServiceProvider;
 
 impl Provider for AppServiceProvider {

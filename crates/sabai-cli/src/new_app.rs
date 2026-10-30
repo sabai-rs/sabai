@@ -1,4 +1,4 @@
-//! `sabai new <name>`: a new app from `templates/app`, like `laravel new`.
+//! `sabai new <name>`: a new app from `templates/app`.
 
 use std::fs;
 use std::path::{Path, PathBuf};

@@ -5,7 +5,7 @@ use bytes::Bytes;
 use super::BoxFuture;
 use crate::Result;
 
-/// A cache driver such as memory or Redis, like Laravel's `Cache\Store`. It stores bytes; the
+/// A cache driver such as memory or Redis. It stores bytes; the
 /// app-facing `Cache` with `remember`, `pull` and typed values is built on top of these methods.
 ///
 /// `add` and `increment` must be atomic in the driver (Redis `SET NX`, `INCR`): built from

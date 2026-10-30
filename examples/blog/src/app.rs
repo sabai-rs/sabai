@@ -1,4 +1,4 @@
-//! The blog's own code, like Laravel's `app/` folder.
+//! The blog's own code.
 
 pub mod console;
 pub mod http;

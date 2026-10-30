@@ -4,7 +4,7 @@ use sabai_core::{App, Command, Error, Result, StatusCode};
 
 use crate::Router;
 
-/// `serve`: serves the app's routes, like `php artisan serve`.
+/// `serve`: serves the app's routes.
 pub struct ServeCommand {
     // The server takes the router, so it is handed out once.
     router: Mutex<Option<Router>>,

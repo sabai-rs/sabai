@@ -1,4 +1,4 @@
-//! The blog's controllers, like Laravel's `app/Http/Controllers`.
+//! The blog's controllers.
 
 mod auth_controller;
 mod post_controller;

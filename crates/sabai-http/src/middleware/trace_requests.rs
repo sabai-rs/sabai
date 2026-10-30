@@ -13,7 +13,7 @@ use crate::{Middleware, Next};
 // A `&str` for reading: `HeaderName::as_str` would compile a match over every standard header.
 const REQUEST_ID: &str = "x-request-id";
 
-/// Gives every request an ID and one log line, like `php artisan serve` prints:
+/// Gives every request an ID and one log line:
 /// `request{id=3f9a1c0b7e2d4a65}: GET /posts 200 4.2ms`. Logs written while handling the
 /// request carry the same ID, and the response sends it back as `X-Request-Id`.
 pub struct TraceRequests;

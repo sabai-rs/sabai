@@ -4,7 +4,7 @@ use sabai_core::{Error, Result, StatusCode};
 use super::HashError;
 
 /// bcrypt reads only a password's first 72 bytes, so by default a longer one is refused instead of
-/// cut short; `limit = 0` cuts it short like Laravel's default.
+/// cut short; `limit = 0` cuts it short, as PHP's `password_hash` does.
 pub(super) const DEFAULT_LIMIT: usize = 72;
 
 pub(super) fn make(password: &str, rounds: u32, limit: usize) -> Result<String> {
@@ -19,7 +19,7 @@ pub(super) fn make(password: &str, rounds: u32, limit: usize) -> Result<String> 
     Ok(hashed.format_for_version(Version::TwoY))
 }
 
-// Like PHP's `password_verify`, which also reads 72 bytes, so every Laravel hash checks the same.
+// Like PHP's `password_verify`, which also reads 72 bytes, so every hash PHP made checks the same.
 pub(super) fn matches(password: &str, hashed: &str) -> bool {
     bcrypt::verify(password, hashed).unwrap_or(false)
 }

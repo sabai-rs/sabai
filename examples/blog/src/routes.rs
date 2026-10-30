@@ -1,4 +1,4 @@
-//! Every route file, collected in one place like Laravel's `withRouting(web: ..., api: ...)`.
+//! Every route file, collected in one place: `web` for pages, `api` under `/api`.
 //! Add a file under `routes/` and one line here, such as `route.prefix("/client").group(client::routes)`.
 
 mod api;

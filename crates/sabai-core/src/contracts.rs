@@ -1,4 +1,4 @@
-//! Traits that drivers, fakes and packages implement, like Laravel's `Illuminate\Contracts`.
+//! Traits that drivers, fakes and packages implement.
 //! Code depends on these, never on a concrete driver, so tests and config can swap the driver.
 
 mod cache;

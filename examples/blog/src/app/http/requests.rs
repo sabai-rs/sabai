@@ -1,4 +1,4 @@
-//! The input of each action, like Laravel's `app/Http/Requests`.
+//! The input of each action.
 
 mod import_posts_request;
 mod login_request;

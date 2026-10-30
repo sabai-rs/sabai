@@ -39,7 +39,7 @@ struct MeetingAsText {
     starts_at: String,
 }
 
-/// A clock that only moves when told to, like Laravel's `travel()`.
+/// A clock that only moves when told to.
 struct FrozenClock(Mutex<SystemTime>);
 
 impl Clock for FrozenClock {

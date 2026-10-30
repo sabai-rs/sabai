@@ -13,8 +13,8 @@ const ACQUIRE_TIMEOUT: Duration = Duration::from_secs(5);
 // Built once per connection at boot, so a smaller `Missing` variant costs nothing worth boxing.
 #[allow(clippy::large_enum_variant)]
 pub(crate) enum Options {
-    // Like a Laravel connection whose PDO driver is not installed: listing it in config is fine,
-    // using it is the error.
+    // A connection whose driver was not compiled in: listing it in config is fine, using it is
+    // the error, so one config file can serve builds with different drivers.
     #[cfg(not(all(feature = "mysql", feature = "sqlite")))]
     Missing(&'static str),
     #[cfg(feature = "mysql")]
@@ -62,7 +62,7 @@ impl Options {
                 let options: sqlx::mysql::MySqlConnectOptions =
                     target.url.parse().map_err(invalid)?;
                 // A `timestamp` column converts through the session's zone, so Sabai keeps the
-                // server's like Laravel does, to read what a Laravel app on the same database wrote.
+                // server's, to read what other apps on the same database wrote.
                 let timezone = target
                     .timezone
                     .as_deref()

@@ -1,4 +1,4 @@
-//! The blog's console commands, like Laravel's `app/Console/Commands`.
+//! The blog's console commands.
 
 mod inspire;
 

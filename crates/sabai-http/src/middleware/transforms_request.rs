@@ -8,7 +8,7 @@ use crate::Next;
 pub(super) type Transform = fn(&str, &mut Value);
 
 /// Runs `transform` on every string in the input, nested ones included, then goes on,
-/// like Laravel's `TransformsRequest`. Input that cannot be read is left for the handler to reject.
+/// so each cleaning middleware only says what to do with one string. Input that cannot be read is left for the handler to reject.
 // A `fn` pointer and a future boxed here, so the body compiles once, not per middleware or app.
 pub(super) fn transform_input(
     request: Request,

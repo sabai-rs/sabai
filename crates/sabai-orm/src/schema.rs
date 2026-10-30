@@ -2,7 +2,7 @@ mod grammar;
 
 pub use grammar::Driver;
 
-/// The table changes a migration makes, like Laravel's `Schema` facade.
+/// The table changes a migration makes.
 #[derive(Default)]
 pub struct Schema {
     changes: Vec<Change>,
@@ -13,7 +13,7 @@ enum Change {
     DropIfExists(String),
 }
 
-/// The columns of a table being created, like Laravel's `Blueprint $table`.
+/// The columns of a table being created.
 pub struct Blueprint {
     table: String,
     columns: Vec<Column>,
@@ -125,8 +125,8 @@ impl Blueprint {
         self.add("remember_token", Kind::String(100)).nullable()
     }
 
-    /// `{name}_type` and `{name}_id` for a model of any type, with an index on both, like
-    /// Laravel's `morphs('commentable')`.
+    /// `{name}_type` and `{name}_id` for a model of any type, with an index on both:
+    /// `morphs("commentable")`.
     pub fn morphs(&mut self, name: &str) {
         let (kind, id) = (format!("{name}_type"), format!("{name}_id"));
         self.string(&kind);
@@ -155,7 +155,7 @@ impl Blueprint {
         &mut self.columns[index]
     }
 
-    // Like Laravel, indexes are their own statements after `create table`: first the ones added
+    // Indexes are their own statements after `create table`: first the ones added
     // by name, such as `morphs`, then each column's own, its unique index before its plain one.
     fn to_sql(&self, driver: Driver) -> Vec<String> {
         let column_indexes = self.columns.iter().flat_map(|column| {
@@ -186,19 +186,19 @@ impl Column {
         self
     }
 
-    /// Adds a unique index named like Laravel's: `users_email_unique`.
+    /// Adds a unique index named `{table}_{column}_unique`: `users_email_unique`.
     pub fn unique(&mut self) -> &mut Self {
         self.unique = true;
         self
     }
 
-    /// Adds an index named like Laravel's: `comments_status_index`.
+    /// Adds an index named `{table}_{column}_index`: `comments_status_index`.
     pub fn index(&mut self) -> &mut Self {
         self.index = true;
         self
     }
 
-    /// The most characters a string column holds, like Laravel's `string('status', 20)`;
+    /// The most characters a string column holds, such as `.length(20)`;
     /// `string()` holds 255. Only string columns have a length.
     pub fn length(&mut self, length: u32) -> &mut Self {
         if let Kind::String(_) = self.kind {

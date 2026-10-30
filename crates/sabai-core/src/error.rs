@@ -19,7 +19,7 @@ pub struct Error {
     errors: FieldErrors,
 }
 
-/// Messages per field, in the order they were added, like Laravel's error bag.
+/// Messages per field, in the order they were added.
 #[derive(Debug, Default)]
 struct FieldErrors(Vec<(String, Vec<String>)>);
 
@@ -32,7 +32,7 @@ impl Error {
         Self::from_parts(status, message.into(), None)
     }
 
-    /// An error with a status and its standard reason phrase, like Laravel's `abort(404)`.
+    /// An error with a status and its standard reason phrase: `Error::from_status(StatusCode::NOT_FOUND)`.
     pub fn from_status(status: StatusCode) -> Self {
         let reason = status.canonical_reason().unwrap_or("Error");
         Self::from_parts(status, Cow::Borrowed(reason), None)
@@ -53,7 +53,7 @@ impl Error {
         Self::from_status(StatusCode::FORBIDDEN)
     }
 
-    /// `422` with messages per field, like Laravel's `ValidationException::withMessages([...])`:
+    /// `422` with messages per field:
     /// `Error::with_messages(&[("email", "These credentials do not match our records.")])`.
     /// A field may appear more than once to give it several messages.
     pub fn with_messages(messages: &[(&str, &str)]) -> Self {
@@ -169,7 +169,7 @@ impl IntoResponse for Error {
 
 impl Error {
     // A server error's message is for the log, never the client: it may name tables, columns or
-    // config. The client learns only that something failed, like Laravel's "Server Error".
+    // config. The client learns only that something failed: "Server Error".
     fn public_message(&self) -> &str {
         match self.status {
             StatusCode::INTERNAL_SERVER_ERROR => "Server Error",

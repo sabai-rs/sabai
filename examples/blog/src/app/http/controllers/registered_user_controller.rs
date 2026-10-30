@@ -8,7 +8,7 @@ use crate::app::http::requests::RegisterRequest;
 use crate::app::models::User;
 use crate::app::repositories::UserRepository;
 
-/// Creates accounts, like Laravel Breeze's `RegisteredUserController`.
+/// Creates accounts.
 pub struct RegisteredUserController {
     user_repository: UserRepository,
 }

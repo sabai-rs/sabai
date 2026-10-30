@@ -1,3 +1,3 @@
-//! The app's migrations, like Laravel's `database/` folder.
+//! The app's migrations.
 
 pub mod migrations;

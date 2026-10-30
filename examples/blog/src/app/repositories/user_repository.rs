@@ -21,8 +21,8 @@ impl UserRepository {
         }
     }
 
-    /// Saves a new user. The unique index on `email` answers a taken email the way Laravel's
-    /// `unique:users` rule does, without the race between checking and saving.
+    /// Saves a new user. The unique index on `email` answers a taken email the way a `unique`
+    /// rule would, without the race between checking and saving.
     pub async fn create(
         &self,
         name: String,
