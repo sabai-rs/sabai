@@ -17,6 +17,7 @@ enum Change {
 pub struct Blueprint {
     table: String,
     columns: Vec<Column>,
+    indexes: Vec<Index>,
 }
 
 /// One column; chain modifiers such as [`nullable`](Column::nullable).
@@ -25,6 +26,18 @@ pub struct Column {
     kind: Kind,
     nullable: bool,
     unique: bool,
+    index: bool,
+}
+
+struct Index {
+    kind: IndexKind,
+    columns: Vec<String>,
+}
+
+#[derive(Clone, Copy)]
+pub(crate) enum IndexKind {
+    Unique,
+    Index,
 }
 
 #[derive(Clone, Copy)]
@@ -68,6 +81,7 @@ impl Blueprint {
         Self {
             table: table.to_owned(),
             columns: Vec::new(),
+            indexes: Vec::new(),
         }
     }
 
@@ -111,6 +125,18 @@ impl Blueprint {
         self.add("remember_token", Kind::String(100)).nullable()
     }
 
+    /// `{name}_type` and `{name}_id` for a model of any type, with an index on both, like
+    /// Laravel's `morphs('commentable')`.
+    pub fn morphs(&mut self, name: &str) {
+        let (kind, id) = (format!("{name}_type"), format!("{name}_id"));
+        self.string(&kind);
+        self.unsigned_big_integer(&id);
+        self.indexes.push(Index {
+            kind: IndexKind::Index,
+            columns: vec![kind, id],
+        });
+    }
+
     /// Nullable `created_at` and `updated_at` timestamps.
     pub fn timestamps(&mut self) {
         self.timestamp("created_at").nullable();
@@ -124,20 +150,31 @@ impl Blueprint {
             kind,
             nullable: false,
             unique: false,
+            index: false,
         });
         &mut self.columns[index]
     }
 
-    // Like Laravel, unique indexes are their own statements after `create table`.
+    // Like Laravel, indexes are their own statements after `create table`: first the ones added
+    // by name, such as `morphs`, then each column's own, its unique index before its plain one.
     fn to_sql(&self, driver: Driver) -> Vec<String> {
-        let unique_indexes = self
-            .columns
+        let column_indexes = self.columns.iter().flat_map(|column| {
+            let unique = column.unique.then_some(IndexKind::Unique);
+            let index = column.index.then_some(IndexKind::Index);
+            [unique, index]
+                .into_iter()
+                .flatten()
+                .map(|kind| (kind, std::slice::from_ref(&column.name)))
+        });
+        let indexes = self
+            .indexes
             .iter()
-            .filter(|column| column.unique)
-            .map(|column| driver.add_unique(&self.table, &column.name));
+            .map(|index| (index.kind, index.columns.as_slice()))
+            .chain(column_indexes)
+            .map(|(kind, columns)| driver.add_index(&self.table, kind, columns));
         [driver.create_table(&self.table, &self.columns)]
             .into_iter()
-            .chain(unique_indexes)
+            .chain(indexes)
             .collect()
     }
 }
@@ -152,6 +189,21 @@ impl Column {
     /// Adds a unique index named like Laravel's: `users_email_unique`.
     pub fn unique(&mut self) -> &mut Self {
         self.unique = true;
+        self
+    }
+
+    /// Adds an index named like Laravel's: `comments_status_index`.
+    pub fn index(&mut self) -> &mut Self {
+        self.index = true;
+        self
+    }
+
+    /// The most characters a string column holds, like Laravel's `string('status', 20)`;
+    /// `string()` holds 255. Only string columns have a length.
+    pub fn length(&mut self, length: u32) -> &mut Self {
+        if let Kind::String(_) = self.kind {
+            self.kind = Kind::String(length);
+        }
         self
     }
 }
