@@ -1,4 +1,4 @@
-use super::{Column, Kind};
+use super::{Column, IndexKind, Kind};
 
 /// The SQL dialect of a connection.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -27,12 +27,17 @@ impl Driver {
         format!("drop table if exists {}", self.quote(table))
     }
 
-    pub(crate) fn add_unique(self, table: &str, column: &str) -> String {
-        let index = self.quote(&index_name(table, column, "unique"));
-        let (table, column) = (self.quote(table), self.quote(column));
+    pub(crate) fn add_index(self, table: &str, kind: IndexKind, columns: &[String]) -> String {
+        let (mysql_kind, sqlite_kind, suffix) = match kind {
+            IndexKind::Unique => ("unique", "unique index", "unique"),
+            IndexKind::Index => ("index", "index", "index"),
+        };
+        let index = self.quote(&index_name(table, columns, suffix));
+        let quoted: Vec<_> = columns.iter().map(|column| self.quote(column)).collect();
+        let (table, columns) = (self.quote(table), quoted.join(", "));
         match self {
-            Driver::MySql => format!("alter table {table} add unique {index}({column})"),
-            Driver::Sqlite => format!("create unique index {index} on {table} ({column})"),
+            Driver::MySql => format!("alter table {table} add {mysql_kind} {index}({columns})"),
+            Driver::Sqlite => format!("create {sqlite_kind} {index} on {table} ({columns})"),
         }
     }
 
@@ -99,9 +104,9 @@ impl Driver {
     }
 }
 
-/// Laravel's index name: `users_email_unique`.
-fn index_name(table: &str, column: &str, kind: &str) -> String {
-    format!("{table}_{column}_{kind}")
+/// Laravel's index name: `users_email_unique`, `posts_commentable_type_commentable_id_index`.
+fn index_name(table: &str, columns: &[String], kind: &str) -> String {
+    format!("{table}_{}_{kind}", columns.join("_"))
         .to_lowercase()
         .replace(['-', '.'], "_")
 }
@@ -194,6 +199,75 @@ mod tests {
                 "create table \"users\" (\"id\" integer primary key autoincrement not null, \
                  \"email\" varchar not null, \"remember_token\" varchar)",
                 "create unique index \"users_email_unique\" on \"users\" (\"email\")",
+            ]
+        );
+    }
+
+    fn create_comments() -> Schema {
+        let mut schema = Schema::default();
+        schema.create("comments", |table| {
+            table.id();
+            table.morphs("commentable");
+            table.string("author_name").length(100);
+            table.string("slug").length(64).unique();
+            table.text("body");
+            table.string("status").length(20).index();
+            table.timestamps();
+        });
+        schema
+    }
+
+    #[test]
+    fn mysql_adds_the_morphs_index_then_each_column_index_in_order() {
+        assert_eq!(
+            create_comments().to_sql(Driver::MySql),
+            [
+                "create table `comments` (`id` bigint unsigned not null auto_increment primary key, \
+                 `commentable_type` varchar(255) not null, `commentable_id` bigint unsigned not null, \
+                 `author_name` varchar(100) not null, `slug` varchar(64) not null, \
+                 `body` text not null, `status` varchar(20) not null, \
+                 `created_at` timestamp null, `updated_at` timestamp null) \
+                 default character set utf8mb4 collate 'utf8mb4_unicode_ci'",
+                "alter table `comments` add index \
+                 `comments_commentable_type_commentable_id_index`(`commentable_type`, `commentable_id`)",
+                "alter table `comments` add unique `comments_slug_unique`(`slug`)",
+                "alter table `comments` add index `comments_status_index`(`status`)",
+            ]
+        );
+    }
+
+    #[test]
+    fn sqlite_adds_the_same_indexes_as_create_index() {
+        assert_eq!(
+            create_comments().to_sql(Driver::Sqlite),
+            [
+                "create table \"comments\" (\"id\" integer primary key autoincrement not null, \
+                 \"commentable_type\" varchar not null, \"commentable_id\" integer not null, \
+                 \"author_name\" varchar not null, \"slug\" varchar not null, \
+                 \"body\" text not null, \"status\" varchar not null, \
+                 \"created_at\" datetime, \"updated_at\" datetime)",
+                "create index \"comments_commentable_type_commentable_id_index\" \
+                 on \"comments\" (\"commentable_type\", \"commentable_id\")",
+                "create unique index \"comments_slug_unique\" on \"comments\" (\"slug\")",
+                "create index \"comments_status_index\" on \"comments\" (\"status\")",
+            ]
+        );
+    }
+
+    #[test]
+    fn a_column_with_both_gets_its_unique_index_before_its_plain_one() {
+        let mut schema = Schema::default();
+        schema.create("users", |table| {
+            table.string("email").index().unique();
+        });
+
+        let sql = schema.to_sql(Driver::Sqlite);
+
+        assert_eq!(
+            sql[1..],
+            [
+                "create unique index \"users_email_unique\" on \"users\" (\"email\")",
+                "create index \"users_email_index\" on \"users\" (\"email\")",
             ]
         );
     }

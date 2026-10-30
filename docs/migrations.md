@@ -88,10 +88,12 @@ Every column gives the same SQL as Laravel for each database.
 | `table.integer("votes")` | `int` | `integer` |
 | `table.unsigned_big_integer("post_id")` | `bigint unsigned` | `integer` |
 | `table.string("title")` | `varchar(255)` | `varchar` |
+| `table.string("token").length(64)` | `varchar(64)` | `varchar` |
 | `table.text("body")` | `text` | `text` |
 | `table.timestamp("sent_at")` | `timestamp` | `datetime` |
 | `table.timestamps()` | nullable `created_at` and `updated_at` | |
 | `table.remember_token()` | nullable `varchar(100)` named `remember_token` | nullable `varchar` |
+| `table.morphs("commentable")` | `commentable_type varchar(255)`, `commentable_id bigint unsigned` and an index on both | `varchar`, `integer` and the same index |
 
 Add `.nullable()` to allow `NULL`:
 
@@ -109,7 +111,21 @@ table.string("email").unique();
 alter table `users` add unique `users_email_unique`(`email`)
 ```
 
-More column types, indexes and foreign keys are coming.
+Add `.index()` for a plain index, named `{table}_{column}_index`:
+
+```rust
+table.string("status").length(20).index();
+```
+
+```sql
+alter table `comments` add index `comments_status_index`(`status`)
+```
+
+A string holds 255 characters unless you give a length, like `.length(20)` above for Laravel's `string('status', 20)`. Only string columns have a length.
+
+`morphs("commentable")` adds the two columns a polymorphic relation needs, with an index on both named `{table}_commentable_type_commentable_id_index`. Like Laravel, the indexes come in this order after the table: those added by name, such as `morphs`, then each column's own, its unique index before its plain one. On SQLite each is a `create index` statement.
+
+Foreign keys and more column types are coming.
 
 ## Another Connection
 
